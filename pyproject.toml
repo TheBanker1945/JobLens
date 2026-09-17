@@ -1,0 +1,34 @@
+[project]
+name = "joblens"
+version = "0.1.0"
+description = "AI assistant for the Dutch job market: vacancy extraction, CV matching (RAG), agents and MCP tools."
+readme = "README.md"
+authors = [
+    { name = "Mohammed Mahdi", email = "125477617+TheBanker1945@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "httpx>=0.28.1",
+    "openai>=3.14.1",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.8",
+]
+
+[tool.ruff.lint]
+# E/F: default errors, I: import sorting, UP: modern Python syntax, B: common bugs
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
