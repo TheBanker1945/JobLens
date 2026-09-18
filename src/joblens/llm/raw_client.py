@@ -9,25 +9,9 @@ the whole conversation on every call.
 import time
 
 import httpx
-from pydantic import BaseModel
 
 from joblens.config import LLMSettings
-
-Message = dict[str, str]  # {"role": "system" | "user" | "assistant", "content": ...}
-
-
-class Usage(BaseModel):
-    prompt_tokens: int  # input: everything we sent
-    completion_tokens: int  # output: answer + reasoning
-    total_tokens: int
-
-
-class ChatResult(BaseModel):
-    content: str
-    reasoning: str | None = None  # the model's "thinking", if it returned any
-    usage: Usage | None = None
-    model: str
-    latency_s: float
+from joblens.llm.types import ChatResult, Message
 
 
 def build_request_body(
