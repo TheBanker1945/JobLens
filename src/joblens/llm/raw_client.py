@@ -1,0 +1,82 @@
+"""A chat completion call by hand: one HTTP POST, no SDK.
+
+Every OpenAI-compatible provider (Ollama, OpenRouter, DeepSeek, ...) speaks the same
+protocol: POST {base_url}/chat/completions with the model name and the full list of
+messages, and get the answer back as JSON. The API is stateless, so the caller sends
+the whole conversation on every call.
+"""
+
+import time
+
+import httpx
+from pydantic import BaseModel
+
+from joblens.config import LLMSettings
+
+Message = dict[str, str]  # {"role": "system" | "user" | "assistant", "content": ...}
+
+
+class Usage(BaseModel):
+    prompt_tokens: int  # input: everything we sent
+    completion_tokens: int  # output: answer + reasoning
+    total_tokens: int
+
+
+class ChatResult(BaseModel):
+    content: str
+    reasoning: str | None = None  # the model's "thinking", if it returned any
+    usage: Usage | None = None
+    model: str
+    latency_s: float
+
+
+def build_request_body(
+    messages: list[Message], settings: LLMSettings, temperature: float
+) -> dict:
+    body = {
+        "model": settings.model,
+        "messages": messages,
+        "temperature": temperature,
+    }
+    if not settings.thinking:
+        # Verified on Ollama; other providers need their own mapping (milestone 1.2).
+        body["reasoning_effort"] = "none"
+    return body
+
+
+def chat(
+    messages: list[Message],
+    settings: LLMSettings,
+    *,
+    temperature: float = 0.0,
+    timeout: float = 120.0,
+    client: httpx.Client | None = None,
+) -> ChatResult:
+    """Send one chat completion request and return the parsed result.
+
+    `client` can be passed in so tests can swap the network for a fake server.
+    """
+    if client is None:
+        # We own this client, so close it when done (the `with` block does that).
+        with httpx.Client(timeout=timeout) as owned:
+            return chat(messages, settings, temperature=temperature, client=owned)
+
+    start = time.perf_counter()
+    response = client.post(
+        f"{settings.base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {settings.api_key}"},
+        json=build_request_body(messages, settings, temperature),
+    )
+    latency = time.perf_counter() - start
+    response.raise_for_status()  # 4xx/5xx -> httpx.HTTPStatusError
+
+    data = response.json()
+    message = data["choices"][0]["message"]
+    return ChatResult(
+        content=message.get("content") or "",
+        # Ollama calls it "reasoning", DeepSeek and vLLM "reasoning_content"
+        reasoning=message.get("reasoning") or message.get("reasoning_content"),
+        usage=data.get("usage"),
+        model=data.get("model", settings.model),
+        latency_s=latency,
+    )
