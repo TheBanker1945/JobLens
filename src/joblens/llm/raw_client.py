@@ -11,6 +11,7 @@ import time
 import httpx
 
 from joblens.config import LLMSettings
+from joblens.llm.providers import thinking_params
 from joblens.llm.types import ChatResult, Message
 
 
@@ -22,9 +23,7 @@ def build_request_body(
         "messages": messages,
         "temperature": temperature,
     }
-    if not settings.thinking:
-        # Verified on Ollama; other providers need their own mapping (milestone 1.2).
-        body["reasoning_effort"] = "none"
+    body.update(thinking_params(settings))  # provider-specific thinking switch
     return body
 
 
