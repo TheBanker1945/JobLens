@@ -40,6 +40,8 @@ REPAIR_PROMPT = """\
 Your JSON was not valid:
 {errors}
 
+Check these fields against the vacancy text again. If the text does not state a
+value, use null instead of a placeholder or a guess.
 Return the corrected JSON object only."""
 
 

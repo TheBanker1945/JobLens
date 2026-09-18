@@ -57,10 +57,11 @@ class VacancyDetails(BaseModel):
         ge=1, le=60, description="Maximum hours per week. Same as hours_min if fixed."
     )
     salary_min: float | None = Field(
-        ge=0, description="Lowest gross salary as a plain number, e.g. 3200.0."
+        gt=0,  # 0 is never a real salary; use null when no amount is given
+        description="Lowest gross salary as a plain number, e.g. 3200.0.",
     )
     salary_max: float | None = Field(
-        ge=0, description="Highest gross salary. Same as salary_min if one amount."
+        gt=0, description="Highest gross salary. Same as salary_min if one amount."
     )
     salary_period: SalaryPeriod | None = Field(
         description="Period the salary amounts are per. Required if a salary is given."

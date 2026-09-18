@@ -47,6 +47,7 @@ def test_unknown_values_can_be_null():
         ({"salary_period": None}, "salary_period is required"),
         ({"work_mode": "hybride"}, "work_mode"),  # Dutch word, not an allowed value
         ({"hours_max": 80}, "hours_max"),
+        ({"salary_min": 0}, "salary_min"),  # a placeholder, not a salary
         ({"bonus": "yes"}, "bonus"),  # invented extra field
     ],
 )
