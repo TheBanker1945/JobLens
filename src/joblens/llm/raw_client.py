@@ -9,25 +9,10 @@ the whole conversation on every call.
 import time
 
 import httpx
-from pydantic import BaseModel
 
 from joblens.config import LLMSettings
-
-Message = dict[str, str]  # {"role": "system" | "user" | "assistant", "content": ...}
-
-
-class Usage(BaseModel):
-    prompt_tokens: int  # input: everything we sent
-    completion_tokens: int  # output: answer + reasoning
-    total_tokens: int
-
-
-class ChatResult(BaseModel):
-    content: str
-    reasoning: str | None = None  # the model's "thinking", if it returned any
-    usage: Usage | None = None
-    model: str
-    latency_s: float
+from joblens.llm.providers import thinking_params
+from joblens.llm.types import ChatResult, Message
 
 
 def build_request_body(
@@ -38,9 +23,7 @@ def build_request_body(
         "messages": messages,
         "temperature": temperature,
     }
-    if not settings.thinking:
-        # Verified on Ollama; other providers need their own mapping (milestone 1.2).
-        body["reasoning_effort"] = "none"
+    body.update(thinking_params(settings))  # provider-specific thinking switch
     return body
 
 

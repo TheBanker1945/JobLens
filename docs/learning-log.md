@@ -49,3 +49,41 @@ that predictability.
   had to load it again (cold start).
 - Thinking off added 6 hidden input tokens (54 vs 48) — the chat template changes the
   prompt behind the scenes.
+
+## 1.2 — The openai SDK behind our own interface
+
+Added `joblens.llm.client.LLMClient` (openai SDK) next to the hand-built
+`raw_client`, both returning the same `ChatResult`. The rest of JobLens depends on the
+`ChatClient` interface in `llm/types.py`, not on a specific client.
+
+**Same wire format.** A test proves the SDK sends exactly the same JSON body as the
+raw client. The SDK is a convenience layer, not a different protocol.
+
+**What the SDK adds.**
+- Retries with backoff on connection errors, 429 (rate limit) and 5xx — but not on
+  401: a wrong key never gets better by retrying (both are tested).
+- Named errors: `RateLimitError`, `AuthenticationError`, `APIConnectionError`, ...
+- Typed responses and a reusable connection pool.
+
+**What it costs.**
+- Its types only know OpenAI's own fields. Ollama's `reasoning` field arrives in
+  `message.model_extra` — the main trap of "OpenAI-compatible".
+- Default timeout is 600 s; we set 120 s.
+- It uses `httpx2` internally, not the `httpx` we depend on.
+
+**Speed** (`scripts/compare_clients.py`, qwen3:8b, warm, median of 5):
+
+| Client | Thinking off | Thinking on |
+|--------|--------------|-------------|
+| raw    | 0.26 s       | 2.64 s      |
+| SDK    | 0.26 s       | 2.52 s      |
+
+The client overhead is invisible; generating tokens is what takes time.
+At temperature 0 all 10 calls gave the identical answer.
+
+**"Compatible" is not "identical".** Every provider switches thinking in its own way,
+so `llm/providers.py` holds a table of verified profiles. With no thinking field,
+qwen3 thinks by default: 271 output tokens to say "Hallo." versus 3 with thinking off.
+A wrong mapping fails silently (thinking stays on and costs tokens), so a provider
+only gets a profile after a real test call. Unknown providers get a warning and their
+own default.
