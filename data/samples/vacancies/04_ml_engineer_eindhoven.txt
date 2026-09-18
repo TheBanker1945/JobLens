@@ -1,0 +1,24 @@
+Machine Learning Engineer — Computer Vision
+
+Company: Lumora Imaging, Eindhoven (Netherlands)
+
+About us
+Lumora Imaging builds AI software that detects defects on semiconductor wafers.
+We are a team of 60 engineers from 18 countries. Our working language is English.
+
+What you will do
+- Train and deploy deep learning models for image segmentation.
+- Optimise inference on edge devices with ONNX and TensorRT.
+- Work closely with our process engineers on the fab floor.
+
+What we are looking for
+- An MSc or PhD in Computer Science, Electrical Engineering or a related field.
+- At least 5 years of experience with deep learning in production.
+- Strong skills in Python and PyTorch; C++ is a plus.
+- Fluent English. Dutch is not required.
+
+What we offer
+- A permanent contract, 40 hours per week.
+- A salary between €70,000 and €90,000 per year, plus an 8% holiday allowance.
+- Hybrid working: at least 3 days a week in our Eindhoven office.
+- Relocation support and help with the 30% tax ruling.

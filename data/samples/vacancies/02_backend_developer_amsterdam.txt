@@ -1,0 +1,22 @@
+Medior Backend Developer
+
+Over Fietsdeel
+Fietsdeel is een snelgroeiende scale-up die deelfietsen aanbiedt in 12 Nederlandse steden.
+Ons team van 40 mensen zit aan de Zuidas in Amsterdam.
+
+Jouw rol
+Als backend developer werk je aan de API's waar onze app en 20.000 fietsen mee praten.
+Je werkt in een team van vijf developers volgens Scrum.
+
+Wat vragen we?
+- Minimaal 3 jaar ervaring met backend-development.
+- Goede kennis van Python (Django of FastAPI) en PostgreSQL.
+- Ervaring met Docker en Kubernetes; kennis van AWS is mooi meegenomen.
+- Hbo- of wo-denkniveau.
+- Je spreekt goed Engels; Nederlands is geen vereiste.
+
+Wat bieden we?
+- Een fulltime functie (40 uur) met een vast contract.
+- Een marktconform salaris en 25 vakantiedagen.
+- Je werkt vanuit ons kantoor, met de mogelijkheid om af en toe thuis te werken.
+- Een gratis deelfiets-abonnement, uiteraard.
