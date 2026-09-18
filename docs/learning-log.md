@@ -87,3 +87,51 @@ qwen3 thinks by default: 271 output tokens to say "Hallo." versus 3 with thinkin
 A wrong mapping fails silently (thinking stays on and costs tokens), so a provider
 only gets a profile after a real test call. Unknown providers get a warning and their
 own default.
+
+## 1.3 — Structured extraction from Dutch vacancies
+
+`extract_vacancy(text, client)` turns a vacancy into a validated `VacancyDetails`:
+prompt (rules + JSON schema) -> LLM -> pydantic validation -> one repair attempt.
+Five fictional samples in `data/samples/vacancies/`, each with a hard case.
+
+**Three levels of structured output.**
+1. Ask for JSON in the prompt: the model may add text, fences, or break the shape.
+2. JSON mode: always valid JSON, but any shape.
+3. Schema-constrained decoding: the server only lets the model pick tokens that fit
+   the schema. Shape guaranteed.
+
+**Shape is guaranteed, content is not.** Asked for "one sentence about the weather
+in Zwolle" with the schema on, qwen3 had to return vacancy JSON — and invented a
+salary of €2,500–3,000, "hbo" and 2 years of experience to fill it. A schema forces
+the model to answer, even when the honest answer is "there is nothing here".
+
+**The constraint does not see everything.** Ollama enforces fields, types and enum
+values (including `$ref` enums), but not numeric bounds: `exclusiveMinimum: 0` did
+not stop a salary of 0. Validation afterwards is still needed.
+
+**The schema must be in the prompt too.** Constrained decoding restricts tokens; it
+does not show the model the field descriptions. We put the schema in the system
+prompt in both modes, so the only difference between the modes is the constraint.
+
+**Schema vs prompt mode: identical on all 5 samples** (same output, same tokens).
+With the schema in the prompt and temperature 0, qwen3 writes valid JSON anyway; the
+constraint is a safety net for weaker models and messier input. Worth re-checking
+per model in the 1.4 eval.
+
+**All 10 first outputs were valid, and still had 10 content mistakes:**
+- Hallucination: "schaal 11" became `salary: 4250` — from training data, not the text.
+- Placeholder instead of null: "marktconform" became `salary: 0–0 per month`.
+- Invented: `hours_min: 30` where the text says 40 hours.
+- Heading as name: `company: "Over Fietsdeel"`.
+- Nuance missed: "mbo is mooi, maar niet verplicht" became `education_level: mbo`;
+  "enkele jaren ervaring" became `0`; "plaats- en tijdonafhankelijk" became `onsite`.
+- Missed: Power BI (mentioned under tasks, not requirements).
+
+**Repair loop: the feedback must say what to do.** After adding a rule that salary
+must be > 0, the repair prompt "salary_min: Input should be greater than 0" gave the
+same 0 back twice — the model had no acceptable alternative. Adding "if the text does
+not state a value, use null" fixed it on the next try. Cost: one extra call (~2x
+tokens) for that vacancy only.
+
+**Lesson:** validation catches rule violations (0, min > max, unknown enum values),
+not wrong facts. Measuring accuracy needs hand-labelled answers: milestone 1.4.
