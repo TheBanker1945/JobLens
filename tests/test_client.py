@@ -101,3 +101,15 @@ def test_auth_error_is_not_retried():
     with pytest.raises(openai.AuthenticationError):
         client.chat(MESSAGES)
     assert len(seen) == 1  # retrying a wrong key never helps
+
+
+def test_response_format_is_sent_only_when_given():
+    seen = []
+    client = sdk_client(ollama_reply(), seen=seen)
+    schema_format = {"type": "json_schema", "json_schema": {"name": "x", "schema": {}}}
+
+    client.chat(MESSAGES)
+    client.chat(MESSAGES, response_format=schema_format)
+
+    assert "response_format" not in json.loads(seen[0].content)
+    assert json.loads(seen[1].content)["response_format"] == schema_format

@@ -1,0 +1,24 @@
+Junior Data Analist (32-36 uur)
+
+Bakkerij De Vries B.V. — Utrecht
+
+Over ons
+Bakkerij De Vries is een familiebedrijf met 14 winkels in de regio Utrecht. We willen
+onze inkoop en productie slimmer plannen op basis van data, en daar zoeken we jou voor.
+
+Wat ga je doen?
+- Je bouwt dashboards in Power BI voor inkoop en productie.
+- Je schrijft SQL-queries op ons datawarehouse.
+- Je analyseert verkoopcijfers per winkel en adviseert over voorraad.
+
+Wie ben jij?
+- Je hebt een afgeronde hbo-opleiding, bijvoorbeeld Bedrijfskunde of Informatica.
+- 0 tot 2 jaar werkervaring; starters zijn welkom.
+- Je beheerst SQL en Excel; ervaring met Python is een pré.
+- Je spreekt en schrijft vloeiend Nederlands.
+
+Wat bieden wij?
+- Salaris tussen € 3.200 en € 3.800 bruto per maand, afhankelijk van ervaring.
+- Een jaarcontract met uitzicht op een vast dienstverband.
+- Hybride werken: 2 dagen per week thuis.
+- Elke vrijdag vers brood mee naar huis.

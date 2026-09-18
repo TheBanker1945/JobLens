@@ -1,7 +1,7 @@
 import logging
 
 from joblens.config import LLMSettings
-from joblens.llm.providers import thinking_params
+from joblens.llm.providers import supports_json_schema, thinking_params
 
 
 def make_settings(provider="ollama", thinking=False):
@@ -40,3 +40,8 @@ def test_returned_params_are_a_copy():
     thinking_params(make_settings())["reasoning_effort"] = "high"
 
     assert thinking_params(make_settings()) == {"reasoning_effort": "none"}
+
+
+def test_json_schema_support_is_known_for_ollama_only():
+    assert supports_json_schema(make_settings()) is True
+    assert supports_json_schema(make_settings(provider="some-new-provider")) is False

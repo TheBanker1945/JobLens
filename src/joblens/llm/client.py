@@ -7,7 +7,7 @@ own fields, so provider extras like Ollama's `reasoning` arrive in `model_extra`
 
 import time
 
-from openai import DefaultHttpxClient, OpenAI
+from openai import DefaultHttpxClient, OpenAI, omit
 
 from joblens.config import LLMSettings
 from joblens.llm.providers import thinking_params
@@ -34,12 +34,19 @@ class LLMClient:
             http_client=http_client,
         )
 
-    def chat(self, messages: list[Message], *, temperature: float = 0.0) -> ChatResult:
+    def chat(
+        self,
+        messages: list[Message],
+        *,
+        temperature: float = 0.0,
+        response_format: dict | None = None,  # e.g. a JSON schema to follow
+    ) -> ChatResult:
         start = time.perf_counter()
         response = self._sdk.chat.completions.create(
             model=self.settings.model,
             messages=messages,
             temperature=temperature,
+            response_format=response_format or omit,
             extra_body=thinking_params(self.settings),  # merged into the JSON body
         )
         latency = time.perf_counter() - start

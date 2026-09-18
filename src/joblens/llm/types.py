@@ -26,5 +26,9 @@ class ChatClient(Protocol):
     this, not on a specific client, so clients can be swapped (or faked in tests)."""
 
     def chat(
-        self, messages: list[Message], *, temperature: float = 0.0
+        self,
+        messages: list[Message],
+        *,
+        temperature: float = 0.0,
+        response_format: dict | None = None,
     ) -> ChatResult: ...
