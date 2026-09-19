@@ -54,6 +54,16 @@ def test_perfect_answers_score_one():
     assert result.list_f1("skills") == 1.0
 
 
+def test_for_split_keeps_only_that_split():
+    replies = [s.expected.model_dump_json() for s in SAMPLES]
+    result = run_eval(CONFIG, SAMPLES, FakeClient(replies))
+
+    holdout = result.for_split("holdout")
+
+    assert {s.split for s in holdout.samples} == {"holdout"}
+    assert len(holdout.samples) + len(result.for_split("dev").samples) == len(SAMPLES)
+
+
 def test_failed_extraction_counts_as_zero():
     replies = ["not json", "still not json"] + [
         s.expected.model_dump_json() for s in SAMPLES[1:]

@@ -3,7 +3,10 @@
 Usage:
     uv run python scripts/eval_extraction.py                 # all runs, save results
     uv run python scripts/eval_extraction.py --only think    # runs whose name matches
-    uv run python scripts/eval_extraction.py --mistakes      # list every wrong field
+    uv run python scripts/eval_extraction.py --mistakes      # wrong fields, dev only
+
+Results are reported per split. --mistakes shows the dev split only: the holdout
+split must never be used for tuning, so its individual mistakes stay hidden.
 """
 
 import argparse
@@ -23,13 +26,16 @@ from joblens.llm.client import LLMClient
 ROOT = Path(__file__).parent.parent
 SAMPLES_DIR = ROOT / "data" / "samples"
 RESULTS_DIR = ROOT / "evals" / "results"
+SPLITS = ("dev", "holdout")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=ROOT / "evals/extraction.toml")
     parser.add_argument("--only", help="only runs whose name contains this text")
-    parser.add_argument("--mistakes", action="store_true", help="list wrong fields")
+    parser.add_argument(
+        "--mistakes", action="store_true", help="list wrong fields (dev split only)"
+    )
     parser.add_argument("--no-save", action="store_true")
     args = parser.parse_args()
 
@@ -51,10 +57,13 @@ def main() -> int:
         print(f"Cannot reach the LLM server: {err}")
         return 1
 
-    print_summary(results)
-    print_per_field(results)
+    for split in SPLITS:
+        split_results = [r.for_split(split) for r in results]
+        print(f"\n===== {split} ({len(split_results[0].samples)} samples) =====")
+        print_summary(split_results)
+        print_per_field(split_results)
     if args.mistakes:
-        print_mistakes(results)
+        print_mistakes([r.for_split("dev") for r in results])
     if not args.no_save:
         print(f"\nsaved: {save(results).relative_to(ROOT)}")
     return 0
@@ -106,7 +115,7 @@ def print_per_field(results: list[RunResult]) -> None:
 
 def print_mistakes(results: list[RunResult]) -> None:
     for r in results:
-        print(f"\n--- mistakes: {r.config.name} ---")
+        print(f"\n--- dev mistakes: {r.config.name} ---")
         for s in r.samples:
             if s.error:
                 print(f"{s.sample}: FAILED {s.error.splitlines()[0]}")
@@ -125,6 +134,20 @@ def print_mistakes(results: list[RunResult]) -> None:
                     )
 
 
+def summarize(r: RunResult) -> dict:
+    return {
+        "accuracy": r.accuracy,
+        "hallucinated": r.total("hallucinated"),
+        "missed": r.total("missed"),
+        "wrong": r.total("wrong"),
+        "skills_f1": r.list_f1("skills"),
+        "languages_f1": r.list_f1("languages_required"),
+        "failed": r.failed,
+        "cost_usd": r.cost_usd,
+        "usd_per_1k_vacancies": r.usd_per_1k_vacancies,
+    }
+
+
 def save(results: list[RunResult]) -> Path:
     commit = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True
@@ -135,17 +158,7 @@ def save(results: list[RunResult]) -> Path:
         "git_commit": commit,  # which code and prompt produced these numbers
         "runs": [
             {
-                "summary": {
-                    "accuracy": r.accuracy,
-                    "hallucinated": r.total("hallucinated"),
-                    "missed": r.total("missed"),
-                    "wrong": r.total("wrong"),
-                    "skills_f1": r.list_f1("skills"),
-                    "languages_f1": r.list_f1("languages_required"),
-                    "failed": r.failed,
-                    "cost_usd": r.cost_usd,
-                    "usd_per_1k_vacancies": r.usd_per_1k_vacancies,
-                },
+                "summary": {split: summarize(r.for_split(split)) for split in SPLITS},
                 **r.model_dump(mode="json"),
             }
             for r in results

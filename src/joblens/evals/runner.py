@@ -60,6 +60,7 @@ class Sample(BaseModel):
 
 class SampleResult(BaseModel):
     sample: str
+    split: Split
     score: SampleScore | None = None  # None when extraction failed
     error: str | None = None
     predicted: dict[str, Any] | None = None
@@ -72,6 +73,12 @@ class SampleResult(BaseModel):
 class RunResult(BaseModel):
     config: RunConfig
     samples: list[SampleResult]
+
+    def for_split(self, split: Split) -> "RunResult":
+        """Same run, only the samples of one split; all metrics work unchanged."""
+        return self.model_copy(
+            update={"samples": [s for s in self.samples if s.split == split]}
+        )
 
     @property
     def scored(self) -> list[SampleScore]:
@@ -140,6 +147,7 @@ def run_eval(config: RunConfig, samples: list[Sample], client: ChatClient) -> Ru
             results.append(
                 SampleResult(
                     sample=sample.name,
+                    split=sample.split,
                     error=str(err),
                     attempts=len(err.attempts),
                 )
@@ -148,6 +156,7 @@ def run_eval(config: RunConfig, samples: list[Sample], client: ChatClient) -> Ru
         results.append(
             SampleResult(
                 sample=sample.name,
+                split=sample.split,
                 score=score_details(
                     sample.expected, extraction.details, sample.alternatives
                 ),
