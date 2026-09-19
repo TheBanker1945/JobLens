@@ -101,6 +101,10 @@ class VacancyDetails(BaseModel):
         has_salary = self.salary_min is not None or self.salary_max is not None
         if has_salary and self.salary_period is None:
             raise ValueError("salary_period is required when a salary amount is given")
+        if self.salary_period is not None and not has_salary:
+            raise ValueError(
+                "salary_period is set but no salary amount is given; use null"
+            )
         return self
 
 
