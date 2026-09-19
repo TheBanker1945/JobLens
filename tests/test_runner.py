@@ -21,7 +21,7 @@ class FakeClient:
     def __init__(self, replies):
         self.replies = list(replies)
 
-    def chat(self, messages, *, temperature=0.0, response_format=None):
+    def chat(self, messages, *, temperature=0.0, response_format=None, max_tokens=None):
         return ChatResult(content=self.replies.pop(0), model="fake", latency_s=0.1)
 
 

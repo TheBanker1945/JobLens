@@ -60,6 +60,9 @@ def main() -> int:
             with LLMClient(config.settings()) as client:
                 client.chat([{"role": "user", "content": "hi"}])  # warm-up, not scored
                 results.append(run_eval(config, samples, client))
+    except openai.APITimeoutError:  # a subclass of APIConnectionError: check first
+        print("The LLM server is reachable but did not answer in time.")
+        return 1
     except (httpx.ConnectError, openai.APIConnectionError) as err:
         print(f"Cannot reach the LLM server: {err}")
         return 1

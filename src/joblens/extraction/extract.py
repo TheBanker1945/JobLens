@@ -40,6 +40,11 @@ Rules:
 Return one JSON object matching this JSON schema:
 {schema}"""
 
+# A normal extraction needs ~300 output tokens, or ~1,500 with thinking. The cap
+# stops a model that loops in its reasoning (qwen3 does at temperature 0) instead of
+# letting it block the server until its context is full.
+MAX_OUTPUT_TOKENS = 3000
+
 REPAIR_PROMPT = """\
 Your JSON was not valid:
 {errors}
@@ -93,8 +98,20 @@ def extract_vacancy(
 
     attempts: list[ChatResult] = []
     for _ in range(max_attempts):
-        result = client.chat(messages, temperature=0.0, response_format=response_format)
+        result = client.chat(
+            messages,
+            temperature=0.0,
+            response_format=response_format,
+            max_tokens=MAX_OUTPUT_TOKENS,
+        )
         attempts.append(result)
+        if result.finish_reason == "length":
+            # Cut-off JSON can't be repaired: asking again would restart the loop.
+            raise ExtractionError(
+                f"Output limit of {MAX_OUTPUT_TOKENS} tokens reached; the answer was "
+                "cut off (the model probably looped in its reasoning).",
+                attempts,
+            )
         try:
             details = VacancyDetails.model_validate_json(_json_text(result.content))
         except ValidationError as err:
