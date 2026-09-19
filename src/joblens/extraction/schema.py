@@ -90,13 +90,14 @@ class VacancyDetails(BaseModel):
         description="Every concrete skill, tool, technology, certificate or knowledge "
         "area in the whole text: requirements, nice-to-haves ('een pré', 'a plus') "
         "AND tools named in the task description. One item per skill: 'Python "
-        "(Django of FastAPI)' -> 'Python', 'Django', 'FastAPI'. Keep the wording of "
-        "the text. Not soft skills and not names of study programmes."
+        "(Django of FastAPI)' -> 'Python', 'Django', 'FastAPI'. Keep each skill's "
+        "wording from the text. Not soft skills and not names of study programmes."
     )
     languages_required: list[str] = Field(
-        description="Languages the candidate MUST speak, in English, e.g. Dutch. "
-        "Not languages that are only a plus. If any one of several languages is "
-        "enough ('Nederlands of Engels'), none is required on its own: []."
+        description="Languages the candidate MUST speak, always as English language "
+        "names: 'Nederlands' -> 'Dutch', 'Engels' -> 'English'. Not languages that "
+        "are only a plus. If any one of several languages is enough ('Nederlands of "
+        "Engels'), none is required on its own: []."
     )
     contract_type: ContractType | None = Field(
         description="permanent (vast), temporary (tijdelijk/jaarcontract), temp_agency "
