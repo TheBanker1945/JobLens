@@ -36,11 +36,18 @@ def main() -> int:
     parser.add_argument(
         "--mistakes", action="store_true", help="list wrong fields (dev split only)"
     )
+    parser.add_argument(
+        "--split",
+        choices=SPLITS,
+        help="run one split only; use dev while tuning, holdout only to measure",
+    )
     parser.add_argument("--no-save", action="store_true")
     args = parser.parse_args()
 
     load_dotenv()  # api_key_env names are looked up in .env too
     samples = load_samples(SAMPLES_DIR / "vacancies", SAMPLES_DIR / "expected")
+    if args.split:
+        samples = [s for s in samples if s.split == args.split]
     configs = [
         c for c in load_configs(args.config) if not args.only or args.only in c.name
     ]
@@ -57,7 +64,7 @@ def main() -> int:
         print(f"Cannot reach the LLM server: {err}")
         return 1
 
-    for split in SPLITS:
+    for split in [args.split] if args.split else SPLITS:
         split_results = [r.for_split(split) for r in results]
         print(f"\n===== {split} ({len(split_results[0].samples)} samples) =====")
         print_summary(split_results)
@@ -158,7 +165,11 @@ def save(results: list[RunResult]) -> Path:
         "git_commit": commit,  # which code and prompt produced these numbers
         "runs": [
             {
-                "summary": {split: summarize(r.for_split(split)) for split in SPLITS},
+                "summary": {
+                    split: summarize(r.for_split(split))
+                    for split in SPLITS
+                    if r.for_split(split).samples
+                },
                 **r.model_dump(mode="json"),
             }
             for r in results
