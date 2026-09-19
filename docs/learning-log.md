@@ -297,3 +297,50 @@ dev mistakes only → measure after. `--mistakes` only shows dev mistakes and
 **Conclusion.** gemini-3.8-flash stays the default (100% dev, 95% holdout, 1 invented
 value on 10 vacancies). qwen3:8b without thinking is the better local fallback now.
 Next lever is more (and more varied) samples, not more prompt rules.
+
+## 2.1 — Embeddings and semantic search by hand
+
+`scripts/search_vacancies.py "query"` ranks the 10 sample vacancies by meaning, using
+a local embedding model (`qwen3-embedding:0.6b` on Ollama) and cosine similarity
+written out in pure Python (`joblens.embeddings.similarity`).
+
+**An embedding** is a list of numbers (1,024 here) that places a text in a "meaning
+space": similar meaning → nearby vectors. **Cosine similarity** measures the angle
+between two vectors: dot product divided by both lengths. 1 = same direction,
+0 = unrelated. qwen3-embedding already returns vectors of length 1, so cosine equals
+the plain dot product.
+
+**Scores are relative.** 0.60 is not "60% match"; it only means "closer than 0.50".
+Different models produce different score ranges, so thresholds don't transfer.
+
+**Same model on both sides.** Each model has its own coordinate system; vectors from
+different models can't be compared (the code refuses vectors of different sizes). Because
+CVs stay local (GDPR), the model used for CV-to-vacancy matching must be local too.
+Settings now have a prefix per task (`LLM_*`, `EMBED_*`), so embeddings can stay local
+while extraction uses Gemini.
+
+**Asymmetric search.** A short query and a long vacancy are different kinds of text.
+Qwen3-Embedding expects queries to carry a task instruction
+(`Instruct: …\nQuery: …`); documents are embedded as they are. Without it,
+"Python-ontwikkelaar gezocht in Amsterdam" was closer to a Dutch *orderpicker* sentence
+(0.637) than to an English backend-developer sentence (0.545): the shared Dutch
+sentence pattern ("[job] in [city]") outweighed the meaning. With the instruction the
+ranking was right.
+
+**Example searches** (10 vacancies, embedded in <1 s):
+
+| Query | #1 result | Note |
+|-------|-----------|------|
+| "werken met je handen, geen diploma nodig" | Orderpicker (0.433) | no shared words — pure meaning |
+| "zorg voor ouderen" | Verpleegkundige Geriatrie (0.596) | next one 0.367: clear margin |
+| "python developer" | Backend Developer (0.580) | next one 0.445 |
+| "python baan in amsterdam" | Product Manager (0.605) ✗ | backend developer only #3 |
+
+**Dilution.** The last search fails because an embedding summarises the *whole*
+vacancy: "Python" is one word in a long text about bike sharing, Scrum and holidays,
+while "Amsterdam" and generic job wording match the product manager's text. Hypothesis
+for 2.2: embed a focused text (title + skills + city from the extraction) instead of
+the raw vacancy — measured with a retrieval eval, not by eye.
+
+**SDK detail:** the openai SDK asks for embeddings as base64 (`encoding_format`)
+instead of a JSON list of numbers — about 4x less data — and decodes them itself.
