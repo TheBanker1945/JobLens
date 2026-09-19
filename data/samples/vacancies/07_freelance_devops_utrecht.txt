@@ -1,0 +1,25 @@
+Opdracht: Freelance DevOps Engineer (ZZP)
+
+Via: TechMatch Detachering
+Locatie: Utrecht (Leidsche Rijn)
+Duur: 6 maanden, met optie tot verlenging
+Uren: 32 uur per week
+Start: zo snel mogelijk
+
+Voor een zorgverzekeraar zoeken wij een ervaren DevOps engineer die de migratie naar
+Azure begeleidt.
+
+Werkzaamheden
+- Je bouwt CI/CD-pipelines in Azure DevOps.
+- Je schrijft infrastructuur als code met Terraform.
+- Je beheert containers op Azure Kubernetes Service (AKS).
+
+Eisen
+- Minimaal 5 jaar ervaring als DevOps engineer.
+- Aantoonbare ervaring met Azure, Terraform en Kubernetes.
+- Een Azure-certificering (AZ-400) is een pré.
+- Je beheerst de Nederlandse taal vloeiend.
+
+Tarief
+€ 85 tot € 100 per uur, exclusief btw.
+Werken: 2 dagen op locatie, 3 dagen remote.
