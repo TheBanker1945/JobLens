@@ -6,7 +6,7 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -47,8 +47,12 @@ class RunConfig(BaseModel):
         )
 
 
+Split = Literal["dev", "holdout"]
+
+
 class Sample(BaseModel):
     name: str
+    split: Split  # dev: used for prompt tuning; holdout: only for measuring
     text: str
     expected: VacancyDetails
     alternatives: dict[str, list[Any]] = {}
@@ -56,6 +60,7 @@ class Sample(BaseModel):
 
 class SampleResult(BaseModel):
     sample: str
+    split: Split
     score: SampleScore | None = None  # None when extraction failed
     error: str | None = None
     predicted: dict[str, Any] | None = None
@@ -68,6 +73,12 @@ class SampleResult(BaseModel):
 class RunResult(BaseModel):
     config: RunConfig
     samples: list[SampleResult]
+
+    def for_split(self, split: Split) -> "RunResult":
+        """Same run, only the samples of one split; all metrics work unchanged."""
+        return self.model_copy(
+            update={"samples": [s for s in self.samples if s.split == split]}
+        )
 
     @property
     def scored(self) -> list[SampleScore]:
@@ -118,6 +129,7 @@ def load_samples(vacancies_dir: Path, expected_dir: Path) -> list[Sample]:
         samples.append(
             Sample(
                 name=text_path.stem,
+                split=label["split"],
                 text=text_path.read_text(encoding="utf-8"),
                 expected=VacancyDetails.model_validate(label["details"]),
                 alternatives=label.get("alternatives", {}),
@@ -135,6 +147,7 @@ def run_eval(config: RunConfig, samples: list[Sample], client: ChatClient) -> Ru
             results.append(
                 SampleResult(
                     sample=sample.name,
+                    split=sample.split,
                     error=str(err),
                     attempts=len(err.attempts),
                 )
@@ -143,6 +156,7 @@ def run_eval(config: RunConfig, samples: list[Sample], client: ChatClient) -> Ru
         results.append(
             SampleResult(
                 sample=sample.name,
+                split=sample.split,
                 score=score_details(
                     sample.expected, extraction.details, sample.alternatives
                 ),

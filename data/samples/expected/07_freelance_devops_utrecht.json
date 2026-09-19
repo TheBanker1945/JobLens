@@ -1,0 +1,39 @@
+{
+  "split": "holdout",
+  "details": {
+    "title": "DevOps Engineer",
+    "company": "TechMatch Detachering",
+    "city": "Utrecht",
+    "work_mode": "hybrid",
+    "hours_min": 32,
+    "hours_max": 32,
+    "salary_min": 85,
+    "salary_max": 100,
+    "salary_period": "hour",
+    "salary_note": "exclusief btw",
+    "education_level": null,
+    "experience_years_min": 5,
+    "skills": [
+      "Azure",
+      "Azure DevOps",
+      "Terraform",
+      "Kubernetes",
+      "Azure Kubernetes Service",
+      "CI/CD",
+      "infrastructuur als code",
+      "AZ-400"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "freelance"
+  },
+  "alternatives": {
+    "title": [
+      "Freelance DevOps Engineer"
+    ],
+    "company": [
+      "TechMatch"
+    ]
+  }
+}

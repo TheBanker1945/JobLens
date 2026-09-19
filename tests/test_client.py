@@ -124,3 +124,14 @@ def test_gemini_style_hidden_reasoning_is_counted():
 
     assert usage.hidden_reasoning_tokens == 840
     assert usage.output_tokens == 852  # what you pay for as output
+
+
+def test_max_tokens_is_sent_and_finish_reason_read():
+    seen = []
+    reply = ollama_reply()
+    reply["choices"][0]["finish_reason"] = "length"
+
+    result = sdk_client(reply, seen=seen).chat(MESSAGES, max_tokens=3000)
+
+    assert json.loads(seen[0].content)["max_tokens"] == 3000
+    assert result.finish_reason == "length"

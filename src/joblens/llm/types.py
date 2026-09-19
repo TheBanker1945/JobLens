@@ -41,6 +41,8 @@ class ChatResult(BaseModel):
     usage: Usage | None = None
     model: str
     latency_s: float
+    # Why generation stopped: "stop" (done) or "length" (hit max_tokens, cut off).
+    finish_reason: str | None = None
 
 
 class ChatClient(Protocol):
@@ -53,4 +55,5 @@ class ChatClient(Protocol):
         *,
         temperature: float = 0.0,
         response_format: dict | None = None,
+        max_tokens: int | None = None,
     ) -> ChatResult: ...

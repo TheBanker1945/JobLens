@@ -21,7 +21,7 @@ class FakeClient:
     def __init__(self, replies):
         self.replies = list(replies)
 
-    def chat(self, messages, *, temperature=0.0, response_format=None):
+    def chat(self, messages, *, temperature=0.0, response_format=None, max_tokens=None):
         return ChatResult(content=self.replies.pop(0), model="fake", latency_s=0.1)
 
 
@@ -29,6 +29,13 @@ def test_every_sample_has_valid_ground_truth():
     assert [s.name for s in SAMPLES] == sorted(
         p.stem for p in (ROOT / "data/samples/vacancies").glob("*.txt")
     )
+
+
+def test_samples_are_split_five_dev_five_holdout():
+    splits = [s.split for s in SAMPLES]
+
+    assert splits.count("dev") == 5
+    assert splits.count("holdout") == 5
 
 
 def test_eval_config_in_repo_loads():
@@ -47,6 +54,16 @@ def test_perfect_answers_score_one():
     assert result.list_f1("skills") == 1.0
 
 
+def test_for_split_keeps_only_that_split():
+    replies = [s.expected.model_dump_json() for s in SAMPLES]
+    result = run_eval(CONFIG, SAMPLES, FakeClient(replies))
+
+    holdout = result.for_split("holdout")
+
+    assert {s.split for s in holdout.samples} == {"holdout"}
+    assert len(holdout.samples) + len(result.for_split("dev").samples) == len(SAMPLES)
+
+
 def test_failed_extraction_counts_as_zero():
     replies = ["not json", "still not json"] + [
         s.expected.model_dump_json() for s in SAMPLES[1:]
@@ -56,7 +73,8 @@ def test_failed_extraction_counts_as_zero():
 
     assert result.failed == 1
     assert result.samples[0].error
-    assert result.accuracy == pytest.approx(4 / 5)
+    n = len(SAMPLES)
+    assert result.accuracy == pytest.approx((n - 1) / n)
 
 
 def test_hallucinated_salary_is_counted():
@@ -103,8 +121,8 @@ def test_cost_uses_input_and_output_prices():
 
     result = run_eval(config, SAMPLES, PricedClient(replies))
 
-    # per sample: 1000 * $1/M + 300 * $10/M = $0.004; 5 samples = $0.02
-    assert result.cost_usd == pytest.approx(0.02)
+    # per sample: 1000 * $1/M + 300 * $10/M = $0.004
+    assert result.cost_usd == pytest.approx(0.004 * len(SAMPLES))
     assert result.usd_per_1k_vacancies == pytest.approx(4.0)
 
 

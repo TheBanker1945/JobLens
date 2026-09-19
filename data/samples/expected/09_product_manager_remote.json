@@ -1,0 +1,35 @@
+{
+  "split": "holdout",
+  "details": {
+    "title": "Senior Product Manager",
+    "company": "Paylane",
+    "city": null,
+    "work_mode": "remote",
+    "hours_min": 40,
+    "hours_max": 40,
+    "salary_min": null,
+    "salary_max": 85000,
+    "salary_period": "year",
+    "salary_note": "plus stock options",
+    "education_level": null,
+    "experience_years_min": 6,
+    "skills": [
+      "SQL",
+      "Amplitude",
+      "product analytics",
+      "payments",
+      "fintech"
+    ],
+    "languages_required": [
+      "English"
+    ],
+    "contract_type": "temporary"
+  },
+  "alternatives": {
+    "title": [
+      "Senior Product Manager — Payments",
+      "Senior Product Manager - Payments",
+      "Senior Product Manager Payments"
+    ]
+  }
+}

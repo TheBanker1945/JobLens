@@ -40,6 +40,7 @@ class LLMClient:
         *,
         temperature: float = 0.0,
         response_format: dict | None = None,  # e.g. a JSON schema to follow
+        max_tokens: int | None = None,  # output cap, reasoning included
     ) -> ChatResult:
         start = time.perf_counter()
         response = self._sdk.chat.completions.create(
@@ -47,11 +48,13 @@ class LLMClient:
             messages=messages,
             temperature=temperature,
             response_format=response_format or omit,
+            max_tokens=max_tokens or omit,
             extra_body=thinking_params(self.settings),  # merged into the JSON body
         )
         latency = time.perf_counter() - start
 
-        message = response.choices[0].message
+        choice = response.choices[0]
+        message = choice.message
         extra = message.model_extra or {}  # fields the SDK's types don't know about
         return ChatResult(
             content=message.content or "",
@@ -61,6 +64,7 @@ class LLMClient:
             else None,
             model=response.model,
             latency_s=latency,
+            finish_reason=choice.finish_reason,
         )
 
     def close(self) -> None:

@@ -45,6 +45,10 @@ def test_unknown_values_can_be_null():
         ({"hours_min": 40, "hours_max": 32}, "hours_min is greater"),
         ({"salary_min": 5000}, "salary_min is greater"),
         ({"salary_period": None}, "salary_period is required"),
+        (
+            {"salary_min": None, "salary_max": None},  # period "month" left behind
+            "salary_period is set but no salary amount",
+        ),
         ({"work_mode": "hybride"}, "work_mode"),  # Dutch word, not an allowed value
         ({"hours_max": 80}, "hours_max"),
         ({"salary_min": 0}, "salary_min"),  # a placeholder, not a salary
@@ -62,3 +66,12 @@ def test_schema_requires_every_field_and_forbids_extras():
 
     assert set(schema["required"]) == set(VacancyDetails.model_fields)
     assert schema["additionalProperties"] is False
+
+
+def test_only_a_maximum_salary_is_fine():
+    # "up to €85,000 per year": no floor, but a period is needed for the ceiling.
+    details = VacancyDetails.model_validate(
+        VALID | {"salary_min": None, "salary_max": 85000, "salary_period": "year"}
+    )
+
+    assert details.salary_min is None

@@ -6,6 +6,7 @@ import pytest
 
 from joblens.config import LLMSettings
 from joblens.extraction.extract import (
+    MAX_OUTPUT_TOKENS,
     ExtractionError,
     default_mode,
     extract_vacancy,
@@ -39,10 +40,20 @@ class FakeClient:
         self.replies = list(replies)
         self.calls = []
 
-    def chat(self, messages, *, temperature=0.0, response_format=None):
-        self.calls.append({"messages": list(messages), "format": response_format})
+    def chat(self, messages, *, temperature=0.0, response_format=None, max_tokens=None):
+        self.calls.append(
+            {
+                "messages": list(messages),
+                "format": response_format,
+                "max_tokens": max_tokens,
+            }
+        )
+        content, finish_reason = self.replies.pop(0), "stop"
+        if isinstance(content, tuple):
+            content, finish_reason = content
         return ChatResult(
-            content=self.replies.pop(0),
+            finish_reason=finish_reason,
+            content=content,
             usage=Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150),
             model="fake",
             latency_s=0.5,
@@ -124,3 +135,19 @@ def test_default_mode_follows_provider_capability(provider, mode):
     )
 
     assert default_mode(settings) == mode
+
+
+def test_output_is_capped():
+    client = FakeClient(json.dumps(VALID))
+
+    extract_vacancy(VACANCY_TEXT, client)
+
+    assert client.calls[0]["max_tokens"] == MAX_OUTPUT_TOKENS
+
+
+def test_cut_off_answer_fails_without_repair():
+    client = FakeClient((json.dumps(VALID)[:50], "length"), json.dumps(VALID))
+
+    with pytest.raises(ExtractionError, match="Output limit"):
+        extract_vacancy(VACANCY_TEXT, client)
+    assert len(client.calls) == 1  # no repair attempt

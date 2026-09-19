@@ -27,7 +27,11 @@ You extract structured data from job vacancies (usually Dutch, sometimes English
 
 Rules:
 - Use only information stated in the text. If something is not stated, use null
-  (or [] for lists). Never guess.
+  (or [] for lists). Never guess, and never fill a value from your own knowledge:
+  a pay scale without amounts ("schaal 11") means salary_min, salary_max and
+  salary_period are null.
+- Read the whole text, including the task description: skills and tools named
+  there count too.
 - Dutch number format: "." separates thousands and "," decimals.
   "€ 3.200" -> 3200, "€ 14,85" -> 14.85.
 - Enum fields must use the exact English values from the schema.
@@ -35,6 +39,11 @@ Rules:
 
 Return one JSON object matching this JSON schema:
 {schema}"""
+
+# A normal extraction needs ~300 output tokens, or ~1,500 with thinking. The cap
+# stops a model that loops in its reasoning (qwen3 does at temperature 0) instead of
+# letting it block the server until its context is full.
+MAX_OUTPUT_TOKENS = 3000
 
 REPAIR_PROMPT = """\
 Your JSON was not valid:
@@ -89,8 +98,20 @@ def extract_vacancy(
 
     attempts: list[ChatResult] = []
     for _ in range(max_attempts):
-        result = client.chat(messages, temperature=0.0, response_format=response_format)
+        result = client.chat(
+            messages,
+            temperature=0.0,
+            response_format=response_format,
+            max_tokens=MAX_OUTPUT_TOKENS,
+        )
         attempts.append(result)
+        if result.finish_reason == "length":
+            # Cut-off JSON can't be repaired: asking again would restart the loop.
+            raise ExtractionError(
+                f"Output limit of {MAX_OUTPUT_TOKENS} tokens reached; the answer was "
+                "cut off (the model probably looped in its reasoning).",
+                attempts,
+            )
         try:
             details = VacancyDetails.model_validate_json(_json_text(result.content))
         except ValidationError as err:
