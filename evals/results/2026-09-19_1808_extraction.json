@@ -1,0 +1,5558 @@
+{
+  "date": "2026-09-19T18:08:02",
+  "git_commit": "134c632",
+  "runs": [
+    {
+      "summary": {
+        "dev": {
+          "accuracy": 0.8615384615384615,
+          "hallucinated": 6,
+          "missed": 0,
+          "wrong": 3,
+          "skills_f1": 0.48117216117216116,
+          "languages_f1": 0.8,
+          "failed": 0,
+          "cost_usd": 0.0,
+          "usd_per_1k_vacancies": 0.0
+        },
+        "holdout": {
+          "accuracy": 0.8615384615384615,
+          "hallucinated": 4,
+          "missed": 1,
+          "wrong": 4,
+          "skills_f1": 0.29645909645909646,
+          "languages_f1": 0.7333333333333333,
+          "failed": 0,
+          "cost_usd": 0.0,
+          "usd_per_1k_vacancies": 0.0
+        }
+      },
+      "config": {
+        "name": "qwen3:8b",
+        "provider": "ollama",
+        "base_url": "http://localhost:11434/v1",
+        "model": "qwen3:8b",
+        "thinking": false,
+        "mode": "schema",
+        "api_key_env": null,
+        "usd_per_m_input": 0.0,
+        "usd_per_m_output": 0.0
+      },
+      "samples": [
+        {
+          "sample": "01_data_analist_utrecht",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Junior Data Analist",
+                "predicted": "Junior Data Analist"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Bakkerij De Vries B.V.",
+                "predicted": "Bakkerij De Vries B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 3200.0,
+                "predicted": 3200.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 3800.0,
+                "predicted": 3800.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "afhankelijk van ervaring",
+                "predicted": "afhankelijk van ervaring"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 0,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "power bi"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Junior Data Analist",
+            "company": "Bakkerij De Vries B.V.",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 36,
+            "salary_min": 3200.0,
+            "salary_max": 3800.0,
+            "salary_period": "month",
+            "salary_note": "afhankelijk van ervaring",
+            "education_level": "hbo",
+            "experience_years_min": 0,
+            "skills": [
+              "SQL",
+              "Excel",
+              "Python"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1414,
+          "output_tokens": 155,
+          "latency_s": 2.5708127660000173
+        },
+        {
+          "sample": "02_backend_developer_amsterdam",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Medior Backend Developer",
+                "predicted": "Medior Backend Developer"
+              },
+              {
+                "field": "company",
+                "outcome": "wrong",
+                "expected": "Fietsdeel",
+                "predicted": "Over Fietsdeel"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Amsterdam",
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "marktconform",
+                "predicted": "marktconform"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 3,
+                "predicted": 3
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.8,
+                "recall": 0.5,
+                "f1": 0.6153846153846154,
+                "missing": [
+                  "django",
+                  "fastapi",
+                  "python",
+                  "scrum"
+                ],
+                "extra": [
+                  "python (django of fastapi)"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Medior Backend Developer",
+            "company": "Over Fietsdeel",
+            "city": "Amsterdam",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": "month",
+            "salary_note": "marktconform",
+            "education_level": "hbo",
+            "experience_years_min": 3,
+            "skills": [
+              "Python (Django of FastAPI)",
+              "PostgreSQL",
+              "Docker",
+              "Kubernetes",
+              "AWS"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 2,
+          "prompt_tokens": 2982,
+          "output_tokens": 308,
+          "latency_s": 3.944427234999239
+        },
+        {
+          "sample": "03_orderpicker_tilburg",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Orderpicker",
+                "predicted": "Orderpicker"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Snelwerk",
+                "predicted": "Snelwerk"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Tilburg",
+                "predicted": "Tilburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 24,
+                "predicted": 24
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 21% toeslag voor de late dienst",
+                "predicted": "plus 21% toeslag voor de late dienst"
+              },
+              {
+                "field": "education_level",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temp_agency",
+                "predicted": "temp_agency"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "handscanner",
+                  "heftruckcertificaat"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [],
+                "extra": [
+                  "dutch",
+                  "english"
+                ]
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Orderpicker",
+            "company": "Snelwerk",
+            "city": "Tilburg",
+            "work_mode": "onsite",
+            "hours_min": 24,
+            "hours_max": 40,
+            "salary_min": 14.85,
+            "salary_max": 14.85,
+            "salary_period": "hour",
+            "salary_note": "plus 21% toeslag voor de late dienst",
+            "education_level": "mbo",
+            "experience_years_min": null,
+            "skills": [],
+            "languages_required": [
+              "Dutch",
+              "English"
+            ],
+            "contract_type": "temp_agency"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1385,
+          "output_tokens": 152,
+          "latency_s": 1.9596706640004413
+        },
+        {
+          "sample": "04_ml_engineer_eindhoven",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Machine Learning Engineer",
+                "predicted": "Machine Learning Engineer — Computer Vision"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Lumora Imaging",
+                "predicted": "Lumora Imaging"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Eindhoven",
+                "predicted": "Eindhoven"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "wrong",
+                "expected": 40,
+                "predicted": 30
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 70000.0,
+                "predicted": 70000.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 90000.0,
+                "predicted": 90000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 8% holiday allowance",
+                "predicted": "plus an 8% holiday allowance"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.875,
+                "f1": 0.9333333333333333,
+                "missing": [
+                  "computer vision"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Machine Learning Engineer — Computer Vision",
+            "company": "Lumora Imaging",
+            "city": "Eindhoven",
+            "work_mode": "hybrid",
+            "hours_min": 30,
+            "hours_max": 40,
+            "salary_min": 70000.0,
+            "salary_max": 90000.0,
+            "salary_period": "year",
+            "salary_note": "plus an 8% holiday allowance",
+            "education_level": "wo",
+            "experience_years_min": 5,
+            "skills": [
+              "Python",
+              "PyTorch",
+              "C++",
+              "ONNX",
+              "TensorRT",
+              "image segmentation",
+              "deep learning"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1353,
+          "output_tokens": 171,
+          "latency_s": 2.179351757999939
+        },
+        {
+          "sample": "05_beleidsmedewerker_zwolle",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Beleidsmedewerker Klimaatadaptatie",
+                "predicted": "Beleidsmedewerker Klimaatadaptatie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Gemeente Zwolle",
+                "predicted": "Gemeente Zwolle"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Zwolle",
+                "predicted": "Zwolle"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "wrong",
+                "expected": "hybrid",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": 4250.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": 4250.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "schaal 11 cao Gemeenten",
+                "predicted": "schaal 11 cao Gemeenten"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "omgevingswet"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Beleidsmedewerker Klimaatadaptatie",
+            "company": "Gemeente Zwolle",
+            "city": "Zwolle",
+            "work_mode": "onsite",
+            "hours_min": 36,
+            "hours_max": 36,
+            "salary_min": 4250.0,
+            "salary_max": 4250.0,
+            "salary_period": "month",
+            "salary_note": "schaal 11 cao Gemeenten",
+            "education_level": "wo",
+            "experience_years_min": 0,
+            "skills": [],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1377,
+          "output_tokens": 159,
+          "latency_s": 2.0604363410002406
+        },
+        {
+          "sample": "06_stage_marketing_groningen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Stagiair(e) Online Marketing",
+                "predicted": "Stagiair(e) Online Marketing"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Groene Wolk B.V.",
+                "predicted": "Groene Wolk B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Groningen",
+                "predicted": "Groningen"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "missed",
+                "expected": "stagevergoeding",
+                "predicted": null
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "internship",
+                "predicted": "internship"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.8,
+                "f1": 0.888888888888889,
+                "missing": [
+                  "e-mailmarketing"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Stagiair(e) Online Marketing",
+            "company": "Groene Wolk B.V.",
+            "city": "Groningen",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": 600.0,
+            "salary_max": 600.0,
+            "salary_period": "month",
+            "salary_note": null,
+            "education_level": "hbo",
+            "experience_years_min": null,
+            "skills": [
+              "Google Ads",
+              "Meta Ads",
+              "Google Analytics",
+              "Mailchimp"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "internship"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1373,
+          "output_tokens": 155,
+          "latency_s": 2.0099815480007237
+        },
+        {
+          "sample": "07_freelance_devops_utrecht",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "wrong",
+                "expected": "DevOps Engineer",
+                "predicted": "Freelance DevOps Engineer (ZZP)"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "TechMatch Detachering",
+                "predicted": "TechMatch Detachering"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 85.0,
+                "predicted": 85.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 100.0,
+                "predicted": 100.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "exclusief btw",
+                "predicted": "exclusief btw"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "freelance",
+                "predicted": "freelance"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.4,
+                "recall": 0.25,
+                "f1": 0.3076923076923077,
+                "missing": [
+                  "az-400",
+                  "azure",
+                  "azure kubernetes service",
+                  "ci/cd",
+                  "infrastructuur als code",
+                  "kubernetes"
+                ],
+                "extra": [
+                  "azure kubernetes service (aks)",
+                  "azure-certificering (az-400)",
+                  "ci/cd-pipelines"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Freelance DevOps Engineer (ZZP)",
+            "company": "TechMatch Detachering",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 32,
+            "salary_min": 85.0,
+            "salary_max": 100.0,
+            "salary_period": "hour",
+            "salary_note": "exclusief btw",
+            "education_level": null,
+            "experience_years_min": 5,
+            "skills": [
+              "CI/CD-pipelines",
+              "Azure DevOps",
+              "Terraform",
+              "Azure Kubernetes Service (AKS)",
+              "Azure-certificering (AZ-400)"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "freelance"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1358,
+          "output_tokens": 179,
+          "latency_s": 2.2952443500007575
+        },
+        {
+          "sample": "08_verpleegkundige_nijmegen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Verpleegkundige Geriatrie",
+                "predicted": "Verpleegkundige Geriatrie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Zorggroep De Linde",
+                "predicted": "Zorggroep De Linde"
+              },
+              {
+                "field": "city",
+                "outcome": "wrong",
+                "expected": "Nijmegen",
+                "predicted": "Nijmegen-Dukenburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 20,
+                "predicted": 20
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 28,
+                "predicted": 28
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 2920.0,
+                "predicted": 2920.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 4180.0,
+                "predicted": 4180.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "bij fulltime (36 uur); plus ORT en eindejaarsuitkering 8,33%",
+                "predicted": "salaris volgens de cao VVT, FWG 45: minimaal € 2.920 en maximaal € 4.180 bruto per maand bij een fulltime dienstverband (36 uur). Onregelmatigheidstoeslag (ORT) voor avond- en weekenddiensten. Een eindejaarsuitkering van 8,33%."
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "big-registratie",
+                  "ouderenzorg"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Verpleegkundige Geriatrie",
+            "company": "Zorggroep De Linde",
+            "city": "Nijmegen-Dukenburg",
+            "work_mode": "onsite",
+            "hours_min": 20,
+            "hours_max": 28,
+            "salary_min": 2920.0,
+            "salary_max": 4180.0,
+            "salary_period": "month",
+            "salary_note": "salaris volgens de cao VVT, FWG 45: minimaal € 2.920 en maximaal € 4.180 bruto per maand bij een fulltime dienstverband (36 uur). Onregelmatigheidstoeslag (ORT) voor avond- en weekenddiensten. Een eindejaarsuitkering van 8,33%.",
+            "education_level": "mbo",
+            "experience_years_min": 0,
+            "skills": [],
+            "languages_required": [],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1412,
+          "output_tokens": 241,
+          "latency_s": 3.0849769699998433
+        },
+        {
+          "sample": "09_product_manager_remote",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Senior Product Manager",
+                "predicted": "Senior Product Manager — Payments"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Paylane",
+                "predicted": "Paylane"
+              },
+              {
+                "field": "city",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "remote",
+                "predicted": "remote"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 85000.0,
+                "predicted": 85000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus stock options",
+                "predicted": "plus stock options"
+              },
+              {
+                "field": "education_level",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 6,
+                "predicted": 6
+              },
+              {
+                "field": "contract_type",
+                "outcome": "wrong",
+                "expected": "temporary",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.5,
+                "recall": 0.2,
+                "f1": 0.28571428571428575,
+                "missing": [
+                  "amplitude",
+                  "fintech",
+                  "payments",
+                  "product analytics"
+                ],
+                "extra": [
+                  "product analytics tools like amplitude"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 0.5,
+                "recall": 1.0,
+                "f1": 0.6666666666666666,
+                "missing": [],
+                "extra": [
+                  "dutch"
+                ]
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Senior Product Manager — Payments",
+            "company": "Paylane",
+            "city": "Amsterdam",
+            "work_mode": "remote",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": 85000.0,
+            "salary_period": "year",
+            "salary_note": "plus stock options",
+            "education_level": "wo",
+            "experience_years_min": 6,
+            "skills": [
+              "SQL",
+              "product analytics tools like Amplitude"
+            ],
+            "languages_required": [
+              "English",
+              "Dutch"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 2,
+          "prompt_tokens": 2815,
+          "output_tokens": 291,
+          "latency_s": 3.8477175710004303
+        },
+        {
+          "sample": "10_accountmanager_randstad",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Accountmanager Binnendienst",
+                "predicted": "Accountmanager Binnendienst"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Kantoorland B.V.",
+                "predicted": "Kantoorland B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "wrong",
+                "expected": "Rotterdam",
+                "predicted": "Rotterdam of Den Haag"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "n.o.t.k.",
+                "predicted": "Salaris n.o.t.k."
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 1,
+                "predicted": 1
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "crm",
+                  "salesforce"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "dutch"
+                ],
+                "extra": [
+                  "nederlands"
+                ]
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Accountmanager Binnendienst",
+            "company": "Kantoorland B.V.",
+            "city": "Rotterdam of Den Haag",
+            "work_mode": "onsite",
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "Salaris n.o.t.k.",
+            "education_level": "mbo",
+            "experience_years_min": 1,
+            "skills": [],
+            "languages_required": [
+              "Nederlands"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1349,
+          "output_tokens": 143,
+          "latency_s": 1.8732340999995358
+        }
+      ]
+    },
+    {
+      "summary": {
+        "dev": {
+          "accuracy": 0.9692307692307693,
+          "hallucinated": 1,
+          "missed": 0,
+          "wrong": 1,
+          "skills_f1": 0.8035964035964036,
+          "languages_f1": 0.8,
+          "failed": 0,
+          "cost_usd": 0.0,
+          "usd_per_1k_vacancies": 0.0
+        },
+        "holdout": {
+          "accuracy": 0.9230769230769231,
+          "hallucinated": 1,
+          "missed": 1,
+          "wrong": 3,
+          "skills_f1": 0.49812409812409814,
+          "languages_f1": 1.0,
+          "failed": 0,
+          "cost_usd": 0.0,
+          "usd_per_1k_vacancies": 0.0
+        }
+      },
+      "config": {
+        "name": "qwen3:8b +think",
+        "provider": "ollama",
+        "base_url": "http://localhost:11434/v1",
+        "model": "qwen3:8b",
+        "thinking": true,
+        "mode": "schema",
+        "api_key_env": null,
+        "usd_per_m_input": 0.0,
+        "usd_per_m_output": 0.0
+      },
+      "samples": [
+        {
+          "sample": "01_data_analist_utrecht",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Junior Data Analist",
+                "predicted": "Junior Data Analist"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Bakkerij De Vries B.V.",
+                "predicted": "Bakkerij De Vries B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 3200.0,
+                "predicted": 3200.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 3800.0,
+                "predicted": 3800.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "afhankelijk van ervaring",
+                "predicted": "afhankelijk van ervaring"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 0,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "power bi"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Junior Data Analist",
+            "company": "Bakkerij De Vries B.V.",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 36,
+            "salary_min": 3200.0,
+            "salary_max": 3800.0,
+            "salary_period": "month",
+            "salary_note": "afhankelijk van ervaring",
+            "education_level": "hbo",
+            "experience_years_min": 0,
+            "skills": [
+              "SQL",
+              "Excel",
+              "Python"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1408,
+          "output_tokens": 853,
+          "latency_s": 10.759110302000408
+        },
+        {
+          "sample": "02_backend_developer_amsterdam",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Medior Backend Developer",
+                "predicted": "Medior Backend Developer"
+              },
+              {
+                "field": "company",
+                "outcome": "wrong",
+                "expected": "Fietsdeel",
+                "predicted": "Over Fietsdeel"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Amsterdam",
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "marktconform",
+                "predicted": "marktconform"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 3,
+                "predicted": 3
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.8,
+                "recall": 0.5,
+                "f1": 0.6153846153846154,
+                "missing": [
+                  "django",
+                  "fastapi",
+                  "python",
+                  "scrum"
+                ],
+                "extra": [
+                  "python (django of fastapi)"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Medior Backend Developer",
+            "company": "Over Fietsdeel",
+            "city": "Amsterdam",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "marktconform",
+            "education_level": "hbo",
+            "experience_years_min": 3,
+            "skills": [
+              "Python (Django of FastAPI)",
+              "PostgreSQL",
+              "Docker",
+              "Kubernetes",
+              "AWS"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1370,
+          "output_tokens": 1399,
+          "latency_s": 17.750645148999865
+        },
+        {
+          "sample": "03_orderpicker_tilburg",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Orderpicker",
+                "predicted": "Orderpicker"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Snelwerk",
+                "predicted": "Uitzendbureau Snelwerk"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Tilburg",
+                "predicted": "Tilburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 24,
+                "predicted": 24
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 21% toeslag voor de late dienst",
+                "predicted": "plus 21% toeslag voor de late dienst. Reiskostenvergoeding vanaf 10 km"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temp_agency",
+                "predicted": "temp_agency"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [],
+                "extra": [
+                  "dutch",
+                  "english"
+                ]
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Orderpicker",
+            "company": "Uitzendbureau Snelwerk",
+            "city": "Tilburg",
+            "work_mode": "onsite",
+            "hours_min": 24,
+            "hours_max": 40,
+            "salary_min": 14.85,
+            "salary_max": 14.85,
+            "salary_period": "hour",
+            "salary_note": "plus 21% toeslag voor de late dienst. Reiskostenvergoeding vanaf 10 km",
+            "education_level": null,
+            "experience_years_min": null,
+            "skills": [
+              "handscanner",
+              "heftruckcertificaat"
+            ],
+            "languages_required": [
+              "Dutch",
+              "English"
+            ],
+            "contract_type": "temp_agency"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1379,
+          "output_tokens": 1134,
+          "latency_s": 14.317743753999821
+        },
+        {
+          "sample": "04_ml_engineer_eindhoven",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Machine Learning Engineer",
+                "predicted": "Machine Learning Engineer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Lumora Imaging",
+                "predicted": "Lumora Imaging"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Eindhoven",
+                "predicted": "Eindhoven"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 70000.0,
+                "predicted": 70000.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 90000.0,
+                "predicted": 90000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 8% holiday allowance",
+                "predicted": "plus an 8% holiday allowance"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.375,
+                "f1": 0.5454545454545454,
+                "missing": [
+                  "computer vision",
+                  "deep learning",
+                  "image segmentation",
+                  "onnx",
+                  "tensorrt"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Machine Learning Engineer",
+            "company": "Lumora Imaging",
+            "city": "Eindhoven",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": 70000.0,
+            "salary_max": 90000.0,
+            "salary_period": "year",
+            "salary_note": "plus an 8% holiday allowance",
+            "education_level": "wo",
+            "experience_years_min": 5,
+            "skills": [
+              "Python",
+              "PyTorch",
+              "C++"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1347,
+          "output_tokens": 759,
+          "latency_s": 9.666363197999999
+        },
+        {
+          "sample": "05_beleidsmedewerker_zwolle",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Beleidsmedewerker Klimaatadaptatie",
+                "predicted": "Beleidsmedewerker Klimaatadaptatie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Gemeente Zwolle",
+                "predicted": "Gemeente Zwolle"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Zwolle",
+                "predicted": "Zwolle"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "schaal 11 cao Gemeenten",
+                "predicted": "schaal 11 cao Gemeenten"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Beleidsmedewerker Klimaatadaptatie",
+            "company": "Gemeente Zwolle",
+            "city": "Zwolle",
+            "work_mode": "hybrid",
+            "hours_min": 36,
+            "hours_max": 36,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": "month",
+            "salary_note": "schaal 11 cao Gemeenten",
+            "education_level": "wo",
+            "experience_years_min": null,
+            "skills": [
+              "Omgevingswet"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1371,
+          "output_tokens": 928,
+          "latency_s": 11.858652441999766
+        },
+        {
+          "sample": "06_stage_marketing_groningen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Stagiair(e) Online Marketing",
+                "predicted": "Stagiair(e) Online Marketing"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Groene Wolk B.V.",
+                "predicted": "Groene Wolk B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Groningen",
+                "predicted": "Groningen"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "missed",
+                "expected": "stagevergoeding",
+                "predicted": null
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "internship",
+                "predicted": "internship"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.8,
+                "f1": 0.888888888888889,
+                "missing": [
+                  "e-mailmarketing"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Stagiair(e) Online Marketing",
+            "company": "Groene Wolk B.V.",
+            "city": "Groningen",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": 600.0,
+            "salary_max": 600.0,
+            "salary_period": "month",
+            "salary_note": null,
+            "education_level": "hbo",
+            "experience_years_min": null,
+            "skills": [
+              "Google Ads",
+              "Meta Ads",
+              "Google Analytics",
+              "Mailchimp"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "internship"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1367,
+          "output_tokens": 822,
+          "latency_s": 10.445146588999705
+        },
+        {
+          "sample": "07_freelance_devops_utrecht",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "DevOps Engineer",
+                "predicted": "Freelance DevOps Engineer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "TechMatch Detachering",
+                "predicted": "TechMatch Detachering"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 85.0,
+                "predicted": 85.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 100.0,
+                "predicted": 100.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "exclusief btw",
+                "predicted": "exclusief btw"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "freelance",
+                "predicted": "freelance"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.6666666666666666,
+                "recall": 0.25,
+                "f1": 0.36363636363636365,
+                "missing": [
+                  "az-400",
+                  "azure",
+                  "azure kubernetes service",
+                  "ci/cd",
+                  "infrastructuur als code",
+                  "kubernetes"
+                ],
+                "extra": [
+                  "azure kubernetes service (aks)"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Freelance DevOps Engineer",
+            "company": "TechMatch Detachering",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 32,
+            "salary_min": 85.0,
+            "salary_max": 100.0,
+            "salary_period": "hour",
+            "salary_note": "exclusief btw",
+            "education_level": null,
+            "experience_years_min": 5,
+            "skills": [
+              "Azure DevOps",
+              "Terraform",
+              "Azure Kubernetes Service (AKS)"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "freelance"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1352,
+          "output_tokens": 796,
+          "latency_s": 10.072175246999905
+        },
+        {
+          "sample": "08_verpleegkundige_nijmegen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Verpleegkundige Geriatrie",
+                "predicted": "Verpleegkundige Geriatrie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Zorggroep De Linde",
+                "predicted": "Zorggroep De Linde"
+              },
+              {
+                "field": "city",
+                "outcome": "wrong",
+                "expected": "Nijmegen",
+                "predicted": "Nijmegen-Dukenburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 20,
+                "predicted": 20
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 28,
+                "predicted": 28
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 2920.0,
+                "predicted": 2920.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 4180.0,
+                "predicted": 4180.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "bij fulltime (36 uur); plus ORT en eindejaarsuitkering 8,33%",
+                "predicted": "FWG 45"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "big-registratie",
+                  "ouderenzorg"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Verpleegkundige Geriatrie",
+            "company": "Zorggroep De Linde",
+            "city": "Nijmegen-Dukenburg",
+            "work_mode": "onsite",
+            "hours_min": 20,
+            "hours_max": 28,
+            "salary_min": 2920.0,
+            "salary_max": 4180.0,
+            "salary_period": "month",
+            "salary_note": "FWG 45",
+            "education_level": "mbo",
+            "experience_years_min": null,
+            "skills": [],
+            "languages_required": [],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1406,
+          "output_tokens": 1393,
+          "latency_s": 17.76148514200031
+        },
+        {
+          "sample": "09_product_manager_remote",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Senior Product Manager",
+                "predicted": "Senior Product Manager — Payments"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Paylane",
+                "predicted": "Paylane"
+              },
+              {
+                "field": "city",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "remote",
+                "predicted": "remote"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 85000.0,
+                "predicted": 85000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus stock options",
+                "predicted": "plus stock options"
+              },
+              {
+                "field": "education_level",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 6,
+                "predicted": 6
+              },
+              {
+                "field": "contract_type",
+                "outcome": "wrong",
+                "expected": "temporary",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.4,
+                "f1": 0.5714285714285715,
+                "missing": [
+                  "fintech",
+                  "payments",
+                  "product analytics"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Senior Product Manager — Payments",
+            "company": "Paylane",
+            "city": null,
+            "work_mode": "remote",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": 85000.0,
+            "salary_period": "year",
+            "salary_note": "plus stock options",
+            "education_level": "hbo",
+            "experience_years_min": 6,
+            "skills": [
+              "SQL",
+              "Amplitude"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1297,
+          "output_tokens": 2055,
+          "latency_s": 26.318773221999436
+        },
+        {
+          "sample": "10_accountmanager_randstad",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Accountmanager Binnendienst",
+                "predicted": "Accountmanager Binnendienst"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Kantoorland B.V.",
+                "predicted": "Kantoorland B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "wrong",
+                "expected": "Rotterdam",
+                "predicted": "Rotterdam en Den Haag"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "n.o.t.k.",
+                "predicted": "Salaris n.o.t.k."
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 1,
+                "predicted": 1
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.5,
+                "f1": 0.6666666666666666,
+                "missing": [
+                  "crm"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Accountmanager Binnendienst",
+            "company": "Kantoorland B.V.",
+            "city": "Rotterdam en Den Haag",
+            "work_mode": null,
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "Salaris n.o.t.k.",
+            "education_level": "mbo",
+            "experience_years_min": 1,
+            "skills": [
+              "Salesforce"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1343,
+          "output_tokens": 1445,
+          "latency_s": 18.15173731499999
+        }
+      ]
+    },
+    {
+      "summary": {
+        "dev": {
+          "accuracy": 0.9538461538461538,
+          "hallucinated": 0,
+          "missed": 3,
+          "wrong": 0,
+          "skills_f1": 0.8761904761904762,
+          "languages_f1": 1.0,
+          "failed": 0,
+          "cost_usd": 0.00846375,
+          "usd_per_1k_vacancies": 1.6927500000000002
+        },
+        "holdout": {
+          "accuracy": 0.9538461538461538,
+          "hallucinated": 1,
+          "missed": 1,
+          "wrong": 1,
+          "skills_f1": 0.634920634920635,
+          "languages_f1": 1.0,
+          "failed": 0,
+          "cost_usd": 0.00860925,
+          "usd_per_1k_vacancies": 1.72185
+        }
+      },
+      "config": {
+        "name": "gemini-3.8-flash",
+        "provider": "gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "model": "gemini-3.8-flash",
+        "thinking": false,
+        "mode": "schema",
+        "api_key_env": "GEMINI_API_KEY",
+        "usd_per_m_input": 0.75,
+        "usd_per_m_output": 3.75
+      },
+      "samples": [
+        {
+          "sample": "01_data_analist_utrecht",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Junior Data Analist",
+                "predicted": "Junior Data Analist"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Bakkerij De Vries B.V.",
+                "predicted": "Bakkerij De Vries B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 3200.0,
+                "predicted": 3200.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 3800.0,
+                "predicted": 3800.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "missed",
+                "expected": "afhankelijk van ervaring",
+                "predicted": null
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 0,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "python"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Junior Data Analist",
+            "company": "Bakkerij De Vries B.V.",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 36,
+            "salary_min": 3200.0,
+            "salary_max": 3800.0,
+            "salary_period": "month",
+            "salary_note": null,
+            "education_level": "hbo",
+            "experience_years_min": 0,
+            "skills": [
+              "Power BI",
+              "SQL",
+              "Excel"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1391,
+          "output_tokens": 193,
+          "latency_s": 1.9071345519996612
+        },
+        {
+          "sample": "02_backend_developer_amsterdam",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Medior Backend Developer",
+                "predicted": "Medior Backend Developer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Fietsdeel",
+                "predicted": "Fietsdeel"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Amsterdam",
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "marktconform",
+                "predicted": "marktconform"
+              },
+              {
+                "field": "education_level",
+                "outcome": "missed",
+                "expected": "hbo",
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 3,
+                "predicted": 3
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Medior Backend Developer",
+            "company": "Fietsdeel",
+            "city": "Amsterdam",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "marktconform",
+            "education_level": null,
+            "experience_years_min": 3,
+            "skills": [
+              "Python",
+              "Django",
+              "FastAPI",
+              "PostgreSQL",
+              "Docker",
+              "Kubernetes",
+              "AWS",
+              "Scrum"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1374,
+          "output_tokens": 143,
+          "latency_s": 1.1906481660007557
+        },
+        {
+          "sample": "03_orderpicker_tilburg",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Orderpicker",
+                "predicted": "Orderpicker"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Snelwerk",
+                "predicted": "Uitzendbureau Snelwerk"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Tilburg",
+                "predicted": "Tilburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 24,
+                "predicted": 24
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "missed",
+                "expected": "plus 21% toeslag voor de late dienst",
+                "predicted": null
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temp_agency",
+                "predicted": "temp_agency"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.5,
+                "f1": 0.6666666666666666,
+                "missing": [
+                  "heftruckcertificaat"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Orderpicker",
+            "company": "Uitzendbureau Snelwerk",
+            "city": "Tilburg",
+            "work_mode": "onsite",
+            "hours_min": 24,
+            "hours_max": 40,
+            "salary_min": 14.85,
+            "salary_max": 14.85,
+            "salary_period": "hour",
+            "salary_note": null,
+            "education_level": null,
+            "experience_years_min": null,
+            "skills": [
+              "handscanner"
+            ],
+            "languages_required": [],
+            "contract_type": "temp_agency"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1375,
+          "output_tokens": 171,
+          "latency_s": 1.7302988040000855
+        },
+        {
+          "sample": "04_ml_engineer_eindhoven",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Machine Learning Engineer",
+                "predicted": "Machine Learning Engineer — Computer Vision"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Lumora Imaging",
+                "predicted": "Lumora Imaging"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Eindhoven",
+                "predicted": "Eindhoven"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 70000.0,
+                "predicted": 70000.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 90000.0,
+                "predicted": 90000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 8% holiday allowance",
+                "predicted": "plus an 8% holiday allowance"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "c++",
+                  "computer vision"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Machine Learning Engineer — Computer Vision",
+            "company": "Lumora Imaging",
+            "city": "Eindhoven",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": 70000.0,
+            "salary_max": 90000.0,
+            "salary_period": "year",
+            "salary_note": "plus an 8% holiday allowance",
+            "education_level": "wo",
+            "experience_years_min": 5,
+            "skills": [
+              "deep learning",
+              "image segmentation",
+              "ONNX",
+              "TensorRT",
+              "Python",
+              "PyTorch"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1368,
+          "output_tokens": 196,
+          "latency_s": 1.6894379029999982
+        },
+        {
+          "sample": "05_beleidsmedewerker_zwolle",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Beleidsmedewerker Klimaatadaptatie",
+                "predicted": "Beleidsmedewerker Klimaatadaptatie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Gemeente Zwolle",
+                "predicted": "Gemeente Zwolle"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Zwolle",
+                "predicted": "Zwolle"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "schaal 11 cao Gemeenten",
+                "predicted": "schaal 11 van de cao Gemeenten"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Beleidsmedewerker Klimaatadaptatie",
+            "company": "Gemeente Zwolle",
+            "city": "Zwolle",
+            "work_mode": "hybrid",
+            "hours_min": 36,
+            "hours_max": 36,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "schaal 11 van de cao Gemeenten",
+            "education_level": "wo",
+            "experience_years_min": null,
+            "skills": [
+              "Omgevingswet"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1347,
+          "output_tokens": 183,
+          "latency_s": 1.22898986600012
+        },
+        {
+          "sample": "06_stage_marketing_groningen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Stagiair(e) Online Marketing",
+                "predicted": "Stagiair(e) Online Marketing"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Groene Wolk B.V.",
+                "predicted": "Groene Wolk B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Groningen",
+                "predicted": "Groningen"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "missed",
+                "expected": "stagevergoeding",
+                "predicted": null
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "internship",
+                "predicted": "internship"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.8,
+                "f1": 0.888888888888889,
+                "missing": [
+                  "e-mailmarketing"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Stagiair(e) Online Marketing",
+            "company": "Groene Wolk B.V.",
+            "city": "Groningen",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": 600.0,
+            "salary_max": 600.0,
+            "salary_period": "month",
+            "salary_note": null,
+            "education_level": "hbo",
+            "experience_years_min": null,
+            "skills": [
+              "Google Ads",
+              "Meta Ads",
+              "Google Analytics",
+              "Mailchimp"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "internship"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1374,
+          "output_tokens": 205,
+          "latency_s": 1.3677598249996663
+        },
+        {
+          "sample": "07_freelance_devops_utrecht",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "DevOps Engineer",
+                "predicted": "DevOps Engineer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "TechMatch Detachering",
+                "predicted": "TechMatch Detachering"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 85.0,
+                "predicted": 85.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 100.0,
+                "predicted": 100.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "exclusief btw",
+                "predicted": "exclusief btw"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "freelance",
+                "predicted": "freelance"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.8333333333333334,
+                "recall": 0.625,
+                "f1": 0.7142857142857143,
+                "missing": [
+                  "az-400",
+                  "ci/cd",
+                  "infrastructuur als code"
+                ],
+                "extra": [
+                  "aks"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "DevOps Engineer",
+            "company": "TechMatch Detachering",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 32,
+            "salary_min": 85.0,
+            "salary_max": 100.0,
+            "salary_period": "hour",
+            "salary_note": "exclusief btw",
+            "education_level": null,
+            "experience_years_min": 5,
+            "skills": [
+              "Azure DevOps",
+              "Terraform",
+              "Azure Kubernetes Service",
+              "AKS",
+              "Azure",
+              "Kubernetes"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "freelance"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1348,
+          "output_tokens": 209,
+          "latency_s": 1.2939724520001619
+        },
+        {
+          "sample": "08_verpleegkundige_nijmegen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Verpleegkundige Geriatrie",
+                "predicted": "Verpleegkundige Geriatrie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Zorggroep De Linde",
+                "predicted": "Zorggroep De Linde"
+              },
+              {
+                "field": "city",
+                "outcome": "wrong",
+                "expected": "Nijmegen",
+                "predicted": "Nijmegen-Dukenburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 20,
+                "predicted": 20
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 28,
+                "predicted": 28
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 2920.0,
+                "predicted": 2920.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 4180.0,
+                "predicted": 4180.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "bij fulltime (36 uur); plus ORT en eindejaarsuitkering 8,33%",
+                "predicted": "cao VVT, FWG 45"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "big-registratie",
+                  "ouderenzorg"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Verpleegkundige Geriatrie",
+            "company": "Zorggroep De Linde",
+            "city": "Nijmegen-Dukenburg",
+            "work_mode": "onsite",
+            "hours_min": 20,
+            "hours_max": 28,
+            "salary_min": 2920.0,
+            "salary_max": 4180.0,
+            "salary_period": "month",
+            "salary_note": "cao VVT, FWG 45",
+            "education_level": "mbo",
+            "experience_years_min": null,
+            "skills": [],
+            "languages_required": [],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1393,
+          "output_tokens": 182,
+          "latency_s": 1.6487239879998015
+        },
+        {
+          "sample": "09_product_manager_remote",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Senior Product Manager",
+                "predicted": "Senior Product Manager — Payments"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Paylane",
+                "predicted": "Paylane"
+              },
+              {
+                "field": "city",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "remote",
+                "predicted": "remote"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 85000.0,
+                "predicted": 85000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus stock options",
+                "predicted": "plus stock options"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 6,
+                "predicted": 6
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.4,
+                "f1": 0.5714285714285715,
+                "missing": [
+                  "fintech",
+                  "payments",
+                  "product analytics"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Senior Product Manager — Payments",
+            "company": "Paylane",
+            "city": "Amsterdam",
+            "work_mode": "remote",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": 85000.0,
+            "salary_period": "year",
+            "salary_note": "plus stock options",
+            "education_level": null,
+            "experience_years_min": 6,
+            "skills": [
+              "SQL",
+              "Amplitude"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1321,
+          "output_tokens": 163,
+          "latency_s": 1.583471068000108
+        },
+        {
+          "sample": "10_accountmanager_randstad",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Accountmanager Binnendienst",
+                "predicted": "Accountmanager Binnendienst"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Kantoorland B.V.",
+                "predicted": "Kantoorland B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Rotterdam",
+                "predicted": "Rotterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "n.o.t.k.",
+                "predicted": "n.o.t.k."
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 1,
+                "predicted": 1
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Accountmanager Binnendienst",
+            "company": "Kantoorland B.V.",
+            "city": "Rotterdam",
+            "work_mode": null,
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "n.o.t.k.",
+            "education_level": "mbo",
+            "experience_years_min": 1,
+            "skills": [
+              "CRM",
+              "Salesforce"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1343,
+          "output_tokens": 181,
+          "latency_s": 1.3366118630001438
+        }
+      ]
+    },
+    {
+      "summary": {
+        "dev": {
+          "accuracy": 0.9846153846153847,
+          "hallucinated": 1,
+          "missed": 0,
+          "wrong": 0,
+          "skills_f1": 0.6095238095238095,
+          "languages_f1": 1.0,
+          "failed": 0,
+          "cost_usd": 0.0044615,
+          "usd_per_1k_vacancies": 0.8923000000000001
+        },
+        "holdout": {
+          "accuracy": 0.9692307692307691,
+          "hallucinated": 2,
+          "missed": 0,
+          "wrong": 0,
+          "skills_f1": 0.634920634920635,
+          "languages_f1": 1.0,
+          "failed": 0,
+          "cost_usd": 0.0043437,
+          "usd_per_1k_vacancies": 0.86874
+        }
+      },
+      "config": {
+        "name": "gemini-3.5-flash-lite",
+        "provider": "gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "model": "gemini-3.5-flash-lite",
+        "thinking": false,
+        "mode": "schema",
+        "api_key_env": "GEMINI_API_KEY",
+        "usd_per_m_input": 0.3,
+        "usd_per_m_output": 2.5
+      },
+      "samples": [
+        {
+          "sample": "01_data_analist_utrecht",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Junior Data Analist",
+                "predicted": "Junior Data Analist"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Bakkerij De Vries B.V.",
+                "predicted": "Bakkerij De Vries B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 3200.0,
+                "predicted": 3200.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 3800.0,
+                "predicted": 3800.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "afhankelijk van ervaring",
+                "predicted": "afhankelijk van ervaring"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 0,
+                "predicted": 0
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "python"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Junior Data Analist",
+            "company": "Bakkerij De Vries B.V.",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 36,
+            "salary_min": 3200.0,
+            "salary_max": 3800.0,
+            "salary_period": "month",
+            "salary_note": "afhankelijk van ervaring",
+            "education_level": "hbo",
+            "experience_years_min": 0,
+            "skills": [
+              "Power BI",
+              "SQL",
+              "Excel"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1391,
+          "output_tokens": 197,
+          "latency_s": 1.1325520340005824
+        },
+        {
+          "sample": "02_backend_developer_amsterdam",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Medior Backend Developer",
+                "predicted": "Medior Backend Developer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Fietsdeel",
+                "predicted": "Fietsdeel"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Amsterdam",
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "marktconform",
+                "predicted": "marktconform"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 3,
+                "predicted": 3
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1": 0.8571428571428571,
+                "missing": [
+                  "aws",
+                  "scrum"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Medior Backend Developer",
+            "company": "Fietsdeel",
+            "city": "Amsterdam",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "marktconform",
+            "education_level": "hbo",
+            "experience_years_min": 3,
+            "skills": [
+              "Python",
+              "Django",
+              "FastAPI",
+              "PostgreSQL",
+              "Docker",
+              "Kubernetes"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1374,
+          "output_tokens": 193,
+          "latency_s": 1.3328041189997748
+        },
+        {
+          "sample": "03_orderpicker_tilburg",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Orderpicker",
+                "predicted": "Orderpicker"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Snelwerk",
+                "predicted": "Uitzendbureau Snelwerk"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Tilburg",
+                "predicted": "Tilburg"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 24,
+                "predicted": 24
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 14.85,
+                "predicted": 14.85
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 21% toeslag voor de late dienst",
+                "predicted": "plus 21% toeslag voor de late dienst"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temp_agency",
+                "predicted": "temp_agency"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "handscanner",
+                  "heftruckcertificaat"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Orderpicker",
+            "company": "Uitzendbureau Snelwerk",
+            "city": "Tilburg",
+            "work_mode": "onsite",
+            "hours_min": 24,
+            "hours_max": 40,
+            "salary_min": 14.85,
+            "salary_max": 14.85,
+            "salary_period": "hour",
+            "salary_note": "plus 21% toeslag voor de late dienst",
+            "education_level": null,
+            "experience_years_min": null,
+            "skills": [],
+            "languages_required": [],
+            "contract_type": "temp_agency"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1375,
+          "output_tokens": 173,
+          "latency_s": 1.0255385699992985
+        },
+        {
+          "sample": "04_ml_engineer_eindhoven",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Machine Learning Engineer",
+                "predicted": "Machine Learning Engineer — Computer Vision"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Lumora Imaging",
+                "predicted": "Lumora Imaging"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Eindhoven",
+                "predicted": "Eindhoven"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 70000.0,
+                "predicted": 70000.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 90000.0,
+                "predicted": 90000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus 8% holiday allowance",
+                "predicted": "plus an 8% holiday allowance"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.5,
+                "f1": 0.6666666666666666,
+                "missing": [
+                  "c++",
+                  "computer vision",
+                  "deep learning",
+                  "image segmentation"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Machine Learning Engineer — Computer Vision",
+            "company": "Lumora Imaging",
+            "city": "Eindhoven",
+            "work_mode": "hybrid",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": 70000.0,
+            "salary_max": 90000.0,
+            "salary_period": "year",
+            "salary_note": "plus an 8% holiday allowance",
+            "education_level": "wo",
+            "experience_years_min": 5,
+            "skills": [
+              "Python",
+              "PyTorch",
+              "ONNX",
+              "TensorRT"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1368,
+          "output_tokens": 206,
+          "latency_s": 1.4610672930002693
+        },
+        {
+          "sample": "05_beleidsmedewerker_zwolle",
+          "split": "dev",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Beleidsmedewerker Klimaatadaptatie",
+                "predicted": "Beleidsmedewerker Klimaatadaptatie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Gemeente Zwolle",
+                "predicted": "Gemeente Zwolle"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Zwolle",
+                "predicted": "Zwolle"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 36,
+                "predicted": 36
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "schaal 11 cao Gemeenten",
+                "predicted": "schaal 11 van de cao Gemeenten"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "wo",
+                "predicted": "wo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": 2
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.5,
+                "recall": 1.0,
+                "f1": 0.6666666666666666,
+                "missing": [],
+                "extra": [
+                  "ruimtelijke planning"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Beleidsmedewerker Klimaatadaptatie",
+            "company": "Gemeente Zwolle",
+            "city": "Zwolle",
+            "work_mode": "hybrid",
+            "hours_min": 36,
+            "hours_max": 36,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "schaal 11 van de cao Gemeenten",
+            "education_level": "wo",
+            "experience_years_min": 2,
+            "skills": [
+              "Omgevingswet",
+              "Ruimtelijke Planning"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1347,
+          "output_tokens": 193,
+          "latency_s": 1.5614909879996048
+        },
+        {
+          "sample": "06_stage_marketing_groningen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Stagiair(e) Online Marketing",
+                "predicted": "Stagiair(e) Online Marketing"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Groene Wolk B.V.",
+                "predicted": "Groene Wolk B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Groningen",
+                "predicted": "Groningen"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 600.0,
+                "predicted": 600.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "stagevergoeding",
+                "predicted": "stagevergoeding van € 600 per maand"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "hbo",
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "internship",
+                "predicted": "internship"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.8,
+                "f1": 0.888888888888889,
+                "missing": [
+                  "e-mailmarketing"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Stagiair(e) Online Marketing",
+            "company": "Groene Wolk B.V.",
+            "city": "Groningen",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": 600.0,
+            "salary_max": 600.0,
+            "salary_period": "month",
+            "salary_note": "stagevergoeding van € 600 per maand",
+            "education_level": "hbo",
+            "experience_years_min": null,
+            "skills": [
+              "Google Ads",
+              "Meta Ads",
+              "Google Analytics",
+              "Mailchimp"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "internship"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1374,
+          "output_tokens": 216,
+          "latency_s": 1.1924771600006352
+        },
+        {
+          "sample": "07_freelance_devops_utrecht",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "DevOps Engineer",
+                "predicted": "DevOps Engineer"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "TechMatch Detachering",
+                "predicted": "TechMatch Detachering"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Utrecht",
+                "predicted": "Utrecht"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "hybrid",
+                "predicted": "hybrid"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 85.0,
+                "predicted": 85.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 100.0,
+                "predicted": 100.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "hour",
+                "predicted": "hour"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "exclusief btw",
+                "predicted": "exclusief btw"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 5,
+                "predicted": 5
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "freelance",
+                "predicted": "freelance"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.8333333333333334,
+                "recall": 0.625,
+                "f1": 0.7142857142857143,
+                "missing": [
+                  "az-400",
+                  "infrastructuur als code",
+                  "kubernetes"
+                ],
+                "extra": [
+                  "aks"
+                ]
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "DevOps Engineer",
+            "company": "TechMatch Detachering",
+            "city": "Utrecht",
+            "work_mode": "hybrid",
+            "hours_min": 32,
+            "hours_max": 32,
+            "salary_min": 85.0,
+            "salary_max": 100.0,
+            "salary_period": "hour",
+            "salary_note": "exclusief btw",
+            "education_level": null,
+            "experience_years_min": 5,
+            "skills": [
+              "Azure DevOps",
+              "CI/CD",
+              "Terraform",
+              "Azure Kubernetes Service",
+              "AKS",
+              "Azure"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "freelance"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1348,
+          "output_tokens": 155,
+          "latency_s": 1.2338984620000701
+        },
+        {
+          "sample": "08_verpleegkundige_nijmegen",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Verpleegkundige Geriatrie",
+                "predicted": "Verpleegkundige Geriatrie"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Zorggroep De Linde",
+                "predicted": "Zorggroep De Linde"
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Nijmegen",
+                "predicted": "Nijmegen"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "onsite",
+                "predicted": "onsite"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 20,
+                "predicted": 20
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 28,
+                "predicted": 28
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct",
+                "expected": 2920.0,
+                "predicted": 2920.0
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 4180.0,
+                "predicted": 4180.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "month",
+                "predicted": "month"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "bij fulltime (36 uur); plus ORT en eindejaarsuitkering 8,33%",
+                "predicted": "salaris volgens de cao VVT, FWG 45"
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "permanent",
+                "predicted": "permanent"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "missing": [
+                  "big-registratie",
+                  "ouderenzorg"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Verpleegkundige Geriatrie",
+            "company": "Zorggroep De Linde",
+            "city": "Nijmegen",
+            "work_mode": "onsite",
+            "hours_min": 20,
+            "hours_max": 28,
+            "salary_min": 2920.0,
+            "salary_max": 4180.0,
+            "salary_period": "month",
+            "salary_note": "salaris volgens de cao VVT, FWG 45",
+            "education_level": "mbo",
+            "experience_years_min": null,
+            "skills": [],
+            "languages_required": [],
+            "contract_type": "permanent"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1393,
+          "output_tokens": 183,
+          "latency_s": 1.250387832999877
+        },
+        {
+          "sample": "09_product_manager_remote",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Senior Product Manager",
+                "predicted": "Senior Product Manager"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Paylane",
+                "predicted": "Paylane"
+              },
+              {
+                "field": "city",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "Amsterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct",
+                "expected": "remote",
+                "predicted": "remote"
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct",
+                "expected": 85000.0,
+                "predicted": 85000.0
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct",
+                "expected": "year",
+                "predicted": "year"
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "plus stock options",
+                "predicted": "up to €85,000 per year, plus stock options"
+              },
+              {
+                "field": "education_level",
+                "outcome": "hallucinated",
+                "expected": null,
+                "predicted": "hbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 6,
+                "predicted": 6
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 0.4,
+                "f1": 0.5714285714285715,
+                "missing": [
+                  "fintech",
+                  "payments",
+                  "product analytics"
+                ],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Senior Product Manager",
+            "company": "Paylane",
+            "city": "Amsterdam",
+            "work_mode": "remote",
+            "hours_min": 40,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": 85000.0,
+            "salary_period": "year",
+            "salary_note": "up to €85,000 per year, plus stock options",
+            "education_level": "hbo",
+            "experience_years_min": 6,
+            "skills": [
+              "SQL",
+              "Amplitude"
+            ],
+            "languages_required": [
+              "English"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1321,
+          "output_tokens": 189,
+          "latency_s": 1.0368321999994805
+        },
+        {
+          "sample": "10_accountmanager_randstad",
+          "split": "holdout",
+          "score": {
+            "scalars": [
+              {
+                "field": "title",
+                "outcome": "correct",
+                "expected": "Accountmanager Binnendienst",
+                "predicted": "Accountmanager Binnendienst"
+              },
+              {
+                "field": "company",
+                "outcome": "correct",
+                "expected": "Kantoorland B.V.",
+                "predicted": "Kantoorland B.V."
+              },
+              {
+                "field": "city",
+                "outcome": "correct",
+                "expected": "Rotterdam",
+                "predicted": "Rotterdam"
+              },
+              {
+                "field": "work_mode",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "hours_min",
+                "outcome": "correct",
+                "expected": 32,
+                "predicted": 32
+              },
+              {
+                "field": "hours_max",
+                "outcome": "correct",
+                "expected": 40,
+                "predicted": 40
+              },
+              {
+                "field": "salary_min",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_max",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_period",
+                "outcome": "correct_null",
+                "expected": null,
+                "predicted": null
+              },
+              {
+                "field": "salary_note",
+                "outcome": "correct",
+                "expected": "n.o.t.k.",
+                "predicted": "n.o.t.k."
+              },
+              {
+                "field": "education_level",
+                "outcome": "correct",
+                "expected": "mbo",
+                "predicted": "mbo"
+              },
+              {
+                "field": "experience_years_min",
+                "outcome": "correct",
+                "expected": 1,
+                "predicted": 1
+              },
+              {
+                "field": "contract_type",
+                "outcome": "correct",
+                "expected": "temporary",
+                "predicted": "temporary"
+              }
+            ],
+            "lists": [
+              {
+                "field": "skills",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              },
+              {
+                "field": "languages_required",
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "missing": [],
+                "extra": []
+              }
+            ]
+          },
+          "error": null,
+          "predicted": {
+            "title": "Accountmanager Binnendienst",
+            "company": "Kantoorland B.V.",
+            "city": "Rotterdam",
+            "work_mode": null,
+            "hours_min": 32,
+            "hours_max": 40,
+            "salary_min": null,
+            "salary_max": null,
+            "salary_period": null,
+            "salary_note": "n.o.t.k.",
+            "education_level": "mbo",
+            "experience_years_min": 1,
+            "skills": [
+              "Salesforce",
+              "CRM"
+            ],
+            "languages_required": [
+              "Dutch"
+            ],
+            "contract_type": "temporary"
+          },
+          "attempts": 1,
+          "prompt_tokens": 1343,
+          "output_tokens": 181,
+          "latency_s": 1.0125409199999922
+        }
+      ]
+    }
+  ]
+}
