@@ -1,37 +1,69 @@
 # Settings compared by scripts/eval_extraction.py. Each [[run]] is evaluated over all
 # samples in data/samples/vacancies/ against data/samples/expected/.
 #
-# To add a cloud model: set api_key_env to the NAME of an env var in .env
-# (e.g. "OPENROUTER_API_KEY"). Never put a key in this file.
+# Rules:
+# - Use exact model IDs, not "-latest" aliases: an alias can point to a new model
+#   tomorrow, and then old results no longer describe the same model.
+# - api_key_env is the NAME of an env var in .env. Never put a key in this file.
+# - Prices: USD per 1M tokens, paid tier, from
+#   https://ai.google.dev/gemini-api/docs/pricing (page updated 2026-09-16,
+#   checked 2026-09-19). Output prices include thinking tokens.
+#   gemini-3.8-flash prices are an introductory rate valid through 2026-12-31.
 
 [[run]]
-name = "qwen3:8b schema"
+name = "qwen3:8b"
 provider = "ollama"
 base_url = "http://localhost:11434/v1"
 model = "qwen3:8b"
 thinking = false
-mode = "schema"
+usd_per_m_input = 0.0   # local: no API cost
+usd_per_m_output = 0.0
 
 [[run]]
-name = "qwen3:8b prompt"
+name = "qwen3:8b +think"
 provider = "ollama"
 base_url = "http://localhost:11434/v1"
 model = "qwen3:8b"
+thinking = true
+usd_per_m_input = 0.0
+usd_per_m_output = 0.0
+
+[[run]]
+name = "gemini-3.8-flash"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-3.8-flash"
+api_key_env = "GEMINI_API_KEY"
+thinking = false   # "none" still leaves some thinking on this model
+usd_per_m_input = 0.75
+usd_per_m_output = 3.75
+
+[[run]]
+name = "gemini-3.8-flash +think"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-3.8-flash"
+api_key_env = "GEMINI_API_KEY"
+thinking = true
+usd_per_m_input = 0.75
+usd_per_m_output = 3.75
+
+[[run]]
+name = "gemini-3.5-flash-lite"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-3.5-flash-lite"
+api_key_env = "GEMINI_API_KEY"
 thinking = false
-mode = "prompt"
+usd_per_m_input = 0.30
+usd_per_m_output = 2.50
 
 [[run]]
-name = "qwen3:8b schema +think"
-provider = "ollama"
-base_url = "http://localhost:11434/v1"
-model = "qwen3:8b"
-thinking = true
-mode = "schema"
-
-[[run]]
-name = "qwen3:8b prompt +think"
-provider = "ollama"
-base_url = "http://localhost:11434/v1"
-model = "qwen3:8b"
-thinking = true
-mode = "prompt"
+name = "gemini-3.1-pro +think"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-3.1-pro-preview"
+api_key_env = "GEMINI_API_KEY"
+thinking = true   # this model always thinks
+usd_per_m_input = 2.00
+usd_per_m_output = 12.00

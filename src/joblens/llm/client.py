@@ -56,7 +56,7 @@ class LLMClient:
         return ChatResult(
             content=message.content or "",
             reasoning=extra.get("reasoning") or extra.get("reasoning_content"),
-            usage=Usage.model_validate(response.usage.model_dump())
+            usage=Usage.from_api(response.usage.model_dump())
             if response.usage
             else None,
             model=response.model,

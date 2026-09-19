@@ -64,11 +64,11 @@ def print_summary(results: list[RunResult]) -> None:
     print(
         f"\n{'#':<3}{'run':<24} {'acc':>5} {'halluc':>6} {'missed':>6} {'wrong':>5} "
         f"{'skillF1':>7} {'langF1':>6} {'fail':>4} {'tries':>5} "
-        f"{'out tok':>7} {'sec':>6}"
+        f"{'out tok':>7} {'sec':>6} {'$/1k vac':>9}"
     )
     for i, r in enumerate(results, 1):
         tries = sum(s.attempts for s in r.samples)
-        tokens = sum(s.completion_tokens for s in r.samples)
+        tokens = sum(s.output_tokens for s in r.samples)
         seconds = sum(s.latency_s for s in r.samples)
         halluc, missed, wrong = (
             r.total(o) for o in ("hallucinated", "missed", "wrong")
@@ -77,8 +77,13 @@ def print_summary(results: list[RunResult]) -> None:
             f"#{i:<2}{r.config.name:<24} {r.accuracy:>5.0%} "
             f"{halluc:>6} {missed:>6} {wrong:>5} "
             f"{r.list_f1('skills'):>7.2f} {r.list_f1('languages_required'):>6.2f} "
-            f"{r.failed:>4} {tries:>5} {tokens:>7} {seconds:>6.1f}"
+            f"{r.failed:>4} {tries:>5} {tokens:>7} {seconds:>6.1f} "
+            f"{format_usd(r.usd_per_1k_vacancies):>9}"
         )
+
+
+def format_usd(value: float | None) -> str:
+    return "-" if value is None else f"${value:.2f}"
 
 
 def print_per_field(results: list[RunResult]) -> None:
@@ -138,6 +143,8 @@ def save(results: list[RunResult]) -> Path:
                     "skills_f1": r.list_f1("skills"),
                     "languages_f1": r.list_f1("languages_required"),
                     "failed": r.failed,
+                    "cost_usd": r.cost_usd,
+                    "usd_per_1k_vacancies": r.usd_per_1k_vacancies,
                 },
                 **r.model_dump(mode="json"),
             }

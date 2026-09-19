@@ -9,8 +9,30 @@ Message = dict[str, str]  # {"role": "system" | "user" | "assistant", "content":
 
 class Usage(BaseModel):
     prompt_tokens: int  # input: everything we sent
-    completion_tokens: int  # output: answer + reasoning
+    completion_tokens: int  # output as reported by the provider
     total_tokens: int
+    # Reasoning tokens the provider left OUT of completion_tokens (Gemini does this).
+    # They are still billed as output.
+    hidden_reasoning_tokens: int = 0
+
+    @property
+    def output_tokens(self) -> int:
+        """Everything billed as output: answer + reasoning, on every provider."""
+        return self.completion_tokens + self.hidden_reasoning_tokens
+
+    @classmethod
+    def from_api(cls, raw: dict) -> "Usage":
+        """Normalise a provider's usage block. OpenAI and Ollama count reasoning
+        inside completion_tokens (total = input + output); Gemini does not, so the
+        gap between total and input + output is hidden reasoning."""
+        prompt, completion = raw["prompt_tokens"], raw["completion_tokens"]
+        total = raw.get("total_tokens") or prompt + completion
+        return cls(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+            hidden_reasoning_tokens=max(total - prompt - completion, 0),
+        )
 
 
 class ChatResult(BaseModel):

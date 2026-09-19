@@ -51,7 +51,7 @@ def main() -> int:
     if result.usage:
         u = result.usage
         print(
-            f"tokens:   in {u.prompt_tokens} · out {u.completion_tokens}"
+            f"tokens:   in {u.prompt_tokens} · out {u.output_tokens}"
             f" · total {u.total_tokens}"
         )
     if result.reasoning:

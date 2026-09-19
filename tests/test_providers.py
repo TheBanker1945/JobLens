@@ -1,7 +1,13 @@
 import logging
 
+import pytest
+
 from joblens.config import LLMSettings
-from joblens.llm.providers import supports_json_schema, thinking_params
+from joblens.llm.providers import (
+    ThinkingNotSupportedError,
+    supports_json_schema,
+    thinking_params,
+)
 
 
 def make_settings(provider="ollama", thinking=False):
@@ -45,3 +51,49 @@ def test_returned_params_are_a_copy():
 def test_json_schema_support_is_known_for_ollama_only():
     assert supports_json_schema(make_settings()) is True
     assert supports_json_schema(make_settings(provider="some-new-provider")) is False
+
+
+def gemini(model, thinking=False):
+    return LLMSettings(
+        provider="gemini",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        api_key="key",
+        model=model,
+        thinking=thinking,
+    )
+
+
+@pytest.mark.parametrize(
+    ("model", "thinking", "params"),
+    [
+        ("gemini-3.8-flash", False, {"reasoning_effort": "none"}),
+        ("gemini-3.8-flash", True, {}),
+        ("gemini-3.5-flash-lite", False, {"reasoning_effort": "minimal"}),
+        ("gemini-3.5-flash-lite", True, {"reasoning_effort": "medium"}),
+        ("gemini-3.1-pro-preview", True, {}),
+    ],
+)
+def test_gemini_thinking_is_chosen_per_model(model, thinking, params):
+    assert thinking_params(gemini(model, thinking)) == params
+
+
+def test_model_that_always_thinks_refuses_thinking_off():
+    with pytest.raises(ThinkingNotSupportedError, match="always thinks"):
+        thinking_params(gemini("gemini-3.1-pro-preview", thinking=False))
+
+
+def test_unverified_gemini_model_sends_nothing_and_warns(caplog):
+    with caplog.at_level(logging.WARNING):
+        params = thinking_params(gemini("gemini-9-experimental"))
+
+    assert params == {}
+    assert "gemini/gemini-9-experimental" in caplog.text
+
+
+def test_exact_model_match_only():
+    # A similar name must not inherit a profile verified for another model.
+    assert thinking_params(gemini("gemini-3.8-flash-lite")) == {}
+
+
+def test_unverified_gemini_model_still_gets_schema_support():
+    assert supports_json_schema(gemini("gemini-9-experimental")) is True

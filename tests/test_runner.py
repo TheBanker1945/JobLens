@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from joblens.evals.runner import RunConfig, load_configs, load_samples, run_eval
-from joblens.llm.types import ChatResult
+from joblens.llm.types import ChatResult, Usage
 
 ROOT = Path(__file__).parent.parent
 SAMPLES = load_samples(
@@ -78,3 +78,37 @@ def test_api_key_comes_from_named_env_var():
     assert config.settings({"MY_KEY": "sk-1"}).api_key == "sk-1"
     with pytest.raises(ValueError, match="MY_KEY is not set"):
         config.settings({})
+
+
+def test_cost_uses_input_and_output_prices():
+    config = CONFIG.model_copy(
+        update={"usd_per_m_input": 1.0, "usd_per_m_output": 10.0}
+    )
+    replies = [s.expected.model_dump_json() for s in SAMPLES]
+
+    class PricedClient(FakeClient):
+        def chat(self, messages, **kwargs):
+            result = super().chat(messages, **kwargs)
+            return result.model_copy(
+                update={
+                    "usage": Usage.from_api(
+                        {
+                            "prompt_tokens": 1000,
+                            "completion_tokens": 100,
+                            "total_tokens": 1300,
+                        }
+                    )
+                }
+            )  # 200 hidden reasoning tokens -> 300 output tokens
+
+    result = run_eval(config, SAMPLES, PricedClient(replies))
+
+    # per sample: 1000 * $1/M + 300 * $10/M = $0.004; 5 samples = $0.02
+    assert result.cost_usd == pytest.approx(0.02)
+    assert result.usd_per_1k_vacancies == pytest.approx(4.0)
+
+
+def test_cost_is_none_without_prices():
+    replies = [s.expected.model_dump_json() for s in SAMPLES]
+
+    assert run_eval(CONFIG, SAMPLES, FakeClient(replies)).cost_usd is None

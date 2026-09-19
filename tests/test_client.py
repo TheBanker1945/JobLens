@@ -113,3 +113,14 @@ def test_response_format_is_sent_only_when_given():
 
     assert "response_format" not in json.loads(seen[0].content)
     assert json.loads(seen[1].content)["response_format"] == schema_format
+
+
+def test_gemini_style_hidden_reasoning_is_counted():
+    reply = ollama_reply() | {
+        "usage": {"prompt_tokens": 45, "completion_tokens": 12, "total_tokens": 897}
+    }
+
+    usage = sdk_client(reply).chat(MESSAGES).usage
+
+    assert usage.hidden_reasoning_tokens == 840
+    assert usage.output_tokens == 852  # what you pay for as output

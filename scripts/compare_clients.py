@@ -58,7 +58,7 @@ def main() -> int:
     print(f"{'client':<14} {'median s':>9} {'out tokens':>11}  answer")
     for name, runs in results.items():
         median = statistics.median(r.latency_s for r in runs)
-        tokens = runs[0].usage.completion_tokens if runs[0].usage else "?"
+        tokens = runs[0].usage.output_tokens if runs[0].usage else "?"
         answer = runs[0].content.replace("\n", " ")[:60]
         print(f"{name:<14} {median:>9.2f} {tokens:>11}  {answer}")
 
