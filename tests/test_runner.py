@@ -31,6 +31,13 @@ def test_every_sample_has_valid_ground_truth():
     )
 
 
+def test_samples_are_split_five_dev_five_holdout():
+    splits = [s.split for s in SAMPLES]
+
+    assert splits.count("dev") == 5
+    assert splits.count("holdout") == 5
+
+
 def test_eval_config_in_repo_loads():
     configs = load_configs(ROOT / "evals" / "extraction.toml")
 
@@ -56,7 +63,8 @@ def test_failed_extraction_counts_as_zero():
 
     assert result.failed == 1
     assert result.samples[0].error
-    assert result.accuracy == pytest.approx(4 / 5)
+    n = len(SAMPLES)
+    assert result.accuracy == pytest.approx((n - 1) / n)
 
 
 def test_hallucinated_salary_is_counted():
@@ -103,8 +111,8 @@ def test_cost_uses_input_and_output_prices():
 
     result = run_eval(config, SAMPLES, PricedClient(replies))
 
-    # per sample: 1000 * $1/M + 300 * $10/M = $0.004; 5 samples = $0.02
-    assert result.cost_usd == pytest.approx(0.02)
+    # per sample: 1000 * $1/M + 300 * $10/M = $0.004
+    assert result.cost_usd == pytest.approx(0.004 * len(SAMPLES))
     assert result.usd_per_1k_vacancies == pytest.approx(4.0)
 
 

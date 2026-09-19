@@ -1,0 +1,24 @@
+{
+  "split": "holdout",
+  "details": {
+    "title": "Verpleegkundige Geriatrie",
+    "company": "Zorggroep De Linde",
+    "city": "Nijmegen",
+    "work_mode": "onsite",
+    "hours_min": 20,
+    "hours_max": 28,
+    "salary_min": 2920,
+    "salary_max": 4180,
+    "salary_period": "month",
+    "salary_note": "bij fulltime (36 uur); plus ORT en eindejaarsuitkering 8,33%",
+    "education_level": "mbo",
+    "experience_years_min": null,
+    "skills": [
+      "BIG-registratie",
+      "ouderenzorg"
+    ],
+    "languages_required": [],
+    "contract_type": "permanent"
+  },
+  "alternatives": {}
+}

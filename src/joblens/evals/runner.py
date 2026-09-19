@@ -6,7 +6,7 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -47,8 +47,12 @@ class RunConfig(BaseModel):
         )
 
 
+Split = Literal["dev", "holdout"]
+
+
 class Sample(BaseModel):
     name: str
+    split: Split  # dev: used for prompt tuning; holdout: only for measuring
     text: str
     expected: VacancyDetails
     alternatives: dict[str, list[Any]] = {}
@@ -118,6 +122,7 @@ def load_samples(vacancies_dir: Path, expected_dir: Path) -> list[Sample]:
         samples.append(
             Sample(
                 name=text_path.stem,
+                split=label["split"],
                 text=text_path.read_text(encoding="utf-8"),
                 expected=VacancyDetails.model_validate(label["details"]),
                 alternatives=label.get("alternatives", {}),
