@@ -186,3 +186,62 @@ exactly: free, fast and reproducible. LLM-as-judge is for free text (phase 2).
 helps, hallucinations cluster in salary fields), not enough to rank settings that
 differ by 1–2 points. Tuning the prompt on these same 5 samples risks overfitting:
 more samples, and a held-out set that is never used for tuning, come first.
+
+## 1.5 — Gemini as a second provider: local vs cloud
+
+Added Gemini through its OpenAI-compatible endpoint. The client needed no changes;
+the provider table and the token accounting did.
+
+**"Compatible" differs even per model.** On the same Gemini API:
+
+| Model                  | thinking off with       | notes                                   |
+|------------------------|-------------------------|-----------------------------------------|
+| gemini-3.8-flash       | `reasoning_effort=none` | still ~330 hidden thinking tokens       |
+| gemini-3.5-flash-lite  | `minimal` (or default)  | `none` → HTTP 400; thinks from `medium` |
+| gemini-3.1-pro-preview | impossible              | "only works in thinking mode"           |
+
+So profiles are now looked up per exact model, and an impossible setting raises an
+error instead of silently running with thinking on. Every entry was tested with a
+real call first.
+
+**Hidden reasoning tokens.** Gemini leaves thinking out of `completion_tokens`: Pro
+reported 12 output tokens for an answer that used 840 thinking tokens — all billed.
+`Usage` now derives them from `total - input - output`, which is 0 on OpenAI and
+Ollama (they already include reasoning) and exactly the hidden part on Gemini.
+
+**Exact model IDs, not aliases.** `gemini-pro-latest` is not on the pricing page and
+can point to a new model tomorrow; old results would then describe a different model.
+
+**Results** (5 samples, commit `205b930`; prices from the Gemini pricing page,
+updated 2026-09-16):
+
+| # | Run                     | Acc | Halluc | Missed | Skills F1 | s/vacancy | $ / 1k vacancies |
+|---|-------------------------|-----|--------|--------|-----------|-----------|------------------|
+| 1 | qwen3:8b                | 86% | 6      | 0      | 0.48      | 2.6       | 0 (local)        |
+| 2 | qwen3:8b +think         | 97% | 1      | 0      | 0.80      | 12.8      | 0 (local)        |
+| 3 | gemini-3.8-flash        | 97% | 0      | 2      | 0.88      | 1.6       | 1.68             |
+| 4 | gemini-3.8-flash +think | 94% | 0      | 4      | 0.68      | 3.3       | 4.29             |
+| 5 | gemini-3.5-flash-lite   | 97% | 1      | 0      | 0.61      | 1.3       | 0.89             |
+| 6 | gemini-3.1-pro +think   | 98% | 0      | 1      | 0.89      | 10.5      | 18.60            |
+
+Total spend for this eval: $0.13.
+
+**What the numbers say.**
+- The strongest signal is hallucinations, not accuracy: Gemini Flash and Pro invented
+  nothing; qwen3 without thinking invented 6 values (incl. €4,250 for "schaal 11").
+  Accuracy differences of 1–3 points on 5 samples are noise.
+- Gemini Flash errs on the safe side: its mistakes are "missed" (left null), not
+  invented. For job matching that is the better failure direction.
+- Thinking is not always better: on Gemini Flash it *lowered* accuracy and skills F1
+  (more conservative: fewer skills, more nulls) at 2.5x the cost. On qwen3 it helped
+  a lot. Whether reasoning helps is a per-model question, answered by the eval.
+- Pro is the most accurate by 1 point, at 11x the price of Flash and 6x slower.
+- Local qwen3 + thinking reaches the same accuracy as Flash for free, but at
+  12.8 s per vacancy and with 1 hallucination.
+- Remaining errors are mostly rules the model was never told (salary_note next to
+  amounts, "hbo-denkniveau", task tools as skills) — the prompt work for 1.6.
+
+**Conclusion.** For vacancy extraction (public data), gemini-3.8-flash with thinking
+off is the best balance: 0 hallucinations, 1.6 s and $1.68 per 1,000 vacancies. Note
+its price is introductory until 2026-12-31. Flash-lite is the cheaper fallback,
+qwen3 + thinking the local one. CVs stay on local models by default (GDPR).
