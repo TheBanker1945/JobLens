@@ -245,3 +245,55 @@ Total spend for this eval: $0.13.
 off is the best balance: 0 hallucinations, 1.6 s and $1.68 per 1,000 vacancies. Note
 its price is introductory until 2026-12-31. Flash-lite is the cheaper fallback,
 qwen3 + thinking the local one. CVs stay on local models by default (GDPR).
+
+## 1.6 — Improving the prompt, and proving it with a holdout set
+
+Added 5 new fictional vacancies (06–10) as a **holdout** split, never used for
+tuning; 01–05 are the **dev** split. Then: measure before → change the prompt using
+dev mistakes only → measure after. `--mistakes` only shows dev mistakes and
+`--split dev` runs dev alone, so the holdout stays clean.
+
+**Changes** (all derived from dev):
+- The 1.4 labelling guidelines in the field descriptions (which skills count and how to
+  split them, either/or languages, salary_note, work_mode, vague terms → null).
+- General rules in the system prompt: never fill a value from your own knowledge
+  (a pay scale is not an amount); read the task description for skills too.
+- Validation: a `salary_period` without an amount is now invalid.
+
+**Results** (before: commit `134c632`; after: commit `e5735d3`):
+
+| Run              | Dev before → after | Holdout before → after             |
+|------------------|--------------------|------------------------------------|
+| qwen3:8b         | 86% → 98%, skills F1 0.48 → 0.91, invented 6 → 1 | 86% → 88%, skills F1 0.30 → 0.48, languages F1 0.73 → 1.00 |
+| qwen3:8b +think  | 97% → 80% (1 loop) | 92% → 89%, invented 1 → 3          |
+| gemini-3.8-flash | 95% → 100%, skills F1 0.88 → 0.95 | 95% → 95%, skills F1 0.63 → 0.66 |
+| gemini-3.5-flash-lite | 98% → 98%, skills F1 0.61 → 0.97 | 97% → 95%, skills F1 0.63 → 0.62 |
+
+**What this shows.**
+- **Overfitting to a prompt is real.** Dev jumped (qwen3 86% → 98%); the holdout barely
+  moved (86% → 88%). The rules fixed *these* 5 vacancies much more than vacancies in
+  general. Without a holdout I would have reported "+12 points".
+- **What did generalise:** skills for qwen3 (holdout F1 +0.18) and language names
+  (0.73 → 1.00). Rules that describe a general *kind* of mistake transfer; rules that
+  describe one sample's wording mostly don't.
+- **Run-to-run noise is ~2 points.** Gemini at temperature 0 is not fully
+  deterministic (gemini-3.8-flash dev: 97% in 1.5, 95% in the 1.6 baseline, same
+  prompt). Differences smaller than that mean nothing.
+- **A prompt change can break another field.** "Keep the wording of the text" for
+  skills made qwen3 write "nederlands" instead of "Dutch" (languages F1 0.80 → 0.20
+  on dev). Only per-field scores revealed it; fixed by scoping the rule.
+- **Data leakage through guidelines.** Rules decided while labelling the holdout
+  (remote → city null, "up to €85k" → min null, ZZP → freelance) were deliberately
+  kept out of the prompt: putting them in would raise the holdout score with leaked
+  knowledge. The remaining holdout errors (city: 2–3/5) are exactly those cases.
+  Adding them now is fine for the product, but then the holdout is "used up" and a
+  fresh one is needed to measure honestly.
+- **qwen3 + thinking at temperature 0 loops.** Greedy decoding with reasoning can
+  repeat forever; one looping request blocked Ollama (one request at a time) until
+  the client timed out. Fixed with an output cap (`max_tokens=3000`) and failing fast
+  on `finish_reason: "length"`. Qwen advises against greedy decoding in thinking
+  mode; with the longer prompt it is now worse than qwen3 without thinking.
+
+**Conclusion.** gemini-3.8-flash stays the default (100% dev, 95% holdout, 1 invented
+value on 10 vacancies). qwen3:8b without thinking is the better local fallback now.
+Next lever is more (and more varied) samples, not more prompt rules.
