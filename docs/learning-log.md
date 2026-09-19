@@ -135,3 +135,54 @@ tokens) for that vacancy only.
 
 **Lesson:** validation catches rule violations (0, min > max, unknown enum values),
 not wrong facts. Measuring accuracy needs hand-labelled answers: milestone 1.4.
+
+## 1.4 — An eval for extraction
+
+`scripts/eval_extraction.py` runs every setting in `evals/extraction.toml` over the
+5 samples and scores each field against hand-labelled answers in
+`data/samples/expected/`. Results are saved in `evals/results/` with the git commit
+that produced them.
+
+**An eval has four parts:** a test set, ground truth written by a human, a metric,
+and a comparison. Without it, every prompt change is a guess.
+
+**Ground truth is a set of decisions.** Writing the answers surfaced 8 cases where
+the text allows two readings (is "een pré" a required skill? is "af en toe thuis"
+hybrid?). I decided them; the rules are in `data/samples/expected/README.md`. If the
+engineer had decided alone, the eval would measure the engineer's opinions.
+
+**Not every mistake is equal.** Each field is `correct`, `correct_null`, `wrong`,
+`missed` or `hallucinated`. For job matching an invented salary is worse than a
+missing one, so hallucinations are counted separately. Lists get precision, recall
+and F1, so partly right counts for something.
+
+**Scoring by rules, not by an LLM judge.** Structured fields can be compared
+exactly: free, fast and reproducible. LLM-as-judge is for free text (phase 2).
+
+**Baseline** (qwen3:8b, temperature 0, commit `528666f`):
+
+| # | Setting        | Accuracy | Hallucinated | Wrong | Skills F1 | Out tokens | Time   |
+|---|----------------|----------|--------------|-------|-----------|------------|--------|
+| 1 | schema         | 86%      | 6            | 3     | 0.48      | 945        | 12 s   |
+| 2 | prompt         | 86%      | 6            | 3     | 0.48      | 945        | 12 s   |
+| 3 | schema + think | 97%      | 1            | 1     | 0.80      | 5,073      | 65 s   |
+| 4 | prompt + think | 97%      | 1            | 1     | 0.81      | 5,167      | 63 s   |
+
+**What the numbers say.**
+- Thinking: 86% → 97%, hallucinations 6 → 1 (the invented €4,250 for "schaal 11" is
+  gone), at 5.4x the tokens and time. A real trade-off, not a free win.
+- Schema vs prompt mode: no difference for qwen3:8b. The constraint is a safety net.
+- Mistakes that survive every setting: `company: "Over Fietsdeel"` (a heading), and
+  `salary_period: "month"` without any amount — a gap in our own validation (we
+  require a period when there is an amount, but not the reverse).
+- Most skill errors come from rules the model was never told (split
+  "Python (Django of FastAPI)", count task tools). The labelling guidelines are not
+  in the prompt yet.
+- Surprise: thinking made the model *stricter* about skills (dropped ONNX, TensorRT
+  and "deep learning", which only appear under tasks). More reasoning is not the same
+  as following your rules.
+
+**Caution: 5 samples.** 65 scored fields per run: enough to see patterns (thinking
+helps, hallucinations cluster in salary fields), not enough to rank settings that
+differ by 1–2 points. Tuning the prompt on these same 5 samples risks overfitting:
+more samples, and a held-out set that is never used for tuning, come first.
