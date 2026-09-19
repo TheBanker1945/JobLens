@@ -1,0 +1,36 @@
+{
+  "details": {
+    "title": "Machine Learning Engineer",
+    "company": "Lumora Imaging",
+    "city": "Eindhoven",
+    "work_mode": "hybrid",
+    "hours_min": 40,
+    "hours_max": 40,
+    "salary_min": 70000,
+    "salary_max": 90000,
+    "salary_period": "year",
+    "salary_note": "plus 8% holiday allowance",
+    "education_level": "wo",
+    "experience_years_min": 5,
+    "skills": [
+      "Python",
+      "PyTorch",
+      "C++",
+      "ONNX",
+      "TensorRT",
+      "deep learning",
+      "image segmentation",
+      "computer vision"
+    ],
+    "languages_required": [
+      "English"
+    ],
+    "contract_type": "permanent"
+  },
+  "alternatives": {
+    "title": [
+      "Machine Learning Engineer — Computer Vision",
+      "Machine Learning Engineer - Computer Vision"
+    ]
+  }
+}

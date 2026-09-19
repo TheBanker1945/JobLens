@@ -1,0 +1,31 @@
+{
+  "details": {
+    "title": "Medior Backend Developer",
+    "company": "Fietsdeel",
+    "city": "Amsterdam",
+    "work_mode": "hybrid",
+    "hours_min": 40,
+    "hours_max": 40,
+    "salary_min": null,
+    "salary_max": null,
+    "salary_period": null,
+    "salary_note": "marktconform",
+    "education_level": "hbo",
+    "experience_years_min": 3,
+    "skills": [
+      "Python",
+      "Django",
+      "FastAPI",
+      "PostgreSQL",
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "Scrum"
+    ],
+    "languages_required": [
+      "English"
+    ],
+    "contract_type": "permanent"
+  },
+  "alternatives": {}
+}

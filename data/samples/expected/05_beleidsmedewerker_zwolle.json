@@ -1,0 +1,24 @@
+{
+  "details": {
+    "title": "Beleidsmedewerker Klimaatadaptatie",
+    "company": "Gemeente Zwolle",
+    "city": "Zwolle",
+    "work_mode": "hybrid",
+    "hours_min": 36,
+    "hours_max": 36,
+    "salary_min": null,
+    "salary_max": null,
+    "salary_period": null,
+    "salary_note": "schaal 11 cao Gemeenten",
+    "education_level": "wo",
+    "experience_years_min": null,
+    "skills": [
+      "Omgevingswet"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "temporary"
+  },
+  "alternatives": {}
+}
