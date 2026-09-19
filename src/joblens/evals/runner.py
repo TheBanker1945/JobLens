@@ -56,7 +56,8 @@ class SampleResult(BaseModel):
     error: str | None = None
     predicted: dict[str, Any] | None = None
     attempts: int
-    completion_tokens: int = 0
+    prompt_tokens: int = 0
+    output_tokens: int = 0  # answer + reasoning
     latency_s: float = 0.0
 
 
@@ -129,7 +130,8 @@ def run_eval(config: RunConfig, samples: list[Sample], client: ChatClient) -> Ru
                 ),
                 predicted=extraction.details.model_dump(mode="json"),
                 attempts=extraction.attempts,
-                completion_tokens=extraction.completion_tokens,
+                prompt_tokens=extraction.prompt_tokens,
+                output_tokens=extraction.output_tokens,
                 latency_s=extraction.latency_s,
             )
         )

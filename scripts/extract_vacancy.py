@@ -65,7 +65,7 @@ def run(path: Path, text: str, client, mode: str, show: bool) -> dict | None:
     d = result.details
     print(
         f"{path.stem:<36} {mode:<7} {result.attempts:>5} "
-        f"{result.completion_tokens:>8} {result.latency_s:>6.1f}  {d.title}"
+        f"{result.output_tokens:>8} {result.latency_s:>6.1f}  {d.title}"
     )
     if show:
         print(d.model_dump_json(indent=2))

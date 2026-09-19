@@ -68,7 +68,7 @@ def print_summary(results: list[RunResult]) -> None:
     )
     for i, r in enumerate(results, 1):
         tries = sum(s.attempts for s in r.samples)
-        tokens = sum(s.completion_tokens for s in r.samples)
+        tokens = sum(s.output_tokens for s in r.samples)
         seconds = sum(s.latency_s for s in r.samples)
         halluc, missed, wrong = (
             r.total(o) for o in ("hallucinated", "missed", "wrong")

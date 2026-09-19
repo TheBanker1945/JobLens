@@ -50,7 +50,7 @@ class ExtractionResult(BaseModel):
     mode: Mode
     attempts: int
     prompt_tokens: int
-    completion_tokens: int
+    output_tokens: int  # answer + reasoning, summed over attempts
     latency_s: float
 
 
@@ -107,9 +107,7 @@ def extract_vacancy(
             mode=mode,
             attempts=len(attempts),
             prompt_tokens=sum(a.usage.prompt_tokens for a in attempts if a.usage),
-            completion_tokens=sum(
-                a.usage.completion_tokens for a in attempts if a.usage
-            ),
+            output_tokens=sum(a.usage.output_tokens for a in attempts if a.usage),
             latency_s=sum(a.latency_s for a in attempts),
         )
 

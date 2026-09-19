@@ -113,7 +113,7 @@ def test_tokens_and_latency_are_summed_over_attempts():
     result = extract_vacancy(VACANCY_TEXT, client)
 
     assert result.prompt_tokens == 200
-    assert result.completion_tokens == 100
+    assert result.output_tokens == 100
     assert result.latency_s == 1.0
 
 

@@ -12,7 +12,7 @@ import httpx
 
 from joblens.config import LLMSettings
 from joblens.llm.providers import thinking_params
-from joblens.llm.types import ChatResult, Message
+from joblens.llm.types import ChatResult, Message, Usage
 
 
 def build_request_body(
@@ -59,7 +59,7 @@ def chat(
         content=message.get("content") or "",
         # Ollama calls it "reasoning", DeepSeek and vLLM "reasoning_content"
         reasoning=message.get("reasoning") or message.get("reasoning_content"),
-        usage=data.get("usage"),
+        usage=Usage.from_api(data["usage"]) if data.get("usage") else None,
         model=data.get("model", settings.model),
         latency_s=latency,
     )
