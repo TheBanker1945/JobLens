@@ -1,0 +1,27 @@
+{
+  "details": {
+    "title": "Orderpicker",
+    "company": "Snelwerk",
+    "city": "Tilburg",
+    "work_mode": "onsite",
+    "hours_min": 24,
+    "hours_max": 40,
+    "salary_min": 14.85,
+    "salary_max": 14.85,
+    "salary_period": "hour",
+    "salary_note": "plus 21% toeslag voor de late dienst",
+    "education_level": null,
+    "experience_years_min": null,
+    "skills": [
+      "heftruckcertificaat",
+      "handscanner"
+    ],
+    "languages_required": [],
+    "contract_type": "temp_agency"
+  },
+  "alternatives": {
+    "company": [
+      "Uitzendbureau Snelwerk"
+    ]
+  }
+}
