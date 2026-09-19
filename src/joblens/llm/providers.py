@@ -59,8 +59,9 @@ PROFILES: dict[str, ProviderProfile] = {
         thinking_on={"reasoning_effort": "medium"},
         supports_json_schema=True,
     ),
-    "gemini/gemini-pro-latest": ProviderProfile(
-        thinking_off=None,  # "only works in thinking mode"
+    "gemini/gemini-3.1-pro-preview": ProviderProfile(
+        # "none" is rejected: "This model only works in thinking mode".
+        thinking_off=None,
         supports_json_schema=True,
     ),
 }

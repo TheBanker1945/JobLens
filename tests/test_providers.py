@@ -70,7 +70,7 @@ def gemini(model, thinking=False):
         ("gemini-3.8-flash", True, {}),
         ("gemini-3.5-flash-lite", False, {"reasoning_effort": "minimal"}),
         ("gemini-3.5-flash-lite", True, {"reasoning_effort": "medium"}),
-        ("gemini-pro-latest", True, {}),
+        ("gemini-3.1-pro-preview", True, {}),
     ],
 )
 def test_gemini_thinking_is_chosen_per_model(model, thinking, params):
@@ -79,7 +79,7 @@ def test_gemini_thinking_is_chosen_per_model(model, thinking, params):
 
 def test_model_that_always_thinks_refuses_thinking_off():
     with pytest.raises(ThinkingNotSupportedError, match="always thinks"):
-        thinking_params(gemini("gemini-pro-latest", thinking=False))
+        thinking_params(gemini("gemini-3.1-pro-preview", thinking=False))
 
 
 def test_unverified_gemini_model_sends_nothing_and_warns(caplog):

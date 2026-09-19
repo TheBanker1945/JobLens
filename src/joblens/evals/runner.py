@@ -27,6 +27,10 @@ class RunConfig(BaseModel):
     thinking: bool = False
     mode: Mode = "schema"
     api_key_env: str | None = None  # name of the env var holding the key, never the key
+    # USD per 1 million tokens, from the provider's pricing page (0 for local models).
+    # Output price covers reasoning tokens too.
+    usd_per_m_input: float | None = None
+    usd_per_m_output: float | None = None
 
     def settings(self, env: Mapping[str, str] = os.environ) -> LLMSettings:
         api_key = "unused"  # local servers like Ollama ignore the key
@@ -80,6 +84,20 @@ class RunResult(BaseModel):
 
     def total(self, outcome: str) -> int:
         return sum(s.count(outcome) for s in self.scored)
+
+    @property
+    def cost_usd(self) -> float | None:
+        c = self.config
+        if c.usd_per_m_input is None or c.usd_per_m_output is None:
+            return None
+        tokens_in = sum(s.prompt_tokens for s in self.samples)
+        tokens_out = sum(s.output_tokens for s in self.samples)
+        return (tokens_in * c.usd_per_m_input + tokens_out * c.usd_per_m_output) / 1e6
+
+    @property
+    def usd_per_1k_vacancies(self) -> float | None:
+        cost = self.cost_usd
+        return None if cost is None else cost / len(self.samples) * 1000
 
     def list_f1(self, field: str) -> float:
         f1s = [ls.f1 for s in self.scored for ls in s.lists if ls.field == field]
