@@ -39,9 +39,16 @@ conceptually, not just have working code.
 - Provider-agnostic LLM layer: provider, model, base_url and api_key come from
   config/env, never hardcoded. Must work with Ollama, LM Studio, OpenRouter,
   Gemini, DeepSeek, Claude and OpenAI.
-- Local default: Ollama on Windows, reachable from WSL at http://localhost:11434/v1,
-  model qwen3:8b. Reasoning/"thinking" must be switchable (off for extraction).
-- Personal data (CVs) goes to local models by default — GDPR.
+- Default for vacancy extraction (public data): Gemini, model gemini-3.8-flash,
+  thinking off. Chosen by the eval in milestone 1.5 (docs/learning-log.md); re-check
+  when its introductory price ends (2026-12-31) or a new model appears.
+- Local fallback: Ollama on Windows, reachable from WSL at http://localhost:11434/v1,
+  model qwen3:8b. Keep it working and in the eval.
+- Reasoning/"thinking" must be switchable per model, via verified profiles in
+  src/joblens/llm/providers.py. Use exact model IDs, never "-latest" aliases.
+- Personal data (CVs) goes to local models only by default — GDPR.
+- Planned (later): a web UI to choose model and thinking, explaining what each
+  choice changes (accuracy, hallucinations, speed, cost) using eval results.
 
 ## Project layout
 

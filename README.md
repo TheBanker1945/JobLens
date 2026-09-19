@@ -16,14 +16,24 @@ concepts are clear before any framework is introduced.
 3. **Tool use & agents:** an agent loop written by hand, then compared with a
    framework
 4. **MCP:** a Python MCP server exposing JobLens tools to Claude
-5. **Portfolio polish & deploy:** Cloud Run
+5. **Portfolio polish & deploy:** a web interface (including choosing the model and
+   thinking, with the trade-offs explained using eval results), deployed on Cloud Run
 
 ## Works with any LLM provider
 
 JobLens talks to models through the OpenAI-compatible API. Provider, base URL,
 model and API key come from environment variables and are never hardcoded, so the
 same code runs against Ollama, LM Studio, OpenRouter, Gemini, DeepSeek, Claude or
-OpenAI. The default setup is a local model (Ollama with `qwen3:8b`).
+OpenAI.
+
+Which model to use is decided by an eval (`scripts/eval_extraction.py`), not by
+guesswork. Current choice:
+
+- **Vacancy extraction** (public data): Gemini `gemini-3.8-flash`, thinking off.
+  In the milestone 1.5 eval it made no invented values, at about 1.6 s and $1.68 per
+  1,000 vacancies.
+- **Local fallback:** Ollama with `qwen3:8b`.
+- **CVs and other personal data:** local models only, by default.
 
 ## Setup
 
@@ -37,13 +47,25 @@ cp .env.example .env     # then fill in your provider settings
 mkdir -p data/raw        # local-only folder for personal data (see below)
 ```
 
-For a local Ollama instance, `.env` looks like this:
+With Gemini (the default for vacancy extraction), `.env` looks like this:
+
+```env
+GEMINI_API_KEY=your-key
+LLM_PROVIDER=gemini
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_API_KEY=${GEMINI_API_KEY}
+LLM_MODEL=gemini-3.8-flash
+LLM_THINKING=false
+```
+
+For the local Ollama fallback:
 
 ```env
 LLM_PROVIDER=ollama
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_API_KEY=ollama
 LLM_MODEL=qwen3:8b
+LLM_THINKING=false
 ```
 
 ## Development
