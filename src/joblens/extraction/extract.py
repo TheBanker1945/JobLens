@@ -27,7 +27,11 @@ You extract structured data from job vacancies (usually Dutch, sometimes English
 
 Rules:
 - Use only information stated in the text. If something is not stated, use null
-  (or [] for lists). Never guess.
+  (or [] for lists). Never guess, and never fill a value from your own knowledge:
+  a pay scale without amounts ("schaal 11") means salary_min, salary_max and
+  salary_period are null.
+- Read the whole text, including the task description: skills and tools named
+  there count too.
 - Dutch number format: "." separates thousands and "," decimals.
   "€ 3.200" -> 3200, "€ 14,85" -> 14.85.
 - Enum fields must use the exact English values from the schema.
