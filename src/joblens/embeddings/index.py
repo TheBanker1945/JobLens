@@ -19,6 +19,14 @@ from joblens.embeddings.similarity import Vector, rank
 from joblens.extraction.schema import VacancyDetails
 from joblens.sources.base import Vacancy
 
+# An embedding server silently truncates what does not fit and still answers
+# 200. Measured 2026-09-20 against Ollama 0.34.2: it serves qwen3-embedding:0.6b
+# with a 4,096-token window (not the model's own 32,768), and vacancy text runs
+# at about 5.4 characters per token, so anything past ~22,000 characters is
+# dropped without a word. The longest vacancy we have is 11,188. This is the
+# line where that stops being true, and `oversized` is how we hear about it.
+LONG_DOCUMENT_CHARS = 20_000
+
 
 class Embedder(Protocol):
     """What the index needs; EmbeddingClient and CachedEmbedder both fit."""
@@ -84,6 +92,14 @@ class VacancyIndex:
         return [
             Match(self.vacancies[hit.index], hit.score, self.documents[hit.index])
             for hit in hits
+        ]
+
+    def oversized(self, limit: int = LONG_DOCUMENT_CHARS) -> list[Vacancy]:
+        """Vacancies whose document is long enough to risk being cut in half."""
+        return [
+            vacancy
+            for vacancy, document in zip(self.vacancies, self.documents, strict=True)
+            if len(document) > limit
         ]
 
     def __len__(self) -> int:

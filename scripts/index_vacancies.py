@@ -147,6 +147,11 @@ def embed(
         print(f"Cannot reach {settings.base_url}. Is the embedding server running?")
         return 1
 
+    for vacancy in index.oversized():
+        print(
+            f"  warning: {vacancy.key} is longer than the embedder's window; "
+            "its tail was not embedded"
+        )
     missing = len(vacancies) - len(index)
     print(
         f"embedded {len(index)} vacancies as {style} with {settings.model} "

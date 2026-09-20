@@ -114,3 +114,12 @@ def test_an_empty_index_answers_nothing():
 def test_documents_must_match_their_vacancies():
     with pytest.raises(ValueError, match="1 vacancies but 0 documents"):
         VacancyIndex([DATA], [], WordEmbedder())
+
+
+def test_documents_too_long_for_the_embedder_are_named():
+    """An embedding server truncates silently, so length is checked here."""
+    endless = vacancy("3", "Data Engineer", "data " * 6000)
+    index = VacancyIndex.build([DATA, endless], {}, WordEmbedder(), style="raw")
+
+    assert [v.key for v in index.oversized()] == ["indeed:3"]
+    assert index.oversized(limit=100_000) == []
