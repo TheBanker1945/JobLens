@@ -38,3 +38,53 @@ slug = "databricks"
 enabled = true
 country = "NL"
 max_age_days = 7
+
+# Scraped sources: Indeed and LinkedIn publish no feed, so these read the
+# endpoints their own app and logged-out pages use, through JobSpy. They need the
+# optional dependency group: uv sync --group scrape
+#
+# Volume stays small on purpose: a few searches, a radius in kilometres (JobSpy
+# counts miles and defaults to 50, which is most of the Netherlands), and only
+# vacancies from the last few days.
+
+[indeed]
+enabled = true
+country = "netherlands"
+distance_km = 25
+hours_old = 72
+results_per_search = 50
+
+# One search is one request that brings back up to 100 jobs with their
+# descriptions. Deliberately not all tech: the ATS boards above already are.
+[[indeed.searches]]
+term = "data engineer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "verpleegkundige"
+city = "Utrecht"
+[[indeed.searches]]
+term = "monteur"
+city = "Eindhoven"
+[[indeed.searches]]
+term = "beleidsmedewerker"
+city = "Den Haag"
+
+# Off by default, on purpose. LinkedIn's guest endpoints are the throttle-prone
+# half of scraping and its terms do not invite it, so switching this on is a
+# deliberate choice about your own IP. What it costs is capped: jobs already in
+# data/raw/ are never requested again, a run fetches at most
+# max_descriptions_per_run descriptions, and delay_seconds sits between them.
+[linkedin]
+enabled = false
+distance_km = 25
+hours_old = 72
+results_per_search = 25
+max_descriptions_per_run = 40
+delay_seconds = 2.5
+
+[[linkedin.searches]]
+term = "data engineer"
+city = "Amsterdam"
+[[linkedin.searches]]
+term = "product manager"
+city = "Rotterdam"

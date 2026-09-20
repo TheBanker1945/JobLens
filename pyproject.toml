@@ -26,6 +26,12 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.8",
 ]
+# Only needed to scrape Indeed/LinkedIn: uv sync --group scrape
+# Not installed by default, so the library, the tests and the evals stay on the
+# five dependencies above.
+scrape = [
+    "python-jobspy",
+]
 
 [tool.ruff.lint]
 # E/F: default errors, I: import sorting, UP: modern Python syntax, B: common bugs
@@ -33,3 +39,10 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+# Pinned to a commit, not to PyPI: the last release (1.1.82, July 2025) requires
+# numpy==1.26.3, which would drag this project back from numpy 2. Resolving it from
+# PyPI silently installs python-jobspy 1.1.13 from 2024 instead. A commit also means
+# an upstream change can never surprise us mid-run.
+python-jobspy = { git = "https://github.com/speedyapply/JobSpy", rev = "fda080a373e8226f3fd60635323f5da9af9892b1" }

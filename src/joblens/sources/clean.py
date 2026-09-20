@@ -9,6 +9,7 @@ Two steps, both needed before anything is stored:
 
 import html
 import re
+from html.parser import HTMLParser
 
 BLOCK_END = re.compile(r"</(p|div|li|h[1-6]|tr|section|article)>", re.I)
 BREAK = re.compile(r"<(br|hr)\s*/?>", re.I)
@@ -49,3 +50,60 @@ def strip_contact_details(text: str) -> str:
 
 def to_clean_text(raw: str) -> str:
     return strip_contact_details(html_to_text(raw))
+
+
+# Void elements never get a closing tag, so they must not count towards the depth.
+VOID_TAGS = frozenset(
+    "area base br col embed hr img input link meta param source track wbr".split()
+)
+
+
+def extract_by_class(raw: str, class_name: str) -> str | None:
+    """The inner HTML of the first element carrying `class_name`, or None.
+
+    LinkedIn returns a whole page fragment where only one div holds the vacancy
+    text. Written with the standard library's HTMLParser rather than an HTML
+    library: it is one element we need, matched on one class, and the parser is
+    already there.
+    """
+    picker = _ElementByClass(class_name)
+    picker.feed(raw)
+    picker.close()
+    return "".join(picker.parts) if picker.found else None
+
+
+class _ElementByClass(HTMLParser):
+    """Copies everything between an element's start and end tag, nesting included."""
+
+    def __init__(self, class_name: str):
+        super().__init__(convert_charrefs=True)
+        self.class_name = class_name
+        self.parts: list[str] = []
+        self.found = False
+        self.depth = 0  # 0 = not inside the element we want
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self.depth == 0:
+            if self.found or not self._matches(attrs):
+                return  # the first match is the one we keep
+            self.found = True
+            self.depth = 1
+            return  # the element's own start tag is not part of its inner HTML
+        if tag not in VOID_TAGS:
+            self.depth += 1
+        self.parts.append(self.get_starttag_text() or f"<{tag}>")
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.depth == 0 or tag in VOID_TAGS:
+            return
+        self.depth -= 1
+        if self.depth > 0:  # the element's own end tag closes it, and is dropped
+            self.parts.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        if self.depth > 0:
+            self.parts.append(data)
+
+    def _matches(self, attrs: list[tuple[str, str | None]]) -> bool:
+        classes = dict(attrs).get("class") or ""
+        return self.class_name in classes.split()
