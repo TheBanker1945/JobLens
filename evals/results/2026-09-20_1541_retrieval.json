@@ -1,0 +1,2478 @@
+{
+  "date": "2026-09-20T15:41:37",
+  "git_commit": "0ed7247",
+  "runs": [
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.9,
+          "recall_at_3": 1.0,
+          "mrr": 0.95
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.8400000000000001
+        }
+      },
+      "variant": "local raw",
+      "style": "raw",
+      "model": "qwen3-embedding:0.6b",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "08_verpleegkundige_nijmegen",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.0640479520000099,
+      "api_calls": 0
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.845
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.9
+        }
+      },
+      "variant": "local structured",
+      "style": "structured",
+      "model": "qwen3-embedding:0.6b",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.023053736000065328,
+      "api_calls": 0
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.5,
+          "recall_at_3": 0.6,
+          "mrr": 0.6086111111111111
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.9
+        }
+      },
+      "variant": "local title only",
+      "style": "title_only",
+      "model": "qwen3-embedding:0.6b",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.02238074100000631,
+      "api_calls": 0
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.7,
+          "recall_at_3": 0.8,
+          "mrr": 0.780952380952381
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.9
+        }
+      },
+      "variant": "local structured, no instruction",
+      "style": "structured",
+      "model": "qwen3-embedding:0.6b",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "06_stage_marketing_groningen",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.02199607600005038,
+      "api_calls": 0
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.9,
+          "recall_at_3": 0.9,
+          "mrr": 0.925
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.9,
+          "mrr": 0.8666666666666666
+        }
+      },
+      "variant": "gemini-001 structured",
+      "style": "structured",
+      "model": "gemini-embedding-001",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "04_ml_engineer_eindhoven",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 4.792112190000125,
+      "api_calls": 25
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "holdout": {
+          "hit_at_1": 0.6,
+          "recall_at_3": 0.9,
+          "mrr": 0.7666666666666667
+        }
+      },
+      "variant": "gemini-2 structured",
+      "style": "structured",
+      "model": "gemini-embedding-2",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 5.434817161999945,
+      "api_calls": 25
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "holdout": {
+          "hit_at_1": 1.0,
+          "recall_at_3": 0.9,
+          "mrr": 1.0
+        }
+      },
+      "variant": "gemini-2 raw",
+      "style": "raw",
+      "model": "gemini-embedding-2",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven",
+            "03_orderpicker_tilburg"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "04_ml_engineer_eindhoven",
+            "09_product_manager_remote"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "05_beleidsmedewerker_zwolle",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.5374149149999994,
+      "api_calls": 10
+    },
+    {
+      "summary": {
+        "dev": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 1.0,
+          "mrr": 0.8833333333333334
+        },
+        "holdout": {
+          "hit_at_1": 0.8,
+          "recall_at_3": 0.8,
+          "mrr": 0.8666666666666666
+        }
+      },
+      "variant": "local structured + raw",
+      "style": "structured_raw",
+      "model": "qwen3-embedding:0.6b",
+      "results": [
+        {
+          "query": "python developer amsterdam",
+          "split": "dev",
+          "ranked": [
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam"
+          ]
+        },
+        {
+          "query": "werken met kubernetes",
+          "split": "dev",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "05_beleidsmedewerker_zwolle",
+            "04_ml_engineer_eindhoven",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "parttime baan in de zorg",
+          "split": "dev",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "stage marketing",
+          "split": "dev",
+          "ranked": [
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "06_stage_marketing_groningen"
+          ]
+        },
+        {
+          "query": "data analyse met SQL en Power BI",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht"
+          ]
+        },
+        {
+          "query": "freelance opdracht als zzp'er",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "remote job in the Netherlands, English speaking",
+          "split": "dev",
+          "ranked": [
+            "09_product_manager_remote",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "09_product_manager_remote"
+          ]
+        },
+        {
+          "query": "werk zonder diploma, direct beginnen",
+          "split": "dev",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "03_orderpicker_tilburg"
+          ]
+        },
+        {
+          "query": "machine learning computer vision",
+          "split": "dev",
+          "ranked": [
+            "04_ml_engineer_eindhoven",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "03_orderpicker_tilburg",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "04_ml_engineer_eindhoven"
+          ]
+        },
+        {
+          "query": "beleidsfunctie bij de overheid",
+          "split": "dev",
+          "ranked": [
+            "05_beleidsmedewerker_zwolle",
+            "10_accountmanager_randstad",
+            "08_verpleegkundige_nijmegen",
+            "02_backend_developer_amsterdam",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "09_product_manager_remote",
+            "03_orderpicker_tilburg",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "05_beleidsmedewerker_zwolle"
+          ]
+        },
+        {
+          "query": "commerciële functie met klantcontact",
+          "split": "holdout",
+          "ranked": [
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "01_data_analist_utrecht",
+            "08_verpleegkundige_nijmegen",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "07_freelance_devops_utrecht",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "10_accountmanager_randstad"
+          ]
+        },
+        {
+          "query": "job with azure and terraform",
+          "split": "holdout",
+          "ranked": [
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "08_verpleegkundige_nijmegen"
+          ],
+          "relevant": [
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "verpleegkundige ouderenzorg nijmegen",
+          "split": "holdout",
+          "ranked": [
+            "08_verpleegkundige_nijmegen",
+            "05_beleidsmedewerker_zwolle",
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "06_stage_marketing_groningen",
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "08_verpleegkundige_nijmegen"
+          ]
+        },
+        {
+          "query": "parttime werk in utrecht",
+          "split": "holdout",
+          "ranked": [
+            "03_orderpicker_tilburg",
+            "10_accountmanager_randstad",
+            "01_data_analist_utrecht",
+            "05_beleidsmedewerker_zwolle",
+            "06_stage_marketing_groningen",
+            "09_product_manager_remote",
+            "08_verpleegkundige_nijmegen",
+            "07_freelance_devops_utrecht",
+            "02_backend_developer_amsterdam",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "07_freelance_devops_utrecht"
+          ]
+        },
+        {
+          "query": "vacature voor starters zonder ervaring",
+          "split": "holdout",
+          "ranked": [
+            "01_data_analist_utrecht",
+            "06_stage_marketing_groningen",
+            "10_accountmanager_randstad",
+            "03_orderpicker_tilburg",
+            "05_beleidsmedewerker_zwolle",
+            "07_freelance_devops_utrecht",
+            "09_product_manager_remote",
+            "02_backend_developer_amsterdam",
+            "08_verpleegkundige_nijmegen",
+            "04_ml_engineer_eindhoven"
+          ],
+          "relevant": [
+            "01_data_analist_utrecht",
+            "03_orderpicker_tilburg"
+          ]
+        }
+      ],
+      "seconds": 0.024849852999977884,
+      "api_calls": 0
+    }
+  ]
+}

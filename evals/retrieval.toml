@@ -1,0 +1,69 @@
+# Search variants compared by scripts/eval_retrieval.py, over the queries in
+# data/samples/queries.json and the vacancies in data/samples/vacancies/.
+#
+# style: raw (the vacancy text), structured (summary of the extracted fields),
+#        title_only (just the job title).
+# instruction: false embeds the query as plain text, to show what the model's
+#        query instruction is worth (only qwen3-embedding has one).
+# Gemini embeddings are fine here: vacancies are public data. CV matching must use
+# a local model, because CVs stay local (GDPR).
+
+[[run]]
+name = "local raw"
+style = "raw"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+
+[[run]]
+name = "local structured"
+style = "structured"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+
+[[run]]
+name = "local title only"
+style = "title_only"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+
+[[run]]
+name = "local structured, no instruction"
+style = "structured"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+instruction = false
+
+[[run]]
+name = "gemini-001 structured"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-001"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 structured"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 raw"
+style = "raw"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "local structured + raw"
+style = "structured_raw"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"

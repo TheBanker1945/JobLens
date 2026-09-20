@@ -5,17 +5,22 @@ milestone 2.1 the query "python baan in amsterdam" ranked a product manager abov
 the only Python job in Amsterdam, because "Python" was one word in a long story.
 
 Three styles, compared in the 2.2 retrieval eval:
-- raw:        the vacancy text as published (the 2.1 baseline)
-- structured: a short summary built from the extracted fields
-- title_only: only the job title (a deliberately minimal baseline)
+- raw:            the vacancy text as published (the 2.1 baseline)
+- structured:     a short summary built from the extracted fields
+- title_only:     only the job title (a deliberately minimal baseline)
+- structured_raw: the summary followed by the full text
+
+Extraction is lossy: "zzp'er" becomes contract_type=freelance and "geen diploma"
+becomes education_level=null, so a summary drops the very words people search
+with. structured_raw keeps both.
 """
 
 from typing import Literal
 
 from joblens.extraction.schema import VacancyDetails
 
-Style = Literal["raw", "structured", "title_only"]
-STYLES: tuple[Style, ...] = ("raw", "structured", "title_only")
+Style = Literal["raw", "structured", "title_only", "structured_raw"]
+STYLES: tuple[Style, ...] = ("raw", "structured", "title_only", "structured_raw")
 
 
 def build_document(
@@ -29,6 +34,8 @@ def build_document(
         return details.title
     if style == "structured":
         return _structured(details)
+    if style == "structured_raw":
+        return f"{_structured(details)}\n\n{text}"
     raise ValueError(f"unknown style {style!r}")
 
 

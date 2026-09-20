@@ -69,3 +69,11 @@ def test_structured_without_details_is_an_error():
 def test_unknown_style_is_an_error():
     with pytest.raises(ValueError, match="unknown style"):
         build_document("x", DETAILS, "summary")
+
+
+def test_structured_raw_keeps_both():
+    doc = build_document("Wij zoeken een zzp'er", DETAILS, "structured_raw")
+
+    assert doc.startswith("Medior Backend Developer")  # the summary
+    assert "Plaats: Amsterdam" in doc
+    assert doc.endswith("Wij zoeken een zzp'er")  # and the original wording

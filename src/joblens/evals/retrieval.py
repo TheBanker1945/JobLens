@@ -12,12 +12,41 @@ gives all query-document cosines at once.
 """
 
 import json
+import os
+import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 
 import numpy as np
 from pydantic import BaseModel
 
+from joblens.config import LLMSettings
 from joblens.embeddings.documents import Style
+
+
+class RetrievalConfig(BaseModel):
+    """One [[run]] from evals/retrieval.toml."""
+
+    name: str
+    style: Style
+    provider: str
+    base_url: str
+    model: str
+    api_key_env: str | None = None  # env var name holding the key, never the key
+    instruction: bool = True  # wrap queries in the model's task instruction
+
+    def settings(self, env: Mapping[str, str] = os.environ) -> LLMSettings:
+        api_key = "unused"  # local servers like Ollama ignore the key
+        if self.api_key_env:
+            api_key = env.get(self.api_key_env, "")
+            if not api_key:
+                raise ValueError(f"Run {self.name!r}: {self.api_key_env} is not set")
+        return LLMSettings(
+            provider=self.provider,
+            base_url=self.base_url,
+            api_key=api_key,
+            model=self.model,
+        )
 
 
 class Query(BaseModel):
@@ -97,6 +126,11 @@ def _unit(matrix: np.ndarray) -> np.ndarray:
     if np.any(lengths == 0):
         raise ValueError("cosine similarity is undefined for a zero vector")
     return matrix / lengths
+
+
+def load_configs(path: Path) -> list[RetrievalConfig]:
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    return [RetrievalConfig.model_validate(run) for run in data["run"]]
 
 
 def load_queries(path: Path) -> list[Query]:
