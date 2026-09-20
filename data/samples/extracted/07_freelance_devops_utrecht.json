@@ -1,0 +1,33 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "DevOps Engineer",
+    "company": "TechMatch Detachering",
+    "city": "Utrecht",
+    "work_mode": "hybrid",
+    "hours_min": 32,
+    "hours_max": 32,
+    "salary_min": 85.0,
+    "salary_max": 100.0,
+    "salary_period": "hour",
+    "salary_note": "exclusief btw",
+    "education_level": null,
+    "experience_years_min": 5,
+    "skills": [
+      "Azure",
+      "CI/CD-pipelines",
+      "Azure DevOps",
+      "infrastructuur als code",
+      "Terraform",
+      "containers",
+      "Azure Kubernetes Service",
+      "AKS",
+      "Kubernetes",
+      "AZ-400"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "freelance"
+  }
+}

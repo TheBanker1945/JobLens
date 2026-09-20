@@ -83,3 +83,28 @@ def test_vectors_keep_input_order_even_if_server_reorders():
     vectors = fake_client([], reverse=True).embed_documents(["a", "bb", "ccc"])
 
     assert [v[1] for v in vectors] == [1, 2, 3]  # lengths of a, bb, ccc
+
+
+def test_works_when_the_server_omits_index(monkeypatch):
+    """Gemini leaves 'index' empty and relies on the order of the items."""
+    seen = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(json.loads(request.content))
+        return httpx2.Response(
+            200,
+            json={
+                "object": "list",
+                "model": "gemini-embedding-2",
+                "data": [
+                    {"object": "embedding", "index": None, "embedding": [1.0, 0.0]},
+                    {"object": "embedding", "index": None, "embedding": [0.0, 1.0]},
+                ],
+                "usage": {"prompt_tokens": 1, "total_tokens": 1},
+            },
+        )
+
+    http = openai.DefaultHttpxClient(transport=httpx2.MockTransport(handler))
+    client = EmbeddingClient(SETTINGS, http_client=http)
+
+    assert client.embed_documents(["a", "b"]) == [[1.0, 0.0], [0.0, 1.0]]

@@ -11,3 +11,6 @@ dist/
 
 # Personal or scraped data (GDPR) — never commit
 data/raw/
+
+# Derived data (embedding cache)
+data/cache/

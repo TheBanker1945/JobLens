@@ -11,6 +11,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "httpx>=0.28.1",
+    "numpy>=2.5.3",
     "openai>=3.14.1",
     "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",

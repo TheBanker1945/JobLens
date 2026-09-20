@@ -1,0 +1,28 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Senior Product Manager — Payments",
+    "company": "Paylane",
+    "city": "Amsterdam",
+    "work_mode": "hybrid",
+    "hours_min": 40,
+    "hours_max": 40,
+    "salary_min": null,
+    "salary_max": 85000.0,
+    "salary_period": "year",
+    "salary_note": "up to €85,000 per year, plus stock options",
+    "education_level": null,
+    "experience_years_min": 6,
+    "skills": [
+      "SQL",
+      "Amplitude",
+      "product analytics tools",
+      "payments",
+      "fintech"
+    ],
+    "languages_required": [
+      "English"
+    ],
+    "contract_type": "temporary"
+  }
+}

@@ -53,14 +53,24 @@ class EmbeddingClient:
             vectors += self._embed(texts[start : start + self.batch_size])
         return vectors
 
-    def embed_query(self, query: str, task: str = DEFAULT_TASK) -> Vector:
+    def query_text(self, query: str, task: str = DEFAULT_TASK) -> str:
+        """The text actually sent for a query: the model's instruction template."""
         template = QUERY_TEMPLATES.get(self.settings.model, "{query}")
-        return self._embed([template.format(task=task, query=query)])[0]
+        return template.format(task=task, query=query)
+
+    def embed_query(self, query: str, task: str = DEFAULT_TASK) -> Vector:
+        return self._embed([self.query_text(query, task)])[0]
 
     def _embed(self, texts: list[str]) -> list[Vector]:
         response = self._sdk.embeddings.create(model=self.settings.model, input=texts)
-        # The API returns one item per input with its index; keep the input order.
-        return [item.embedding for item in sorted(response.data, key=lambda d: d.index)]
+        items = list(response.data)
+        # OpenAI and Ollama number the items; Gemini leaves index empty and relies on
+        # the order. Sort when we can, trust the order when we cannot.
+        if all(item.index is not None for item in items):
+            items.sort(key=lambda item: item.index)
+        if len(items) != len(texts):
+            raise ValueError(f"asked for {len(texts)} embeddings, got {len(items)}")
+        return [item.embedding for item in items]
 
     def close(self) -> None:
         self._sdk.close()
