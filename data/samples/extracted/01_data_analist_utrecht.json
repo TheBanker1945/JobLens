@@ -1,0 +1,29 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Junior Data Analist",
+    "company": "Bakkerij De Vries B.V.",
+    "city": "Utrecht",
+    "work_mode": "hybrid",
+    "hours_min": 32,
+    "hours_max": 36,
+    "salary_min": 3200.0,
+    "salary_max": 3800.0,
+    "salary_period": "month",
+    "salary_note": "afhankelijk van ervaring",
+    "education_level": "hbo",
+    "experience_years_min": 0,
+    "skills": [
+      "Power BI",
+      "SQL-queries",
+      "datawarehouse",
+      "SQL",
+      "Excel",
+      "Python"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "temporary"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Stagiair(e) Online Marketing",
+    "company": "Groene Wolk B.V.",
+    "city": "Groningen",
+    "work_mode": "hybrid",
+    "hours_min": 32,
+    "hours_max": 40,
+    "salary_min": 600.0,
+    "salary_max": 600.0,
+    "salary_period": "month",
+    "salary_note": "stagevergoeding van € 600 per maand",
+    "education_level": "hbo",
+    "experience_years_min": null,
+    "skills": [
+      "Google Ads",
+      "Meta Ads",
+      "Google Analytics",
+      "e-mailmarketing",
+      "Mailchimp"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "internship"
+  }
+}

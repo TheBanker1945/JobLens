@@ -1,0 +1,30 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Machine Learning Engineer — Computer Vision",
+    "company": "Lumora Imaging",
+    "city": "Eindhoven",
+    "work_mode": "hybrid",
+    "hours_min": 40,
+    "hours_max": 40,
+    "salary_min": 70000.0,
+    "salary_max": 90000.0,
+    "salary_period": "year",
+    "salary_note": "plus an 8% holiday allowance",
+    "education_level": "wo",
+    "experience_years_min": 5,
+    "skills": [
+      "deep learning models",
+      "image segmentation",
+      "ONNX",
+      "TensorRT",
+      "Python",
+      "PyTorch",
+      "C++"
+    ],
+    "languages_required": [
+      "English"
+    ],
+    "contract_type": "permanent"
+  }
+}

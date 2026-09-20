@@ -1,0 +1,25 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Accountmanager Binnendienst",
+    "company": "Kantoorland B.V.",
+    "city": null,
+    "work_mode": null,
+    "hours_min": 32,
+    "hours_max": 40,
+    "salary_min": null,
+    "salary_max": null,
+    "salary_period": null,
+    "salary_note": "n.o.t.k.",
+    "education_level": "mbo",
+    "experience_years_min": 1,
+    "skills": [
+      "CRM-systeem",
+      "Salesforce"
+    ],
+    "languages_required": [
+      "Dutch"
+    ],
+    "contract_type": "temporary"
+  }
+}

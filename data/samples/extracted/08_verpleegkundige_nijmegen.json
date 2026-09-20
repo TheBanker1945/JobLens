@@ -1,0 +1,23 @@
+{
+  "model": "gemini-3.8-flash",
+  "details": {
+    "title": "Verpleegkundige Geriatrie",
+    "company": "Zorggroep De Linde",
+    "city": "Nijmegen-Dukenburg",
+    "work_mode": "onsite",
+    "hours_min": 20,
+    "hours_max": 28,
+    "salary_min": 2920.0,
+    "salary_max": 4180.0,
+    "salary_period": "month",
+    "salary_note": "cao VVT, FWG 45, fulltime dienstverband (36 uur), Onregelmatigheidstoeslag (ORT) voor avond- en weekenddiensten, eindejaarsuitkering van 8,33%",
+    "education_level": "mbo",
+    "experience_years_min": null,
+    "skills": [
+      "BIG-geregistreerd",
+      "ouderenzorg"
+    ],
+    "languages_required": [],
+    "contract_type": "permanent"
+  }
+}
