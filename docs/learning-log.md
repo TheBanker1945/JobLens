@@ -413,3 +413,55 @@ repeated runs cost no time or money.
 **Another "OpenAI-compatible" difference:** Gemini leaves the `index` field empty in
 embedding responses and relies on the order of the items; OpenAI and Ollama number
 them. The client now handles both.
+
+## 2.3 — Real vacancies: three sources behind one interface
+
+`scripts/fetch_vacancies.py` fetches real Dutch vacancies into `data/raw/`
+(never committed) from three public sources, all without a key, registration or
+trial:
+
+| Source | Shape | Note |
+|--------|-------|------|
+| Recruitee | one company board per request | text is split over `description` **and** `requirements` |
+| Greenhouse | one company board per request | `content` is HTML-escaped one extra time (`&lt;p&gt;`) |
+| jobdataapi | aggregator: many employers, one endpoint | anonymous tier, ~10 requests/hour per IP |
+
+Every adapter returns the same `Vacancy`, so extraction, search and matching never
+know where a vacancy came from. Adding a source is one file plus a line in
+`sources.toml`.
+
+**Rate limits, measured rather than assumed.** A controlled probe of jobdataapi
+(stopping at the first 429) showed: the limit is counted **per IP** (no key is
+involved), the window is about an hour, `Retry-After` says exactly how long to wait
+(we saw 2710 s), and **rejected requests still count** — 10 responses with HTTP 403
+used up the whole allowance. So the client never retries, stops at the first 429 and
+varies its filters so every request returns different vacancies. Working around the
+limit (for example by rotating IPs) is off the table: the limit *is* the free tier,
+and this is a public portfolio repo.
+
+**Privacy before storage.** Vacancies name recruiters with emails and phone numbers:
+personal data, exactly like a CV. `clean.py` removes them before anything is written
+to disk (7 of 88 vacancies contained some). The phone pattern is deliberately narrow,
+so "3200 - 3800" and "2026" survive.
+
+**Licence, and why the fictional samples stay.** Vacancy texts are someone else's
+copyright, so `data/raw/` is gitignored. The committed test set stays fictional:
+anyone can clone the repo and run the evals, while the real set stays local and
+honest. Public reproducibility and real measurement, without mixing the two.
+
+**What real vacancies look like** (88 fetched from 6 company boards):
+
+| | fictional samples | real |
+|---|---|---|
+| length | 790–1,000 chars | median 5,463, max 10,430 |
+| language | all Dutch | 73 of 88 English |
+| location | one city | "EMEA; Germany; London, United Kingdom; Paris, France; Remote - Netherlands" |
+
+Three consequences for 2.4: extraction has only ever been tested on texts 5x
+shorter; company boards on Recruitee and Greenhouse skew tech and English, so the
+aggregator matters for sector variety; and `city` sometimes holds a list of
+countries instead of a city.
+
+**Storage format:** JSON Lines, one file per source, one vacancy per line. Easy to
+append, easy to stream back, and a half-written line never corrupts the rest.
+Re-fetching skips what is already stored (dedupe on source + id).

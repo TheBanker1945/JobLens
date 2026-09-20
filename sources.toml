@@ -1,0 +1,40 @@
+# Where vacancies come from. All of these are public endpoints: no key, no
+# registration, no trial. Adding a company is one line here.
+#
+# Fetching rules: one request per company, a pause in between, a User-Agent that
+# names the project, and nothing is fetched twice (see data/raw/, never committed).
+
+delay_seconds = 1.5
+
+# Dutch filter for boards that are global (Greenhouse lists jobs worldwide).
+# A vacancy is kept when country is NL, or the location mentions one of these.
+[netherlands]
+markers = [
+    "Netherlands", "Nederland", "Holland",
+    "Amsterdam", "Rotterdam", "Den Haag", "The Hague", "Utrecht", "Eindhoven",
+    "Groningen", "Tilburg", "Almere", "Breda", "Nijmegen", "Arnhem", "Haarlem",
+    "Zwolle", "Delft", "Leiden", "Amersfoort", "Apeldoorn", "Enschede",
+]
+
+# Company career pages on Recruitee: {slug}.recruitee.com/api/offers/
+[[recruitee]]
+slug = "channable"
+[[recruitee]]
+slug = "nmbrs"
+[[recruitee]]
+slug = "vandebron"
+
+# Company boards on Greenhouse: boards-api.greenhouse.io/v1/boards/{slug}/jobs
+[[greenhouse]]
+slug = "adyen"
+[[greenhouse]]
+slug = "catawiki"
+[[greenhouse]]
+slug = "databricks"
+
+# Aggregator; anonymous tier, ~10 requests/hour per IP, 20 jobs each. Used next to
+# the boards above for sector variety (they skew towards tech), never depended on.
+[jobdataapi]
+enabled = true
+country = "NL"
+max_age_days = 7
