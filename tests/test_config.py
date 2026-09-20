@@ -43,3 +43,20 @@ def test_api_key_is_hidden_from_repr():
     settings = load_llm_settings({**OLLAMA_ENV, "LLM_API_KEY": "sk-secret"})
 
     assert "sk-secret" not in repr(settings)
+
+
+def test_prefix_selects_settings_for_another_task():
+    env = OLLAMA_ENV | {
+        "EMBED_PROVIDER": "ollama",
+        "EMBED_BASE_URL": "http://localhost:11434/v1",
+        "EMBED_API_KEY": "ollama",
+        "EMBED_MODEL": "qwen3-embedding:0.6b",
+    }
+
+    assert load_llm_settings(env, prefix="EMBED").model == "qwen3-embedding:0.6b"
+    assert load_llm_settings(env).model == "qwen3:8b"  # LLM_ is still the default
+
+
+def test_missing_prefixed_var_names_the_variable():
+    with pytest.raises(ValueError, match="EMBED_MODEL"):
+        load_llm_settings(OLLAMA_ENV, prefix="EMBED")
