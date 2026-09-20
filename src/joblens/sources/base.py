@@ -21,7 +21,8 @@ class Vacancy(BaseModel):
     country: str | None = None
     posted_at: datetime | None = None
     text: str  # plain text, contact details removed
-    raw: dict[str, Any] = Field(default_factory=dict, repr=False)  # as received
+    # as received, minus contact details: they are personal data (see clean.py)
+    raw: dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @property
     def key(self) -> str:

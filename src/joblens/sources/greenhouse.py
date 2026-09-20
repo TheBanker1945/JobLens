@@ -11,7 +11,7 @@ from datetime import datetime
 import httpx
 
 from joblens.sources.base import Vacancy
-from joblens.sources.clean import to_clean_text
+from joblens.sources.clean import redact, to_clean_text
 from joblens.sources.http import get_json
 
 
@@ -39,7 +39,7 @@ class GreenhouseSource:
             country=None,  # Greenhouse does not provide one
             posted_at=_parse_date(job.get("first_published") or job.get("updated_at")),
             text=to_clean_text(content),
-            raw=job,
+            raw=redact(job),
         )
 
 

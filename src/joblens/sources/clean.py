@@ -52,6 +52,23 @@ def to_clean_text(raw: str) -> str:
     return strip_contact_details(html_to_text(raw))
 
 
+def redact(payload):
+    """Remove contact details from every string in a payload, however deep.
+
+    A `Vacancy` keeps the original payload in `raw`, and that payload holds the
+    description a second time, in HTML, with the recruiter's e-mail still in it.
+    Redacting the text but storing the payload untouched would put the personal
+    data back on disk, so the same rule applies to both.
+    """
+    if isinstance(payload, str):
+        return strip_contact_details(payload)
+    if isinstance(payload, dict):
+        return {key: redact(value) for key, value in payload.items()}
+    if isinstance(payload, list):
+        return [redact(item) for item in payload]
+    return payload
+
+
 # Void elements never get a closing tag, so they must not count towards the depth.
 VOID_TAGS = frozenset(
     "area base br col embed hr img input link meta param source track wbr".split()

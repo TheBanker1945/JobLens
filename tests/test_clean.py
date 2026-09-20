@@ -1,6 +1,7 @@
 from joblens.sources.clean import (
     extract_by_class,
     html_to_text,
+    redact,
     strip_contact_details,
     to_clean_text,
 )
@@ -85,3 +86,18 @@ def test_only_a_whole_class_name_matches():
 
 def test_missing_class_is_not_an_error():
     assert extract_by_class("<div class='other'>x</div>", "wanted") is None
+
+
+def test_payloads_are_redacted_however_deep():
+    payload = {
+        "id": 7,
+        "description": "<p>Mail jan@x.nl</p>",
+        "translations": [{"nl": {"body": "Bel 06-12345678"}}],
+        "salary_max": 3800,
+    }
+
+    clean = redact(payload)
+
+    assert clean["id"] == 7 and clean["salary_max"] == 3800  # numbers untouched
+    assert "jan@x.nl" not in str(clean)
+    assert clean["translations"][0]["nl"]["body"] == "Bel [phone removed]"

@@ -38,7 +38,7 @@ from datetime import date, datetime
 import httpx
 
 from joblens.sources.base import Vacancy
-from joblens.sources.clean import extract_by_class, to_clean_text
+from joblens.sources.clean import extract_by_class, redact, to_clean_text
 from joblens.sources.http import RateLimited
 
 # A row is one job as JobSpy reports it, already out of pandas and into a dict.
@@ -389,8 +389,9 @@ def storable(row: dict) -> dict:
     on disk. `emails` is a column JobSpy fills by harvesting the description.
     """
     dropped = ("description", "emails")
-    return {
+    kept = {
         key: value.isoformat() if isinstance(value, date | datetime) else value
         for key, value in row.items()
         if key not in dropped and value is not None
     }
+    return redact(kept)  # company fields can carry a contact address too
