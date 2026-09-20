@@ -53,9 +53,13 @@ class EmbeddingClient:
             vectors += self._embed(texts[start : start + self.batch_size])
         return vectors
 
-    def embed_query(self, query: str, task: str = DEFAULT_TASK) -> Vector:
+    def query_text(self, query: str, task: str = DEFAULT_TASK) -> str:
+        """The text actually sent for a query: the model's instruction template."""
         template = QUERY_TEMPLATES.get(self.settings.model, "{query}")
-        return self._embed([template.format(task=task, query=query)])[0]
+        return template.format(task=task, query=query)
+
+    def embed_query(self, query: str, task: str = DEFAULT_TASK) -> Vector:
+        return self._embed([self.query_text(query, task)])[0]
 
     def _embed(self, texts: list[str]) -> list[Vector]:
         response = self._sdk.embeddings.create(model=self.settings.model, input=texts)
