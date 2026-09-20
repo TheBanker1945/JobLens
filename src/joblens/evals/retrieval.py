@@ -1,0 +1,120 @@
+"""Measure search quality: does the right vacancy come out on top?
+
+Metrics (per query, then averaged):
+- hit@1     was the top result relevant? (what the user sees first)
+- recall@3  what share of the relevant vacancies is in the top 3?
+  With 2 relevant vacancies, finding one of them scores 0.5.
+- MRR       1 / position of the first relevant result: 1st = 1.0, 2nd = 0.5,
+            3rd = 0.33, none = 0. Rewards ranking higher, not just appearing.
+
+Ranking uses numpy: normalise every vector to length 1, then one matrix multiply
+gives all query-document cosines at once.
+"""
+
+import json
+from pathlib import Path
+
+import numpy as np
+from pydantic import BaseModel
+
+from joblens.embeddings.documents import Style
+
+
+class Query(BaseModel):
+    split: str
+    query: str
+    relevant: list[str]  # sample names that count as a correct answer
+    note: str = ""
+
+
+class Vacancy(BaseModel):
+    name: str
+    text: str
+    details: dict | None = None
+
+
+class QueryResult(BaseModel):
+    query: str
+    split: str
+    ranked: list[str]  # all vacancy names, best first
+    relevant: list[str]
+
+    @property
+    def hit_at_1(self) -> float:
+        return float(self.ranked[0] in self.relevant)
+
+    def recall_at(self, k: int) -> float:
+        found = sum(name in self.relevant for name in self.ranked[:k])
+        return found / len(self.relevant)
+
+    @property
+    def reciprocal_rank(self) -> float:
+        for position, name in enumerate(self.ranked, 1):
+            if name in self.relevant:
+                return 1 / position
+        return 0.0
+
+
+class RetrievalResult(BaseModel):
+    variant: str
+    style: Style
+    model: str
+    results: list[QueryResult]
+    seconds: float = 0.0
+    api_calls: int = 0
+
+    def for_split(self, split: str) -> "RetrievalResult":
+        keep = [r for r in self.results if r.split == split]
+        return self.model_copy(update={"results": keep})
+
+    @property
+    def hit_at_1(self) -> float:
+        return _mean(r.hit_at_1 for r in self.results)
+
+    @property
+    def recall_at_3(self) -> float:
+        return _mean(r.recall_at(3) for r in self.results)
+
+    @property
+    def mrr(self) -> float:
+        return _mean(r.reciprocal_rank for r in self.results)
+
+
+def _mean(values) -> float:
+    values = list(values)
+    return sum(values) / len(values) if values else 0.0
+
+
+def rank_all(query_vectors: list[list[float]], doc_vectors: list[list[float]]):
+    """Indices of the documents per query, most similar first (cosine)."""
+    queries, docs = _unit(np.array(query_vectors)), _unit(np.array(doc_vectors))
+    similarities = queries @ docs.T  # cosine, because every row has length 1
+    return np.argsort(-similarities, axis=1, kind="stable")
+
+
+def _unit(matrix: np.ndarray) -> np.ndarray:
+    lengths = np.linalg.norm(matrix, axis=1, keepdims=True)
+    if np.any(lengths == 0):
+        raise ValueError("cosine similarity is undefined for a zero vector")
+    return matrix / lengths
+
+
+def load_queries(path: Path) -> list[Query]:
+    return [Query.model_validate(q) for q in json.loads(path.read_text("utf-8"))]
+
+
+def load_vacancies(texts_dir: Path, extracted_dir: Path) -> list[Vacancy]:
+    vacancies = []
+    for path in sorted(texts_dir.glob("*.txt")):
+        extracted = extracted_dir / f"{path.stem}.json"
+        details = (
+            json.loads(extracted.read_text("utf-8"))["details"]
+            if extracted.exists()
+            else None
+        )
+        vacancies.append(
+            Vacancy(
+                name=path.stem, text=path.read_text(encoding="utf-8"), details=details
+            )
+        )
+    return vacancies
