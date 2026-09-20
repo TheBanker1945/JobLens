@@ -344,3 +344,72 @@ the raw vacancy — measured with a retrieval eval, not by eye.
 
 **SDK detail:** the openai SDK asks for embeddings as base64 (`encoding_format`)
 instead of a JSON list of numbers — about 4x less data — and decodes them itself.
+
+## 2.2 — A retrieval eval: what should we embed?
+
+`scripts/eval_retrieval.py` measures search quality over 15 queries (10 dev, 5
+holdout) against the 10 sample vacancies, for 8 variants: 4 text styles × local and
+Gemini embedding models.
+
+**Metrics.**
+- **hit@1**: was the first result relevant? What the user sees without scrolling.
+- **recall@3**: what share of the relevant vacancies is in the top 3? With 2
+  relevant vacancies, finding one scores 0.5.
+- **MRR**: 1 / position of the first relevant result (1st = 1.0, 2nd = 0.5, none = 0).
+  Rewards ranking higher, not just appearing.
+
+**Results** (commit `6d697be`):
+
+| Variant                          | dev hit@1 / MRR | holdout hit@1 / MRR |
+|----------------------------------|-----------------|---------------------|
+| local raw                        | 90% / 0.95      | 80% / 0.84          |
+| local structured                 | 80% / 0.84      | 80% / 0.90          |
+| local title only                 | 50% / 0.61      | 80% / 0.90          |
+| local structured, no instruction | 70% / 0.78      | 80% / 0.90          |
+| local structured + raw           | 80% / 0.88      | 80% / 0.87          |
+| gemini-001 structured            | 90% / 0.93      | 80% / 0.87          |
+| gemini-2 structured              | 100% / 1.00     | 60% / 0.77          |
+| **gemini-2 raw**                 | **100% / 1.00** | **100% / 1.00**     |
+
+**The hypothesis from 2.1 was wrong.** Embedding a structured summary (title, city,
+skills, …) is *worse* than the raw text, not better. The failing dev queries show
+why: "freelance opdracht als **zzp'er**" and "werk **zonder diploma**" are words in
+the vacancy text, but extraction turns them into `contract_type: freelance` and
+`education_level: null`. **Extraction is lossy: a summary drops the very vocabulary
+people search with.** Adding the raw text back (structured + raw) did not beat raw
+either — the summary mostly adds noise for retrieval.
+
+Structured fields are still valuable, but for **filters** ("max 32 hours", "hbo"),
+not for the embedding. Filtering and semantic search are different jobs.
+
+**Gemini embeddings beat the local model** (gemini-2 raw: perfect on both splits).
+But CV matching needs *both* sides in the same vector space and CVs stay local, so
+the local model remains the one for matching. Gemini is an option for
+vacancy-only search.
+
+**The query instruction is worth ~1 query** on dev (hit@1 70% → 80%, MRR 0.78 →
+0.84); only qwen3-embedding has one.
+
+**Noise warning.** 10 dev queries means one query = 10 points; 5 holdout queries
+means one query = 20 points. gemini-2 structured scoring 100% on dev and 60% on
+holdout is mostly that. Only the big gaps (title-only vs raw, local vs gemini-2 raw)
+are meaningful.
+
+**numpy** now does the ranking: normalise all vectors to length 1, then one matrix
+multiply gives every query-document cosine. Measured against the hand-written pure
+Python version (which stays, and which a test uses as the reference):
+
+| documents | pure python | numpy | speed-up |
+|-----------|-------------|-------|----------|
+| 1,000     | 235 ms      | 37 ms | 6.4x     |
+| 10,000    | 2,255 ms    | 294 ms| 7.7x     |
+
+Most of numpy's time goes into turning Python lists into arrays; a real system keeps
+the matrix in memory, where the gap is much bigger.
+
+**Embeddings are cached** on disk per (model, text) in `data/cache/` (gitignored), so
+repeated runs cost no time or money.
+
+**Another "OpenAI-compatible" difference:** Gemini leaves the `index` field empty in
+embedding responses and relies on the order of the items; OpenAI and Ollama number
+them. The client now handles both.
