@@ -79,3 +79,12 @@ def test_query_uses_the_instruction_text(tmp_path):
     CachedEmbedder(client, tmp_path / "c.json").embed_query("python", task="Find jobs")
 
     assert client.sent == ["Instruct: Find jobs\nQuery: python"]
+
+
+def test_what_is_cached_can_be_checked_without_the_server(tmp_path):
+    """data_status.py asks this to report how much is already embedded."""
+    cache = CachedEmbedder(CountingClient(), tmp_path / "cache.json")
+    cache.embed_documents(["een vacaturetekst"])
+
+    assert cache.is_cached("een vacaturetekst")
+    assert not cache.is_cached("een andere tekst")

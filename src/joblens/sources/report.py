@@ -105,6 +105,17 @@ class RunReport:
             "searches": [asdict(run) for run in self.searches],
         }
 
+    @staticmethod
+    def latest(directory: Path) -> dict | None:
+        """The most recent run's report, or None if there has never been one.
+
+        Report names start with the date, so the newest name sorts last.
+        """
+        reports = sorted(directory.glob("*_fetch.json"))
+        if not reports:
+            return None
+        return json.loads(reports[-1].read_text(encoding="utf-8"))
+
     def write(self, directory: Path) -> Path:
         """One file per run, so a bad week is visible next to a good one."""
         directory.mkdir(parents=True, exist_ok=True)

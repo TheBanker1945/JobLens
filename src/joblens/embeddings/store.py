@@ -40,6 +40,10 @@ class CachedEmbedder:
         # Embed the instruction-wrapped text, so queries and documents share a cache.
         return self.embed_documents([self.client.query_text(query, task)])[0]
 
+    def is_cached(self, text: str) -> bool:
+        """Whether this text already has a vector, without asking the server."""
+        return self._key(text) in self._vectors
+
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(self._vectors), encoding="utf-8")

@@ -89,3 +89,19 @@ def test_the_report_is_written_as_json(tmp_path):
     assert written["totals"]["stored"] == 20
     assert written["searches"][0]["source"] == "indeed"
     assert written["started_at"] and written["finished_at"]
+
+
+def test_the_latest_report_is_the_newest_one(tmp_path):
+    from datetime import UTC, datetime
+
+    older = RunReport(started_at=datetime(2026, 9, 19, 7, 15, tzinfo=UTC))
+    newer = RunReport(started_at=datetime(2026, 9, 20, 7, 15, tzinfo=UTC))
+    newer.add(run(stored=7))
+    older.write(tmp_path)
+    newer.write(tmp_path)
+
+    assert RunReport.latest(tmp_path)["totals"]["stored"] == 7
+
+
+def test_no_report_yet_is_not_an_error(tmp_path):
+    assert RunReport.latest(tmp_path) is None
