@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from joblens.embeddings.documents import Style, build_document
-from joblens.embeddings.similarity import Vector, rank
+from joblens.embeddings.similarity import Vector, rank, rank_pooled
 from joblens.extraction.schema import VacancyDetails
 from joblens.sources.base import Vacancy
 
@@ -41,6 +41,9 @@ class Match:
     vacancy: Vacancy
     score: float
     document: str  # what was actually embedded, so a hit can be explained
+    # Which of the queries this vacancy answered best. Always 0 for `search`,
+    # which asks one thing; `search_many` is where it starts to mean something.
+    query_index: int = 0
 
 
 class VacancyIndex:
@@ -95,8 +98,37 @@ class VacancyIndex:
         if not self.vacancies:
             return []
         hits = rank(self.embedder.embed_query(query), self.vectors(), top_k)
+        return self._matches(hits)
+
+    def search_many(
+        self, queries: list[str], top_k: int = 10, *, instruction: bool = True
+    ) -> list[Match]:
+        """Search with several queries at once; a vacancy scores as its best one.
+
+        This is how a CV searches: as its jobs, its skills and its education
+        rather than as one averaged vector. `instruction=False` embeds the
+        queries as documents instead, which is the right thing when a "query" is
+        a paragraph of someone's work history rather than a typed question --
+        only instruction-aware models (qwen3-embedding) can tell the difference,
+        and the eval measures whether it matters.
+        """
+        if not self.vacancies or not queries:
+            return []
+        vectors = (
+            [self.embedder.embed_query(query) for query in queries]
+            if instruction
+            else self.embedder.embed_documents(queries)
+        )
+        return self._matches(rank_pooled(vectors, self.vectors(), top_k))
+
+    def _matches(self, hits) -> list[Match]:
         return [
-            Match(self.vacancies[hit.index], hit.score, self.documents[hit.index])
+            Match(
+                self.vacancies[hit.index],
+                hit.score,
+                self.documents[hit.index],
+                hit.query_index,
+            )
             for hit in hits
         ]
 
