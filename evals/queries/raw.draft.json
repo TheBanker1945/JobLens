@@ -1,27 +1,117 @@
 [
-  { "split": "dev", "query": "verpleegkundige ggz", "note": "sector + setting; many verpleegkundige vacancies, only some GGZ" },
-  { "split": "dev", "query": "thuiszorg parttime", "note": "sector + hours; hours are a field, not a word in the title" },
-  { "split": "dev", "query": "elektromonteur met vca certificaat", "note": "trade + certificate" },
-  { "split": "dev", "query": "liftmonteur", "note": "narrow trade, few answers: tests precision" },
-  { "split": "dev", "query": "logistiek medewerker magazijn", "note": "broad: more than 3 relevant, which is what recall@10 is for" },
-  { "split": "dev", "query": "bijbaan naast mijn studie", "note": "life situation, not a job title" },
-  { "split": "dev", "query": "stage lopen in de logistiek", "note": "contract type + sector" },
-  { "split": "dev", "query": "docent nederlands voortgezet onderwijs", "note": "subject + school type" },
-  { "split": "dev", "query": "beleidsadviseur bij een gemeente", "note": "role + employer type" },
-  { "split": "dev", "query": "data engineer met databricks", "note": "title + tool" },
-  { "split": "dev", "query": "python developer", "note": "cross-lingual: Dutch seeker, English vacancies" },
-  { "split": "dev", "query": "werken met machine learning en ai", "note": "field, no job title" },
-  { "split": "dev", "query": "customer support nederlands sprekend", "note": "role + language requirement" },
-  { "split": "dev", "query": "risk and compliance in fintech", "note": "English query, English half of the corpus" },
-  { "split": "dev", "query": "werk waarvoor je geen diploma nodig hebt", "note": "hard: the opposite of a keyword; education_level is null" },
-  { "split": "dev", "query": "baan waarbij ik veel met mensen werk", "note": "hard: pure meaning, no matching words" },
-
-  { "split": "holdout", "query": "wijkverpleegkundige", "note": "narrow healthcare title" },
-  { "split": "holdout", "query": "monteur beveiliging en camerasystemen", "note": "trade + systems" },
-  { "split": "holdout", "query": "teamleider logistiek", "note": "seniority + sector" },
-  { "split": "holdout", "query": "docent wiskunde", "note": "narrow: one or two answers" },
-  { "split": "holdout", "query": "information security officer", "note": "English title, exact match exists" },
-  { "split": "holdout", "query": "financieel administratief medewerker", "note": "admin/finance, Dutch" },
-  { "split": "holdout", "query": "product manager payments", "note": "English, fintech half" },
-  { "split": "holdout", "query": "baan met een auto van de zaak en rijbewijs", "note": "hard: a condition of the work, not the work" }
+  {
+    "split": "dev",
+    "query": "verpleegkundige ggz",
+    "note": "sector + setting; many verpleegkundige vacancies, only some GGZ"
+  },
+  {
+    "split": "dev",
+    "query": "thuiszorg parttime",
+    "note": "sector + hours; hours are a field, not a word in the title"
+  },
+  {
+    "split": "dev",
+    "query": "elektromonteur met vca certificaat",
+    "note": "trade + certificate"
+  },
+  {
+    "split": "dev",
+    "query": "liftmonteur",
+    "note": "narrow trade, few answers: tests precision"
+  },
+  {
+    "split": "dev",
+    "query": "logistiek medewerker magazijn",
+    "note": "broad: more than 3 relevant, which is what recall@10 is for"
+  },
+  {
+    "split": "dev",
+    "query": "bijbaan naast mijn studie",
+    "note": "life situation, not a job title"
+  },
+  {
+    "split": "dev",
+    "query": "stage lopen in de logistiek",
+    "note": "contract type + sector"
+  },
+  {
+    "split": "dev",
+    "query": "docent nederlands voortgezet onderwijs",
+    "note": "subject + school type"
+  },
+  {
+    "split": "dev",
+    "query": "beleidsadviseur bij een gemeente",
+    "note": "role + employer type"
+  },
+  {
+    "split": "dev",
+    "query": "data engineer met databricks",
+    "note": "title + tool"
+  },
+  {
+    "split": "dev",
+    "query": "python developer",
+    "note": "cross-lingual: Dutch seeker, English vacancies"
+  },
+  {
+    "split": "dev",
+    "query": "werken met machine learning en ai",
+    "note": "field, no job title"
+  },
+  {
+    "split": "dev",
+    "query": "customer support nederlands sprekend",
+    "note": "role + language requirement"
+  },
+  {
+    "split": "dev",
+    "query": "risk and compliance in fintech",
+    "note": "English query, English half of the corpus"
+  },
+  {
+    "split": "dev",
+    "query": "werk waarvoor je geen diploma nodig hebt",
+    "note": "hard: the opposite of a keyword; education_level is null"
+  },
+  {
+    "split": "holdout",
+    "query": "wijkverpleegkundige",
+    "note": "narrow healthcare title"
+  },
+  {
+    "split": "holdout",
+    "query": "monteur beveiliging en camerasystemen",
+    "note": "trade + systems"
+  },
+  {
+    "split": "holdout",
+    "query": "teamleider logistiek",
+    "note": "seniority + sector"
+  },
+  {
+    "split": "holdout",
+    "query": "docent wiskunde",
+    "note": "narrow: one or two answers"
+  },
+  {
+    "split": "holdout",
+    "query": "information security officer",
+    "note": "English title, exact match exists"
+  },
+  {
+    "split": "holdout",
+    "query": "financieel administratief medewerker",
+    "note": "admin/finance, Dutch"
+  },
+  {
+    "split": "holdout",
+    "query": "product manager payments",
+    "note": "English, fintech half"
+  },
+  {
+    "split": "holdout",
+    "query": "baan met een auto van de zaak en rijbewijs",
+    "note": "hard: a condition of the work, not the work"
+  }
 ]

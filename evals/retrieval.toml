@@ -1,12 +1,16 @@
-# Search variants compared by scripts/eval_retrieval.py, over the queries in
-# data/samples/queries.json and the vacancies in data/samples/vacancies/.
+# Search variants compared by scripts/eval_retrieval.py, over one of the two
+# corpora in joblens.corpus and the matching query file in evals/queries/.
 #
 # style: raw (the vacancy text), structured (summary of the extracted fields),
-#        title_only (just the job title).
+#        title_only (just the job title), structured_raw (the summary, then the text).
 # instruction: false embeds the query as plain text, to show what the model's
 #        query instruction is worth (only qwen3-embedding has one).
-# Gemini embeddings are fine here: vacancies are public data. CV matching must use
-# a local model, because CVs stay local (GDPR).
+#
+# Cloud embeddings are allowed for CV matching too since 2026-09-21 (CLAUDE.md), so
+# these variants are candidates for the whole corpus, not just for vacancy search.
+# On the real corpus `gemini-2 structured` wins and `gemini-2 raw` -- the winner on
+# the fictional samples -- comes last: see the 3.1 entry in docs/learning-log.md
+# before reading anything into the sample numbers.
 
 [[run]]
 name = "local raw"

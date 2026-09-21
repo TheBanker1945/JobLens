@@ -558,3 +558,86 @@ a job prints, so silence is the success signal. On WSL, cron only runs while WSL
 does, so Windows Task Scheduler is the more reliable trigger.
 `scripts/data_status.py` answers the question a demo depends on: how fresh is this,
 and did the last run go well?
+
+## 3.1 — The retrieval eval on 202 real vacancies: every 2.2 answer changed
+
+Milestone 2.2 chose what to embed using ten vacancies I wrote myself. This re-runs
+the same eval over the 202 real ones, and almost every conclusion flips. The
+fictional set was not a small version of the real thing; it was a different thing.
+
+**The eval now takes a corpus.** `joblens.corpus` loads `samples` or `raw` into one
+`Vacancy` type, and `search_vacancies.py` and `eval_retrieval.py` share it — search
+and the measurement of search have to see the same vacancies. Vacancies are
+identified by `Vacancy.key` everywhere, so one query-file format fits both corpora.
+
+**23 labelled queries** (15 dev, 8 holdout) in `evals/queries/raw.json`, with the
+rules behind them in the README there and every decision in `raw-review.md`.
+**Labelled by Claude, not by me** — worth remembering before quoting these numbers.
+Candidates were **pooled**: the union of the top 10 of all eight variants, 607
+judgements. Judging only what today's default retrieves would score a better
+variant wrong for finding something nobody was asked about.
+
+**Results** (`evals/results/2026-09-21_1510_retrieval_raw.json`):
+
+| Variant | dev hit@1 / MRR | holdout hit@1 / MRR |
+|---|---|---|
+| local raw | 80% / 0.85 | 75% / 0.88 |
+| local structured | 67% / 0.73 | 62% / 0.75 |
+| local title only | 67% / 0.70 | 62% / 0.74 |
+| local structured, no instruction | 40% / 0.57 | 50% / 0.63 |
+| gemini-001 structured | 73% / 0.80 | 75% / 0.88 |
+| **gemini-2 structured** | **87% / 0.90** | **88% / 0.91** |
+| gemini-2 raw | 60% / 0.71 | 38% / 0.54 |
+| local structured + raw | 80% / 0.84 | 62% / 0.79 |
+
+**`gemini-2 raw` went from best to worst.** It scored a perfect 100% / 1.00 on both
+splits of the fictional set. On real vacancies it is the weakest variant in the
+table, below every local one. Had we trusted 2.2 and shipped it, search would have
+got worse and the sample eval would still have said it was perfect.
+
+**Why: the fictional vacancies had no boilerplate and no junk.**
+
+*Boilerplate.* Twenty-nine Adyen vacancies all open with the same 600 words. Under
+`raw` a company's vacancies sit far closer together than two vacancies picked at
+random (Adyen +0.225 above the baseline cosine for gemini-2, +0.325 for the local
+model); the structured summary roughly halves that (+0.123). Embedding the raw text
+partly embeds *the employer*, not the job. Ten vacancies from ten invented
+companies could not show this.
+
+*Junk.* `recruitee:396939` and `recruitee:312680` are open-application pages — "tell
+us who you are and what you're looking for". That is not a vacancy, it is a
+*query*, which is exactly why it embeds so close to one. They were left in
+deliberately, to price them:
+
+| Variant | ranked #1 | in top 10 | hit@1 → without them |
+|---|---|---|---|
+| local structured, no instruction | 12 / 23 | 21 / 23 | 43% → **65%** |
+| gemini-2 raw | 5 / 23 | 21 / 23 | 52% → 61% |
+| gemini-2 structured | 0 | 0 | 87% → 87% |
+| local raw | 0 | 0 | 78% → 78% |
+
+Two documents out of 202 cost the worst variant **22 points of hit@1**. The
+structured styles are largely immune because neither page has extracted fields to
+summarise — so the structured document is nearly empty, and an empty document
+attracts nothing.
+
+**recall@3 is no longer readable and recall@10 replaces it.** With 202 vacancies a
+broad query has more than three right answers: "logistiek medewerker magazijn" has
+seven, so recall@3 caps at 43% however good the ranking is. On ten vacancies
+recall@10 was 100% for every variant — it measured nothing there and does the work
+here.
+
+**The query instruction is worth far more than 2.2 suggested**: local structured
+drops from 67% to 40% hit@1 without it (2.2 said 80% → 70%). Most of that gap is
+the junk pages, which the instruction keeps off the top spot.
+
+**What still holds from 2.2.** Raw text beats a structured summary *for the local
+model* (80% vs 67%), the lossy-extraction argument intact. What does not hold is
+that this generalises: for `gemini-2` the ordering reverses, structured 87% against
+raw 60%. "Which style is best" turns out to be a property of the model, not of the
+data, which is not something the fictional set could ever have told us.
+
+**Noise.** 15 dev queries means one query is 6.7 points, 8 holdout queries 12.5
+points. The gaps that survive that: gemini-2 structured over everything (both
+splits), gemini-2 raw and no-instruction at the bottom (both splits). The middle of
+the table is not separated.
