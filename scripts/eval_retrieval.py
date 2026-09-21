@@ -20,7 +20,6 @@ import datetime
 import json
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import httpx
@@ -28,14 +27,13 @@ import openai
 from dotenv import load_dotenv
 
 from joblens.corpus import NAMES, Corpus, load_corpus
-from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.documents import build_document
-from joblens.embeddings.store import CachedEmbedder
 from joblens.evals.retrieval import (
     Query,
     QueryResult,
     RetrievalConfig,
     RetrievalResult,
+    embed,
     load_configs,
     load_queries,
     rank_all,
@@ -129,26 +127,15 @@ def run_variant(
         build_document(v.text, corpus.details.get(v.key), config.style)
         for v in corpus.vacancies
     ]
-    cache_path = CACHE_DIR / f"embeddings-{config.model.replace(':', '-')}.json"
-    start = time.perf_counter()
-    with EmbeddingClient(config.settings()) as client:
-        embedder = CachedEmbedder(client, cache_path)
-        doc_vectors = embedder.embed_documents(documents)
-        query_vectors = [
-            embedder.embed_query(q.query)
-            if config.instruction
-            else embedder.embed_documents([q.query])[0]
-            for q in queries
-        ]
-    seconds = time.perf_counter() - start
+    vectors = embed(config, documents, [q.query for q in queries], CACHE_DIR)
 
-    rankings = rank_all(query_vectors, doc_vectors)
+    rankings = rank_all(vectors.queries, vectors.documents)
     return RetrievalResult(
         variant=config.name,
         style=config.style,
         model=config.model,
-        seconds=seconds,
-        api_calls=embedder.misses,
+        seconds=vectors.seconds,
+        api_calls=vectors.api_calls,
         results=[
             QueryResult(
                 query=query.query,

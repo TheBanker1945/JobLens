@@ -16,15 +16,19 @@ gives all query-document cosines at once.
 
 import json
 import os
+import time
 import tomllib
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 from pydantic import BaseModel
 
 from joblens.config import LLMSettings
+from joblens.embeddings.client import EmbeddingClient, Vector
 from joblens.embeddings.documents import Style
+from joblens.embeddings.store import CachedEmbedder
 
 
 class RetrievalConfig(BaseModel):
@@ -56,6 +60,7 @@ class Query(BaseModel):
     split: str
     query: str
     relevant: list[str]  # Vacancy.key values that count as a correct answer
+    judged: list[str] = []  # every key that was looked at, relevant or not
     note: str = ""
 
 
@@ -129,6 +134,41 @@ def _unit(matrix: np.ndarray) -> np.ndarray:
     return matrix / lengths
 
 
+@dataclass(frozen=True)
+class Embedded:
+    """One variant's vectors, plus what they cost to get."""
+
+    documents: list[Vector]
+    queries: list[Vector]
+    api_calls: int
+    seconds: float
+
+
+def embed(
+    config: RetrievalConfig, documents: list[str], queries: list[str], cache_dir: Path
+) -> Embedded:
+    """Put documents and queries in one variant's vector space.
+
+    Shared by the eval and by scripts/label_queries.py: the candidates a human
+    judges must come out of exactly the same embedding as the numbers reported
+    afterwards, or the labelling is describing a different system.
+    """
+    cache_path = cache_dir / f"embeddings-{config.model.replace(':', '-')}.json"
+    start = time.perf_counter()
+    with EmbeddingClient(config.settings()) as client:
+        embedder = CachedEmbedder(client, cache_path)
+        doc_vectors = embedder.embed_documents(documents)
+        query_vectors = [
+            embedder.embed_query(query)
+            if config.instruction
+            else embedder.embed_documents([query])[0]
+            for query in queries
+        ]
+    return Embedded(
+        doc_vectors, query_vectors, embedder.misses, time.perf_counter() - start
+    )
+
+
 def load_configs(path: Path) -> list[RetrievalConfig]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     return [RetrievalConfig.model_validate(run) for run in data["run"]]
@@ -136,3 +176,32 @@ def load_configs(path: Path) -> list[RetrievalConfig]:
 
 def load_queries(path: Path) -> list[Query]:
     return [Query.model_validate(q) for q in json.loads(path.read_text("utf-8"))]
+
+
+def merge_draft(
+    draft: list[dict], existing: list[Query]
+) -> tuple[list[Query], list[str]]:
+    """Draft queries, carrying over answers already given for the same text.
+
+    The draft decides which queries exist, so one edited or removed there loses
+    its labels -- an edited query is a different question and its old answers
+    cannot be trusted. Returns the merged queries and the texts that were
+    dropped, so a labelling session can say what it is about to forget.
+    """
+    answered = {query.query: query for query in existing}
+    merged = [
+        Query(
+            split=item["split"],
+            query=item["query"],
+            note=item.get("note", ""),
+            relevant=list(answered[item["query"]].relevant)
+            if item["query"] in answered
+            else [],
+            judged=list(answered[item["query"]].judged)
+            if item["query"] in answered
+            else [],
+        )
+        for item in draft
+    ]
+    dropped = sorted(set(answered) - {query.query for query in merged})
+    return merged, dropped
