@@ -1,0 +1,83 @@
+"""Loading the two corpora into one shape, from a repo root built in a tmpdir."""
+
+import json
+
+from conftest import details as make_details
+
+from joblens.corpus import load_corpus
+from joblens.extraction.store import DetailsStore, ExtractedVacancy
+from joblens.sources.base import Vacancy
+from joblens.sources.store import VacancyStore
+
+
+def build_root(tmp_path, *, extract_sample=True, extract_raw=True):
+    samples = tmp_path / "data" / "samples"
+    (samples / "vacancies").mkdir(parents=True)
+    (samples / "vacancies" / "01_data_analist.txt").write_text(
+        "Data Analist\nJe werkt met SQL.", encoding="utf-8"
+    )
+    if extract_sample:
+        (samples / "extracted").mkdir()
+        (samples / "extracted" / "01_data_analist.json").write_text(
+            json.dumps(
+                {"details": make_details("Data Analist", city="Utrecht").model_dump()}
+            ),
+            encoding="utf-8",
+        )
+
+    raw = tmp_path / "data" / "raw"
+    store = VacancyStore(raw / "vacancies")
+    vacancy = Vacancy(
+        source="greenhouse",
+        source_id="99",
+        url="https://example.test/99",
+        title="Backend Developer",
+        text="Je bouwt API's in Python.",
+    )
+    store.add([vacancy])
+    if extract_raw:
+        DetailsStore(raw / "extracted").add(
+            "greenhouse",
+            [
+                ExtractedVacancy(
+                    key=vacancy.key,
+                    model="test",
+                    details=make_details("Backend Developer"),
+                )
+            ],
+        )
+    return tmp_path
+
+
+def test_a_sample_becomes_a_vacancy_keyed_by_its_filename(tmp_path):
+    corpus = load_corpus("samples", root=build_root(tmp_path))
+
+    (vacancy,) = corpus.vacancies
+    assert vacancy.key == "sample:01_data_analist"
+    assert vacancy.city == "Utrecht"  # from the extraction, not from the text
+    assert vacancy.url == "data/samples/vacancies/01_data_analist.txt"
+
+
+def test_a_sample_without_an_extraction_falls_back_to_its_first_line(tmp_path):
+    root = build_root(tmp_path, extract_sample=False)
+
+    corpus = load_corpus("samples", root=root)
+
+    (vacancy,) = corpus.vacancies
+    assert (vacancy.title, vacancy.city) == ("Data Analist", None)
+    assert corpus.details == {}
+
+
+def test_raw_vacancies_are_loaded_with_their_stored_details(tmp_path):
+    corpus = load_corpus("raw", root=build_root(tmp_path))
+
+    assert [v.key for v in corpus.vacancies] == ["greenhouse:99"]
+    assert corpus.details["greenhouse:99"].title == "Backend Developer"
+    assert corpus.by_key()["greenhouse:99"].title == "Backend Developer"
+
+
+def test_extracted_drops_vacancies_that_have_no_details(tmp_path):
+    corpus = load_corpus("raw", root=build_root(tmp_path, extract_raw=False))
+
+    assert len(corpus) == 1
+    assert len(corpus.extracted()) == 0

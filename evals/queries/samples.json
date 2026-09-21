@@ -3,7 +3,7 @@
     "split": "dev",
     "query": "python developer amsterdam",
     "relevant": [
-      "02_backend_developer_amsterdam"
+      "sample:02_backend_developer_amsterdam"
     ],
     "note": "job title + skill + city"
   },
@@ -11,8 +11,8 @@
     "split": "dev",
     "query": "werken met kubernetes",
     "relevant": [
-      "02_backend_developer_amsterdam",
-      "07_freelance_devops_utrecht"
+      "sample:02_backend_developer_amsterdam",
+      "sample:07_freelance_devops_utrecht"
     ],
     "note": "one skill, two vacancies"
   },
@@ -20,7 +20,7 @@
     "split": "dev",
     "query": "parttime baan in de zorg",
     "relevant": [
-      "08_verpleegkundige_nijmegen"
+      "sample:08_verpleegkundige_nijmegen"
     ],
     "note": "sector word, not in the text"
   },
@@ -28,7 +28,7 @@
     "split": "dev",
     "query": "stage marketing",
     "relevant": [
-      "06_stage_marketing_groningen"
+      "sample:06_stage_marketing_groningen"
     ],
     "note": "contract type + field"
   },
@@ -36,7 +36,7 @@
     "split": "dev",
     "query": "data analyse met SQL en Power BI",
     "relevant": [
-      "01_data_analist_utrecht"
+      "sample:01_data_analist_utrecht"
     ],
     "note": "tools; 09 also needs SQL but is not analysis"
   },
@@ -44,7 +44,7 @@
     "split": "dev",
     "query": "freelance opdracht als zzp'er",
     "relevant": [
-      "07_freelance_devops_utrecht"
+      "sample:07_freelance_devops_utrecht"
     ],
     "note": "contract type"
   },
@@ -52,7 +52,7 @@
     "split": "dev",
     "query": "remote job in the Netherlands, English speaking",
     "relevant": [
-      "09_product_manager_remote"
+      "sample:09_product_manager_remote"
     ],
     "note": "remote only; 02/04 are hybrid"
   },
@@ -60,7 +60,7 @@
     "split": "dev",
     "query": "werk zonder diploma, direct beginnen",
     "relevant": [
-      "03_orderpicker_tilburg"
+      "sample:03_orderpicker_tilburg"
     ],
     "note": "no education required"
   },
@@ -68,7 +68,7 @@
     "split": "dev",
     "query": "machine learning computer vision",
     "relevant": [
-      "04_ml_engineer_eindhoven"
+      "sample:04_ml_engineer_eindhoven"
     ],
     "note": "specialism"
   },
@@ -76,7 +76,7 @@
     "split": "dev",
     "query": "beleidsfunctie bij de overheid",
     "relevant": [
-      "05_beleidsmedewerker_zwolle"
+      "sample:05_beleidsmedewerker_zwolle"
     ],
     "note": "employer type, not literally stated"
   },
@@ -84,7 +84,7 @@
     "split": "holdout",
     "query": "commerciële functie met klantcontact",
     "relevant": [
-      "10_accountmanager_randstad"
+      "sample:10_accountmanager_randstad"
     ],
     "note": "job type in other words"
   },
@@ -92,7 +92,7 @@
     "split": "holdout",
     "query": "job with azure and terraform",
     "relevant": [
-      "07_freelance_devops_utrecht"
+      "sample:07_freelance_devops_utrecht"
     ],
     "note": "English query, Dutch vacancy"
   },
@@ -100,7 +100,7 @@
     "split": "holdout",
     "query": "verpleegkundige ouderenzorg nijmegen",
     "relevant": [
-      "08_verpleegkundige_nijmegen"
+      "sample:08_verpleegkundige_nijmegen"
     ],
     "note": "title + city"
   },
@@ -108,8 +108,8 @@
     "split": "holdout",
     "query": "parttime werk in utrecht",
     "relevant": [
-      "01_data_analist_utrecht",
-      "07_freelance_devops_utrecht"
+      "sample:01_data_analist_utrecht",
+      "sample:07_freelance_devops_utrecht"
     ],
     "note": "under 40 hours, in Utrecht"
   },
@@ -117,8 +117,8 @@
     "split": "holdout",
     "query": "vacature voor starters zonder ervaring",
     "relevant": [
-      "01_data_analist_utrecht",
-      "03_orderpicker_tilburg"
+      "sample:01_data_analist_utrecht",
+      "sample:03_orderpicker_tilburg"
     ],
     "note": "no experience; 06 is an internship"
   }

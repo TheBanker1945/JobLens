@@ -4,6 +4,9 @@ Metrics (per query, then averaged):
 - hit@1     was the top result relevant? (what the user sees first)
 - recall@3  what share of the relevant vacancies is in the top 3?
   With 2 relevant vacancies, finding one of them scores 0.5.
+- recall@10 the same over the top 10. On a corpus of 200 vacancies a broad query
+  ("python developer") has more than 3 relevant answers, and recall@3 can then
+  never reach 100% however good the ranking is -- recall@10 stays readable.
 - MRR       1 / position of the first relevant result: 1st = 1.0, 2nd = 0.5,
             3rd = 0.33, none = 0. Rewards ranking higher, not just appearing.
 
@@ -52,34 +55,28 @@ class RetrievalConfig(BaseModel):
 class Query(BaseModel):
     split: str
     query: str
-    relevant: list[str]  # sample names that count as a correct answer
+    relevant: list[str]  # Vacancy.key values that count as a correct answer
     note: str = ""
-
-
-class Vacancy(BaseModel):
-    name: str
-    text: str
-    details: dict | None = None
 
 
 class QueryResult(BaseModel):
     query: str
     split: str
-    ranked: list[str]  # all vacancy names, best first
-    relevant: list[str]
+    ranked: list[str]  # every vacancy key, best first
+    relevant: list[str]  # the keys that count as a correct answer
 
     @property
     def hit_at_1(self) -> float:
         return float(self.ranked[0] in self.relevant)
 
     def recall_at(self, k: int) -> float:
-        found = sum(name in self.relevant for name in self.ranked[:k])
+        found = sum(key in self.relevant for key in self.ranked[:k])
         return found / len(self.relevant)
 
     @property
     def reciprocal_rank(self) -> float:
-        for position, name in enumerate(self.ranked, 1):
-            if name in self.relevant:
+        for position, key in enumerate(self.ranked, 1):
+            if key in self.relevant:
                 return 1 / position
         return 0.0
 
@@ -103,6 +100,10 @@ class RetrievalResult(BaseModel):
     @property
     def recall_at_3(self) -> float:
         return _mean(r.recall_at(3) for r in self.results)
+
+    @property
+    def recall_at_10(self) -> float:
+        return _mean(r.recall_at(10) for r in self.results)
 
     @property
     def mrr(self) -> float:
@@ -135,20 +136,3 @@ def load_configs(path: Path) -> list[RetrievalConfig]:
 
 def load_queries(path: Path) -> list[Query]:
     return [Query.model_validate(q) for q in json.loads(path.read_text("utf-8"))]
-
-
-def load_vacancies(texts_dir: Path, extracted_dir: Path) -> list[Vacancy]:
-    vacancies = []
-    for path in sorted(texts_dir.glob("*.txt")):
-        extracted = extracted_dir / f"{path.stem}.json"
-        details = (
-            json.loads(extracted.read_text("utf-8"))["details"]
-            if extracted.exists()
-            else None
-        )
-        vacancies.append(
-            Vacancy(
-                name=path.stem, text=path.read_text(encoding="utf-8"), details=details
-            )
-        )
-    return vacancies
