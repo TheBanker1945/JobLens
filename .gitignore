@@ -11,6 +11,9 @@ dist/
 
 # Personal or scraped data (GDPR) — never commit
 data/raw/
+# Already covered by the line above. Spelled out because "already covered" is
+# how a CV ends up in a public repository.
+data/raw/cv/
 
 # Derived data (embedding cache)
 data/cache/
