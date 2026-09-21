@@ -42,10 +42,37 @@ def cosine_similarity(a: Vector, b: Vector) -> float:
 class Hit:
     index: int  # position of the document in the list that was searched
     score: float
+    query_index: int = 0  # which query it answered; only rank_pooled uses it
 
 
 def rank(query: Vector, documents: list[Vector], top_k: int | None = None) -> list[Hit]:
     """Documents sorted by similarity to the query, most similar first."""
     hits = [Hit(i, cosine_similarity(query, doc)) for i, doc in enumerate(documents)]
+    hits.sort(key=lambda hit: hit.score, reverse=True)
+    return hits[:top_k] if top_k else hits
+
+
+def rank_pooled(
+    queries: list[Vector], documents: list[Vector], top_k: int | None = None
+) -> list[Hit]:
+    """Rank documents by their single best-matching query, not by the average.
+
+    A CV is not one question. Asked as one vector it becomes the average of five
+    jobs, an education and a pile of skills, and a vacancy that matches one job
+    exactly matches that average weakly -- the same dilution that milestone 3.3
+    measured on long vacancies, but worse, because a career really is several
+    different things while an advert is one job.
+
+    So each part of the CV asks separately and a vacancy keeps its best answer.
+    `Hit.query_index` says which part won, which is what lets a result say "this
+    matched your Coolblue job" rather than only "this matched you".
+    """
+    if not queries:
+        raise ValueError("no queries to rank with")
+    hits = []
+    for index, document in enumerate(documents):
+        scores = [cosine_similarity(query, document) for query in queries]
+        best = max(range(len(scores)), key=scores.__getitem__)
+        hits.append(Hit(index, scores[best], best))
     hits.sort(key=lambda hit: hit.score, reverse=True)
     return hits[:top_k] if top_k else hits

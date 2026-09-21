@@ -1,6 +1,6 @@
 import pytest
 
-from joblens.embeddings.similarity import cosine_similarity, rank
+from joblens.embeddings.similarity import cosine_similarity, rank, rank_pooled
 
 
 @pytest.mark.parametrize(
@@ -42,3 +42,25 @@ def test_rank_sorts_most_similar_first():
 
 def test_rank_top_k():
     assert [h.index for h in rank([1, 0], [[0, 1], [1, 0], [1, 1]], top_k=2)] == [1, 2]
+
+
+def test_rank_pooled_scores_a_document_by_its_best_query():
+    care, data = [1.0, 0.0], [0.0, 1.0]
+    mostly_data, pure_care = [0.6, 0.8], [1.0, 0.0]
+
+    hits = rank_pooled([care, data], [mostly_data, pure_care])
+
+    assert [hit.index for hit in hits] == [1, 0]  # the perfect match first
+    assert hits[0].query_index == 0  # found by the care half of the CV
+    assert hits[1].query_index == 1  # and that one by the data half
+
+
+def test_rank_pooled_can_be_cut_short_like_rank():
+    hits = rank_pooled([[1.0, 0.0]], [[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]], top_k=2)
+
+    assert len(hits) == 2
+
+
+def test_rank_pooled_needs_something_to_ask():
+    with pytest.raises(ValueError, match="no queries"):
+        rank_pooled([], [[1.0, 0.0]])

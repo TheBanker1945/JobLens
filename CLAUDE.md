@@ -57,6 +57,11 @@ conceptually, not just have working code.
   e-mail, phone, address, postcode, date of birth, links and id numbers go; city
   and nationality stay because a vacancy can require them; the name goes only when
   --strip-name says exactly what it is.
+- A CV reaches the index as its whole redacted text, one query (3.5, measured on
+  four invented CVs: best worst-case nDCG@10 of five representations, and the
+  cheapest). Splitting it per job or per chunk lost. Do not reopen without a CV
+  long enough for dilution to be real. The local embedder is not a 13-point drop
+  for CV matching but a cliff: worst case 0.48 against 0.76.
 - A CV, a vacancy and a query must share one embedding space, so opening CVs to the
   cloud also opens cloud embeddings for the whole corpus. Re-measured on the 202
   real vacancies in milestone 3.1: the embedder is now **gemini-embedding-2** with
@@ -111,6 +116,8 @@ conceptually, not just have working code.
 - uv run python scripts/search_vacancies.py "query" --corpus raw
 - uv run python scripts/data_status.py                      # freshness and health
 - uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV
+- uv run python scripts/match_cv.py <cv> --top 10           # rank vacancies for a CV
+- uv run python scripts/eval_cv_matching.py                 # which CV style wins
 
 ## Rules
 

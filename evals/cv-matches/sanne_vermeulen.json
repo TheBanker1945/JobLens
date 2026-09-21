@@ -1,0 +1,52 @@
+{
+  "cv": "sanne_vermeulen",
+  "corpus": "raw",
+  "judged_by": "Claude (Opus 5), 2026-09-21, reviewed by nobody yet",
+  "relevant": [
+    "jobdataapi:56848625",
+    "jobdataapi:56848645",
+    "jobdataapi:56848600",
+    "jobdataapi:56848629",
+    "indeed:b42e0fd8ae27ebd7",
+    "indeed:5c8896085173061b"
+  ],
+  "maybe": [
+    "jobdataapi:56680049",
+    "jobdataapi:56726958",
+    "indeed:9142af3fa92e1632",
+    "indeed:1f11539813c9b03b",
+    "jobdataapi:56850390",
+    "jobdataapi:56728667",
+    "jobdataapi:56850497",
+    "jobdataapi:56848743",
+    "jobdataapi:56848627",
+    "indeed:a9be11452433bf0c",
+    "jobdataapi:56680052",
+    "indeed:7e3b0e360662d3f5"
+  ],
+  "judged": [
+    "jobdataapi:56848625",
+    "jobdataapi:56848645",
+    "jobdataapi:56680049",
+    "jobdataapi:56848600",
+    "jobdataapi:56848629",
+    "jobdataapi:56726958",
+    "indeed:9142af3fa92e1632",
+    "jobdataapi:56850546",
+    "indeed:1f11539813c9b03b",
+    "jobdataapi:56850390",
+    "jobdataapi:56728667",
+    "jobdataapi:56727719",
+    "jobdataapi:56848801",
+    "jobdataapi:56848603",
+    "indeed:b42e0fd8ae27ebd7",
+    "jobdataapi:56850497",
+    "jobdataapi:56848743",
+    "jobdataapi:56848627",
+    "indeed:a9be11452433bf0c",
+    "jobdataapi:56680052",
+    "indeed:5c8896085173061b",
+    "indeed:7e3b0e360662d3f5"
+  ],
+  "note": "MBO-4 verpleegkundige with a BIG registration, 7 years, 4 of them in GGZ, wants 28-36 hours around Utrecht. Two bars decide most of this list: a vacancy that requires hbo-V (wijkverpleegkundige, SPV, regieverpleegkundige) is 'maybe' rather than 'apply' however exactly the work fits, because she cannot meet it; and a job more than about an hour from Utrecht is 'maybe' too. Teaching nursing is not nursing."
+}

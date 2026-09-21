@@ -123,3 +123,27 @@ def test_documents_too_long_for_the_embedder_are_named():
 
     assert [v.key for v in index.oversized()] == ["indeed:3"]
     assert index.oversized(limit=100_000) == []
+
+
+def build_index(*vacancies: Vacancy) -> VacancyIndex:
+    return VacancyIndex.build(list(vacancies), {}, WordEmbedder(), style="raw")
+
+
+def test_search_many_ranks_a_vacancy_by_the_query_it_answers_best():
+    """How a CV searches: as its parts, not as one averaged vector."""
+    index = build_index(DATA, CARE)
+
+    matches = {m.vacancy.title: m for m in index.search_many(["zorg", "data"])}
+
+    assert matches["Verpleegkundige"].query_index == 0  # found by the care part
+    assert matches["Data Engineer"].query_index == 1  # and this by the data part
+
+
+def test_search_still_reports_which_query_it_answered():
+    index = build_index(DATA, CARE)
+
+    assert index.search("data")[0].query_index == 0
+
+
+def test_search_many_with_nothing_to_ask_returns_nothing():
+    assert build_index(DATA).search_many([]) == []

@@ -841,3 +841,91 @@ PyMuPDF (AGPL, wrong for a public repo), OCR (out of scope; the error says so).
 **Not settled here.** Nothing in this milestone matches anything. Whether a CV
 should reach the index as its whole text, as a structured profile, as one query per
 job, or as an invented "ideal vacancy" is 3.5, and it is a question for the eval.
+
+## 3.5 — How should a CV ask the question? The dull answer wins
+
+A CV now searches the real corpus. The question this milestone had to settle was
+what a CV *is* when it reaches the index, because a vacancy is one job and a
+career is five, plus an education and a pile of skills. Five candidates, measured:
+
+| cv style | what it sends |
+|---|---|
+| raw | the redacted CV text, as one query |
+| profile | the extracted fields as a summary, in the same Dutch labels a vacancy is indexed with |
+| roles | one query per job, plus one for education and skills; a vacancy scores as its best part |
+| chunks | the CV cut into overlapping pieces by `chunk_text`, pooled the same way |
+| wishlist | a model writes the advert this person would be hired for next, and that is the query (HyDE) |
+
+Four labelled CVs, all invented, judged by Claude: a data analyst, a warehouse
+voorman, a GGZ nurse, and an Arctic marine biologist who fits nothing. **Nothing
+is averaged across them** — nDCG@10 per CV, and a variant wins by not failing
+anyone:
+
+| variant | lisa | sanne | youssef | worst |
+|---|---|---|---|---|
+| **gemini-2 raw CV** | 0.79 | 0.76 | 0.88 | **0.76** |
+| gemini-2 chunks | 0.80 | 0.71 | 0.72 | 0.71 |
+| gemini-2 profile | 0.67 | 0.83 | 0.91 | 0.67 |
+| gemini-2 roles | 0.80 | 0.79 | 0.67 | 0.67 |
+| gemini-2 wishlist | 0.65 | 0.79 | 0.94 | 0.65 |
+| local profile | 0.83 | 0.83 | 0.52 | 0.52 |
+| local raw CV | 0.87 | 0.60 | 0.48 | 0.48 |
+| local roles | 0.54 | 0.50 | 0.46 | 0.46 |
+
+**No variant wins on every CV, so the rule had to be written down before reading
+the table: pick the best worst case.** A job seeker gets one list, and a
+representation that is brilliant for two people and useless for the third is not
+usable. On that rule `gemini-2 raw CV` wins, and it is also the only variant with
+hit@1 of 100% on all three scored CVs. It is the cheapest (one embedding, no
+extra model call) and the least clever.
+
+**The dilution argument did not transfer.** Splitting a CV into its jobs was the
+expected winner — 3.3 left the chunker "for the side it was really built for",
+which was this one. It came fourth. The likely reason is that the premise was
+half wrong: dilution needs a long document, and these CVs are 1,700-2,300
+characters against a vacancy's 5,100, while the thing they are compared *to* is a
+280-character structured summary. Two short texts do not dilute each other. The
+lesson repeats 3.3's: a mechanism that is real in one place is not thereby real
+in the next one, and the cheap way to find out is a variant in the eval rather
+than a rewrite.
+
+**The local model is not a 13-point drop here, it is a cliff.** On vacancy search
+qwen3-embedding cost about 13 points of hit@1. On CV matching its worst case is
+0.48 against 0.76 — it handles Lisa (0.87, the best score anyone got) and falls
+apart on Youssef. Whatever "keep it local" costs, it is not one number, and it is
+much larger for a CV than for a query.
+
+**The control CV is the useful part.** Ingrid Solheim fits nothing, and every
+variant still hands her a number one. Her top score against a CV that does fit:
+
+| variant | ingrid (no fit) | lisa | sanne | youssef |
+|---|---|---|---|---|
+| gemini-2 raw CV | 0.646 | 0.773 | 0.762 | 0.766 |
+| gemini-2 profile | 0.766 | 0.820 | 0.825 | 0.826 |
+| gemini-2 wishlist | 0.729 | 0.838 | 0.842 | 0.833 |
+
+**A refusal cannot be a cosine threshold.** The gap is 0.12 for `raw` and 0.05
+for `profile`, on one control CV. Nothing that thin, measured once, is a
+threshold — 3.7 has to get "nothing here fits you" from the judge reading the
+vacancy, not from the number. Worth knowing before building it the cheap way.
+
+**And the app does read the CV.** Top-10 overlap between two people's lists is 0%
+for every pair of the three real CVs under every variant. The one bad number is
+`raw`, where Ingrid shares **50%** of her top ten with Lisa: two English-language
+technical CVs land in the same region of the space even when one of them is about
+copepods. The winner is the weakest variant at keeping an unmatchable CV away
+from someone else's list, which is a real mark against it and another reason the
+refusal has to be an explanation rather than a score.
+
+**What this is worth.** Four invented CVs, judged by the same model that does the
+matching, against a corpus of 198. One CV is one row, and one row moving would
+change the winner: the gap between `raw` (0.76) and `chunks` (0.71) is smaller
+than the spread of a single CV. This is "the ordering is not obviously broken",
+not "matching works" — the real test is Mahdi's CV, judged by Mahdi, and
+`evals/cv-matches/README.md` says so in the file itself.
+
+**Method note: the eval got 20x faster by accident.** The first labelling run took
+over fifteen minutes and the fix was not the embeddings. Every variant built its
+own `CachedEmbedder`, and building one reads the whole cache file — 171 MB of
+JSON for gemini-embedding-2, twenty-four times. `EmbedderPool` keeps one per
+model for the length of a run: 43 seconds. Nothing about the measurement changed.
