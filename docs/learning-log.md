@@ -700,3 +700,61 @@ makes every other measurement mean something other than what it appears to.**
 **New defaults**: `gemini-embedding-2`, document style `structured`. `.env.example`
 carries the local block, commented, one edit away — it costs about 13 points of
 hit@1 and sends nothing anywhere.
+
+## 3.3 — Chunking: it rescues raw text, and still does not beat the summary
+
+The last question from the CV-matching brief: does one vector per vacancy lose
+things? Answered as three more eval variants rather than as a rewrite of
+`VacancyIndex`, because the expected answer was "no" and a negative result should
+be cheap.
+
+**What chunking is for, and what it is not for.** Two problems get confused here.
+*Truncation* is the document being longer than the model's window, so the tail is
+silently dropped — ruled out for this corpus in 2.4 (longest vacancy 11,188
+characters, gemini-2 cuts at ~42,000). *Dilution* is one vector being the average
+meaning of the whole text, so a query about one narrow part matches it weakly.
+Dilution happens at every window size; a model with a bigger window would simply
+average more text into the one vector. Only the second is a reason for us.
+
+`chunk_text` splits on paragraph breaks, packs to ~900 characters and carries a
+150-character tail into the next chunk. A vacancy then scores as its **best**
+chunk (`rank_all_pooled`, a scatter-max over the chunk-query cosines), not its
+average.
+
+| Variant | dev hit@1 / MRR | holdout hit@1 / MRR |
+|---|---|---|
+| gemini-2 raw | 73% / 0.80 | 38% / 0.56 |
+| **gemini-2 raw, chunked** | **87% / 0.92** | **75% / 0.84** |
+| gemini-2 structured *(the default)* | 87% / 0.90 | 88% / 0.91 |
+| gemini-2 structured+raw, chunked | 87% / 0.89 | 75% / 0.84 |
+| local raw | 80% / 0.85 | 75% / 0.88 |
+| local raw, chunked | 80% / 0.85 | 62% / 0.76 |
+
+**Chunking repairs raw text almost exactly as predicted.** `gemini-2 raw` went
+from the worst variant in 3.1 to 87% / 75%, a jump of 14 and 37 points. The
+mechanism is the one 3.1 identified: the employer boilerplate ends up in chunks of
+its own, and a chunk of Adyen's company story never wins a max-pool against a
+chunk that actually describes the job. Chunking does not remove the boilerplate;
+it *quarantines* it.
+
+**And it still does not beat the summary.** Against the `structured` default,
+chunked raw ties on dev (87% both, MRR 0.92 against 0.90) and loses holdout by one
+query (75% against 88%). One holdout query is 12.5 points, so this is a tie we
+cannot call — which is the point. Chunking buys nothing measurable over a document
+that never had the dilution problem, because `structured` is already ten fields
+and no prose.
+
+**So cost decides.** Chunking `raw` is 1,628 vectors instead of 198, and
+`structured_raw` is 1,737 — **8 to 9 times** the embeddings to store, refresh and
+pay for, for no gain we can demonstrate. `structured` stays the default, one vector
+per vacancy.
+
+**What this does not settle.** The dilution argument was always weaker for a
+vacancy (one advert, one job) than for a **CV** (five jobs, education and skills in
+one vector). Nothing here measures that, and the 3.4 CV work is where the question
+actually bites. The chunker and the pooled ranking stay, tested and unused, because
+that is the side they were really built for.
+
+**Method note.** Deciding this as eval variants cost an afternoon; the
+`VacancyIndex` rewrite it replaced would have cost a day and would now be carrying
+a feature the numbers say not to use.

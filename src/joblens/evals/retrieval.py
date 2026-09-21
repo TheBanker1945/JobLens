@@ -41,6 +41,7 @@ class RetrievalConfig(BaseModel):
     model: str
     api_key_env: str | None = None  # env var name holding the key, never the key
     instruction: bool = True  # wrap queries in the model's task instruction
+    chunk: bool = False  # split each document and score a vacancy by its best part
 
     def settings(self, env: Mapping[str, str] = os.environ) -> LLMSettings:
         api_key = "unused"  # local servers like Ollama ignore the key
@@ -125,6 +126,26 @@ def rank_all(query_vectors: list[list[float]], doc_vectors: list[list[float]]):
     queries, docs = _unit(np.array(query_vectors)), _unit(np.array(doc_vectors))
     similarities = queries @ docs.T  # cosine, because every row has length 1
     return np.argsort(-similarities, axis=1, kind="stable")
+
+
+def rank_all_pooled(
+    query_vectors: list[list[float]],
+    chunk_vectors: list[list[float]],
+    owners: list[int],
+    count: int,
+):
+    """Rank `count` vacancies by their single best-matching chunk.
+
+    `owners[i]` says which vacancy chunk `i` belongs to. A vacancy scores as its
+    strongest part rather than its average, which is the whole point of chunking:
+    an advert that mentions Kubernetes once should not have that diluted by four
+    paragraphs about the company.
+    """
+    queries, chunks = _unit(np.array(query_vectors)), _unit(np.array(chunk_vectors))
+    similarities = queries @ chunks.T
+    best = np.full((len(queries), count), -np.inf)
+    np.maximum.at(best, (slice(None), np.array(owners)), similarities)
+    return np.argsort(-best, axis=1, kind="stable")
 
 
 def _unit(matrix: np.ndarray) -> np.ndarray:

@@ -27,7 +27,7 @@ import openai
 from dotenv import load_dotenv
 
 from joblens.corpus import NAMES, Corpus, load_corpus
-from joblens.embeddings.documents import build_document
+from joblens.embeddings.documents import build_document, chunk_text
 from joblens.evals.retrieval import (
     Query,
     QueryResult,
@@ -37,6 +37,7 @@ from joblens.evals.retrieval import (
     load_configs,
     load_queries,
     rank_all,
+    rank_all_pooled,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -127,9 +128,23 @@ def run_variant(
         build_document(v.text, corpus.details.get(v.key), config.style)
         for v in corpus.vacancies
     ]
-    vectors = embed(config, documents, [q.query for q in queries], CACHE_DIR)
+    # With chunking one vacancy becomes several documents, and `owners` remembers
+    # which is whose so the scores can be pooled back per vacancy afterwards.
+    owners: list[int] = []
+    if config.chunk:
+        chunked = []
+        for index, document in enumerate(documents):
+            pieces = chunk_text(document)
+            chunked.extend(pieces)
+            owners.extend([index] * len(pieces))
+        documents = chunked
 
-    rankings = rank_all(vectors.queries, vectors.documents)
+    vectors = embed(config, documents, [q.query for q in queries], CACHE_DIR)
+    rankings = (
+        rank_all_pooled(vectors.queries, vectors.documents, owners, len(corpus))
+        if config.chunk
+        else rank_all(vectors.queries, vectors.documents)
+    )
     return RetrievalResult(
         variant=config.name,
         style=config.style,

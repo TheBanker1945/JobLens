@@ -71,3 +71,35 @@ style = "structured_raw"
 provider = "ollama"
 base_url = "http://localhost:11434/v1"
 model = "qwen3-embedding:0.6b"
+
+# Chunked variants (milestone 3.3). One vacancy becomes several documents and is
+# scored by its best-matching one, so a single mention is not diluted by four
+# paragraphs of company story. Not about the context window: nothing in the
+# corpus comes near being truncated (2.4). The interesting case is `raw` --
+# chunking should isolate the employer boilerplate into chunks that never win.
+
+[[run]]
+name = "local raw chunked"
+style = "raw"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+chunk = true
+
+[[run]]
+name = "gemini-2 raw chunked"
+style = "raw"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+chunk = true
+
+[[run]]
+name = "gemini-2 structured+raw chunked"
+style = "structured_raw"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+chunk = true
