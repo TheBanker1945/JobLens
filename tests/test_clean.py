@@ -1,4 +1,10 @@
-from joblens.sources.clean import html_to_text, strip_contact_details, to_clean_text
+from joblens.sources.clean import (
+    extract_by_class,
+    html_to_text,
+    redact,
+    strip_contact_details,
+    to_clean_text,
+)
 
 
 def test_html_becomes_readable_text():
@@ -57,3 +63,41 @@ def test_years_and_amounts_survive():
     text = "In 2026 zoeken we 3 mensen, salaris 3200 - 3800, 40 uur, postcode 1234 AB."
 
     assert strip_contact_details(text) == text
+
+
+def test_element_is_picked_out_by_class_with_nesting_intact():
+    page = (
+        "<body><div class='top'>menu</div>"
+        "<div class='show-more-less-html__markup relative'>"
+        "<p>Wat ga je doen?</p><ul><li>SQL</li></ul><br>"
+        "</div><footer>copyright</footer></body>"
+    )
+
+    inner = extract_by_class(page, "show-more-less-html__markup")
+
+    assert to_clean_text(inner) == "Wat ga je doen?\n\n- SQL"
+
+
+def test_only_a_whole_class_name_matches():
+    page = "<div class='markup__extra'>nee</div><div class='markup'>ja</div>"
+
+    assert extract_by_class(page, "markup").strip() == "ja"
+
+
+def test_missing_class_is_not_an_error():
+    assert extract_by_class("<div class='other'>x</div>", "wanted") is None
+
+
+def test_payloads_are_redacted_however_deep():
+    payload = {
+        "id": 7,
+        "description": "<p>Mail jan@x.nl</p>",
+        "translations": [{"nl": {"body": "Bel 06-12345678"}}],
+        "salary_max": 3800,
+    }
+
+    clean = redact(payload)
+
+    assert clean["id"] == 7 and clean["salary_max"] == 3800  # numbers untouched
+    assert "jan@x.nl" not in str(clean)
+    assert clean["translations"][0]["nl"]["body"] == "Bel [phone removed]"

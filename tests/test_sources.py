@@ -77,6 +77,7 @@ def test_recruitee_joins_description_and_requirements():
     assert "Channable is a SaaS platform." in first.text
     assert "- SQL" in first.text  # the requirements section came along
     assert "jan@channable.com" not in first.text  # contact details removed
+    assert "jan@channable.com" not in str(first.raw)  # also in the kept payload
     assert first.posted_at.year == 2026
 
 

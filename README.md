@@ -75,11 +75,57 @@ uv run pytest                                  # run the tests
 uv run ruff check . && uv run ruff format .    # lint and format
 ```
 
+## Where the vacancies come from
+
+Five sources, one interface. Adding another is one adapter file plus a few lines
+in `sources.toml`; nothing downstream knows the difference.
+
+| Source | How | Needs |
+|--------|-----|-------|
+| Recruitee, Greenhouse | public JSON from a company's own board | nothing |
+| jobdataapi | aggregator, anonymous tier (~10 requests/hour per IP) | nothing |
+| Indeed | its mobile app API, through [JobSpy](https://github.com/speedyapply/JobSpy) | `uv sync --group scrape` |
+| LinkedIn | its logged-out guest endpoints, off by default | `uv sync --group scrape` |
+
+Scraping never happens while someone is using JobLens: a scheduled run puts
+vacancies in `data/raw/`, and search only ever reads what is already there.
+
+```bash
+uv run --group scrape python scripts/fetch_vacancies.py   # fetch what is new
+uv run python scripts/index_vacancies.py                  # extract, then embed
+uv run python scripts/search_vacancies.py "zorg voor ouderen" --corpus raw
+uv run python scripts/data_status.py                      # how fresh is all this?
+```
+
+Every fetch writes a report to `data/raw/runs/` and exits non-zero when
+something looks wrong -- a source that found nothing at all, descriptions that
+never arrived, a board refusing us -- because all three otherwise look exactly
+like a quiet day.
+
+### Keeping it fresh automatically
+
+`scripts/daily_update.sh` fetches and then indexes, logs to `data/raw/logs/`,
+and stays silent unless something went wrong.
+
+On WSL, cron only runs while WSL itself is running, so Windows Task Scheduler is
+the more reliable of the two:
+
+```powershell
+# Windows Task Scheduler, runs daily at 07:15 even with no terminal open
+schtasks /create /tn "JobLens update" /sc daily /st 07:15 ^
+  /tr "wsl.exe -d Ubuntu -- bash -lc 'cd ~/repos/JobLens && ./scripts/daily_update.sh'"
+```
+
+```bash
+# or, inside WSL: sudo service cron start, then crontab -e
+15 7 * * * cd ~/repos/JobLens && ./scripts/daily_update.sh
+```
+
 ## Project layout
 
 ```text
 src/joblens/     package code
-scripts/         small runnable experiments
+scripts/         small runnable experiments and the scheduled update
 data/samples/    example vacancies (committed)
 data/raw/        scraped or personal data (never committed)
 docs/            learning log and notes

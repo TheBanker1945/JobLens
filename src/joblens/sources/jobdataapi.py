@@ -15,7 +15,7 @@ from datetime import datetime
 import httpx
 
 from joblens.sources.base import Vacancy
-from joblens.sources.clean import to_clean_text
+from joblens.sources.clean import redact, to_clean_text
 from joblens.sources.http import RateLimited, get_json
 
 BASE_URL = "https://jobdataapi.com/api/jobs/"
@@ -79,7 +79,7 @@ class JobDataApiSource:
             country=self.country,
             posted_at=_parse_date(job.get("published")),
             text=to_clean_text(job.get("description", "")),
-            raw=job,
+            raw=redact(job),
         )
 
 

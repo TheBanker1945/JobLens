@@ -14,9 +14,16 @@ class RateLimited(Exception):
         self.retry_after = retry_after
 
 
-def new_client(timeout: float = 30.0) -> httpx.Client:
-    """A client that identifies itself, so a site owner can see who we are."""
-    return httpx.Client(timeout=timeout, headers={"User-Agent": USER_AGENT})
+def new_client(
+    timeout: float = 30.0, transport: httpx.BaseTransport | None = None
+) -> httpx.Client:
+    """A client that identifies itself, so a site owner can see who we are.
+
+    `transport` is for tests: they build the real client and answer it locally.
+    """
+    return httpx.Client(
+        timeout=timeout, headers={"User-Agent": USER_AGENT}, transport=transport
+    )
 
 
 def get_json(client: httpx.Client, url: str, source: str, params: dict | None = None):

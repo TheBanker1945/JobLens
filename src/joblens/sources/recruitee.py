@@ -10,7 +10,7 @@ from datetime import datetime
 import httpx
 
 from joblens.sources.base import Vacancy
-from joblens.sources.clean import to_clean_text
+from joblens.sources.clean import redact, to_clean_text
 from joblens.sources.http import get_json
 
 
@@ -38,7 +38,7 @@ class RecruiteeSource:
             country=offer.get("country_code"),
             posted_at=_parse_date(offer.get("published_at") or offer.get("created_at")),
             text=to_clean_text(body),
-            raw=offer,
+            raw=redact(offer),
         )
 
 

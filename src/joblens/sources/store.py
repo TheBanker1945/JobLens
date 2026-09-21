@@ -2,19 +2,34 @@
 
 One file per source, one JSON object per line: easy to append, easy to read back
 line by line, and a partly written file does not corrupt what came before.
-Vacancies already stored (same source and id) are skipped, so fetching twice
-does not create duplicates.
+
+Two kinds of duplicate are skipped. The same vacancy from the same source (same
+id) is the obvious one. The same vacancy from a *different* source is the other:
+one job is advertised on Indeed, on LinkedIn and on the company's own board at
+once, and the matcher should not rank it three times. `Vacancy.fingerprint`
+decides what counts as the same job.
 """
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from joblens.sources.base import Vacancy
 
 
+@dataclass(frozen=True)
+class StoreResult:
+    """What `add` did, so a run report can say why little was stored."""
+
+    stored: int = 0
+    known: int = 0  # same source, same id: seen in an earlier run
+    duplicate: int = 0  # the same job, found through another source
+
+
 class VacancyStore:
     def __init__(self, directory: Path):
         self.directory = directory
+        self._fingerprints: set[str] | None = None
 
     def path_for(self, source: str) -> Path:
         return self.directory / f"{source}.jsonl"
@@ -30,18 +45,41 @@ class VacancyStore:
                 keys.add(f"{record['source']}:{record['source_id']}")
         return keys
 
-    def add(self, vacancies: list[Vacancy]) -> tuple[int, int]:
-        """Append the new ones. Returns (stored, skipped)."""
+    def sources(self) -> list[str]:
+        return sorted(path.stem for path in self.directory.glob("*.jsonl"))
+
+    def fingerprints(self) -> set[str]:
+        """Every job already stored, whichever source it came from.
+
+        Read once and then kept up to date by `add`: a run adds a few dozen
+        vacancies and would otherwise re-read the whole store for each search.
+        """
+        if self._fingerprints is None:
+            self._fingerprints = {
+                vacancy.fingerprint
+                for source in self.sources()
+                for vacancy in self.load(source)
+            }
+        return self._fingerprints
+
+    def add(self, vacancies: list[Vacancy]) -> StoreResult:
+        """Append the ones we do not have yet, from any source."""
         if not vacancies:
-            return 0, 0
+            return StoreResult()
         source = vacancies[0].source
         known = self.existing_keys(source)
-        fresh, skipped = [], 0
+        seen = self.fingerprints()
+        fresh: list[Vacancy] = []
+        known_again = duplicates = 0
         for vacancy in vacancies:
             if vacancy.key in known:
-                skipped += 1
+                known_again += 1
+                continue
+            if vacancy.fingerprint in seen:
+                duplicates += 1
                 continue
             known.add(vacancy.key)
+            seen.add(vacancy.fingerprint)
             fresh.append(vacancy)
 
         if fresh:
@@ -49,7 +87,7 @@ class VacancyStore:
             with self.path_for(source).open("a", encoding="utf-8") as handle:
                 for vacancy in fresh:
                     handle.write(vacancy.model_dump_json() + "\n")
-        return len(fresh), skipped
+        return StoreResult(len(fresh), known_again, duplicates)
 
     def load(self, source: str) -> list[Vacancy]:
         path = self.path_for(source)

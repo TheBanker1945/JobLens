@@ -465,3 +465,96 @@ countries instead of a city.
 **Storage format:** JSON Lines, one file per source, one vacancy per line. Easy to
 append, easy to stream back, and a half-written line never corrupts the rest.
 Re-fetching skips what is already stored (dedupe on source + id).
+
+## 2.4 — Scraping Indeed and LinkedIn, and making real vacancies searchable
+
+Two things at once: two boards that publish no feed, and the bridge that was
+missing since 2.3 — fetched vacancies went into `data/raw/` and nothing read them
+back out. Search still only knew the ten fictional samples.
+
+**A dependency with a trap.** JobSpy knows the endpoints Indeed and LinkedIn use
+and follows their changes, which is worth more than writing that by hand. But its
+last release (1.1.82, July 2025) requires `numpy==1.26.3`, and this project is on
+numpy 2. `uv add python-jobspy` does not fail: it quietly resolves back to
+**python-jobspy 1.1.13 from 2024**. The fix is a git commit pin (`fda080a`, where
+the requirement is `numpy>=1.26.0`) in an optional `scrape` group, so the library,
+the tests and the evals stay on five dependencies.
+
+**Scraped sources fail differently from API sources.** Reading JobSpy's code first
+was worth more than reading its README:
+
+| What it does | What we do instead |
+|---|---|
+| One request per LinkedIn description, no pause, `except: return {}` | Ask for the listing only, fetch descriptions ourselves |
+| Indeed page loop with no guard (it can run forever) | Every scrape runs under a deadline, in a daemon thread |
+| `distance` in miles, default 50 | `distance_km` in config, converted |
+| Harvests recruiter e-mails into a column | Dropped, along with the un-redacted description |
+
+The LinkedIn half is two phases now: JobSpy lists the jobs (paced 3–7 s per page),
+and we fetch each description from the guest fragment endpoint ourselves. That
+inverts the risk — the request path that gets an IP throttled is the one we
+control. Jobs already in the store cost no request at all, a run is capped, and a
+job whose description does not arrive is **dropped rather than stored**: in the
+store an empty vacancy is indistinguishable from a real one, and the matcher would
+happily rank it. Above 30% missing descriptions the run stops and calls itself
+throttled. LinkedIn also answers our honest `JobLens/0.1` User-Agent with HTTP 200,
+so nothing here pretends to be a browser.
+
+**"Nothing stored" says nothing.** A quiet week, a dead API and a throttled board
+all look the same from the outside. Measured, not assumed: `monteur in Eindhoven`
+returned zero jobs with `hours_old=72` and ten with `hours_old=336` — a real zero.
+So the rules in `sources/report.py` treat *one* empty search as normal, and only a
+whole source that listed nothing, or a source whose jobs mostly arrive without a
+description, as a problem. Every run writes `data/raw/runs/<timestamp>_fetch.json`
+and exits non-zero when it needs a look, which is what makes cron speak up.
+
+**A privacy hole from 2.3, found while adding the new sources.** `Vacancy.raw`
+kept the payload as received — including the description in HTML, with the
+recruiter's e-mail still in it. `text` was redacted; the same address went to disk
+one field along, in 7 of 29 Recruitee vacancies. `clean.redact()` now walks a
+payload and strips contact details from every string. The claim in 2.3 that
+contact details never reach disk was true of `text` only.
+
+**Cross-source duplicates.** One job is advertised on Indeed, on LinkedIn and on
+the company's own board. The store now also skips a job it already has from
+another source, matched on title + company + city, normalised. Strict on purpose:
+missing a duplicate costs one row, merging two jobs that only look alike loses a
+real one. The first full run skipped 6.
+
+**The bridge.** `scripts/index_vacancies.py` extracts every stored vacancy (cached
+per vacancy, append-only, last line wins) and embeds the document for it;
+`search_vacancies.py --corpus raw` then searches the real set. 202 vacancies,
+no extraction failures, about **$0.55 in total**, and the second run costs nothing:
+every extraction and every vector comes from the cache.
+
+**How much of a vacancy does an embedding model actually read?** The question that
+mattered most, and the answer was not the one on the model card. Each model was
+probed by appending a distinctive sentence to texts of growing length: if the
+vector does not move at all, the tail was cut.
+
+| model | window it really uses | truncates past | our 202 documents |
+|---|---|---|---|
+| `gemini-embedding-001` | ~2,048 tokens | ~10,500 chars | 2 would be cut |
+| `qwen3-embedding:0.6b` | **4,096** (the model itself: 32,768) | ~22,000 chars | none |
+| `gemini-embedding-2` | ~8,192 tokens | ~42,000 chars | none |
+
+All three truncate **silently**: HTTP 200, no warning. Ollama serves qwen3 with a
+4,096-token window regardless of what the model supports, and `prompt_tokens`
+stops at 4095 whether the input is 24,000 characters or 80,000. Vacancy text runs
+at about 5.1–5.4 characters per token across all three models.
+
+Three consequences. Our longest document (11,526 chars) fits the local model with
+room to spare, so nothing is truncated today. The cloud option that looked
+appealing in 2.2, `gemini-embedding-001`, has a *smaller* window than the local
+model and would already cut two of our vacancies — worth knowing before the
+retrieval eval is ever re-run over real vacancies. And `structured_raw` earns its
+place as the default for a second reason: the summary sits at the front, so if a
+document ever is cut, the decisive facts survive. `VacancyIndex.oversized()` now
+names any document that comes close.
+
+**Scheduling.** `scripts/daily_update.sh` fetches, then indexes, logs to
+`data/raw/logs/` and prints nothing unless something went wrong — cron mails what
+a job prints, so silence is the success signal. On WSL, cron only runs while WSL
+does, so Windows Task Scheduler is the more reliable trigger.
+`scripts/data_status.py` answers the question a demo depends on: how fresh is this,
+and did the last run go well?

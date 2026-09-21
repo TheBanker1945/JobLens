@@ -46,9 +46,34 @@ conceptually, not just have working code.
   model qwen3:8b. Keep it working and in the eval.
 - Reasoning/"thinking" must be switchable per model, via verified profiles in
   src/joblens/llm/providers.py. Use exact model IDs, never "-latest" aliases.
-- Personal data (CVs) goes to local models only by default — GDPR.
+- Personal data (CVs) goes to local models only by default — GDPR. This is why
+  the embedder is local and primary, not a fallback: a query, a vacancy and a CV
+  must share one model, and the CV half may not leave the machine. Embeddings:
+  qwen3-embedding:0.6b on Ollama.
+- Embedding models truncate silently. Measured 2026-09-20: Ollama serves
+  qwen3-embedding:0.6b with a 4,096-token window (~22,000 chars), whatever the
+  model card says; gemini-embedding-001 cuts at ~10,500 chars. Check
+  VacancyIndex.oversized() before assuming a long document was read.
 - Planned (later): a web UI to choose model and thinking, explaining what each
   choice changes (accuracy, hallucinations, speed, cost) using eval results.
+
+## Vacancy sources
+
+- Five sources behind one `VacancySource` interface in src/joblens/sources/;
+  adding one is an adapter file plus a few lines in sources.toml.
+- Recruitee, Greenhouse and jobdataapi are public APIs and need nothing.
+- Indeed and LinkedIn are scraped through JobSpy, an optional dependency:
+  `uv sync --group scrape`. Pinned to a git commit on purpose — its last release
+  requires numpy 1.26, and resolving it from PyPI silently installs a 2024
+  version.
+- JobSpy is used for listings only. LinkedIn descriptions are fetched by us,
+  paced, because its own description loop has no delay and swallows errors.
+  LinkedIn is off by default in sources.toml; turning it on is a deliberate
+  choice about your own IP.
+- Scraping never runs while someone is using JobLens: scripts/daily_update.sh
+  fetches on a schedule, and search only reads what is already stored.
+- Every fetch writes a report to data/raw/runs/ and exits non-zero when a source
+  looks broken, throttled, or suspiciously empty.
 
 ## Project layout
 
@@ -64,6 +89,10 @@ conceptually, not just have working code.
 
 - uv run pytest
 - uv run ruff check . && uv run ruff format .
+- uv run --group scrape python scripts/fetch_vacancies.py   # fetch new vacancies
+- uv run python scripts/index_vacancies.py                  # extract, then embed
+- uv run python scripts/search_vacancies.py "query" --corpus raw
+- uv run python scripts/data_status.py                      # freshness and health
 
 ## Rules
 
