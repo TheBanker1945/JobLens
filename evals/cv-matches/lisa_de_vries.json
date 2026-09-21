@@ -1,0 +1,42 @@
+{
+  "cv": "lisa_de_vries",
+  "corpus": "raw",
+  "judged_by": "Claude (Opus 5), 2026-09-21, reviewed by nobody yet",
+  "relevant": [
+    "indeed:9396c842c3893418",
+    "recruitee:2710502",
+    "recruitee:2710378",
+    "indeed:869ec81383039634"
+  ],
+  "maybe": [
+    "indeed:f1790d1235ab0237",
+    "indeed:7c5c3082c20a5b65",
+    "greenhouse:2338337",
+    "indeed:b5a71f6b42f09aad",
+    "recruitee:2622523"
+  ],
+  "judged": [
+    "indeed:9396c842c3893418",
+    "recruitee:2710502",
+    "recruitee:2710378",
+    "indeed:f1790d1235ab0237",
+    "indeed:7c5c3082c20a5b65",
+    "greenhouse:2338337",
+    "greenhouse:4994046",
+    "recruitee:2701124",
+    "greenhouse:8127699",
+    "greenhouse:8720906002",
+    "greenhouse:8210330",
+    "indeed:b5a71f6b42f09aad",
+    "recruitee:2696453",
+    "indeed:869ec81383039634",
+    "recruitee:2624634",
+    "jobdataapi:56466870",
+    "jobdataapi:56466871",
+    "recruitee:2622523",
+    "recruitee:2699686",
+    "greenhouse:8575048002",
+    "greenhouse:8589349002"
+  ],
+  "note": "Data analyst, ~4.5 years, hbo BI, Amsterdam, wants more modelling. Sales, product and account management are out however much vocabulary they share with her CV; senior roles asking five years or an Azure stack she does not have are 'maybe', not 'apply'."
+}

@@ -1,0 +1,87 @@
+# How should a CV ask the index a question? Compared by scripts/eval_cv_matching.py
+# over the labelled CVs in evals/cv-matches/.
+#
+# cv_style: how the CV becomes one or more queries (src/joblens/cv/documents.py)
+#   raw       the redacted CV text, as one query
+#   profile   a summary of the extracted fields, shaped like a vacancy document
+#   roles     one query per job, plus one for education and skills
+#   chunks    the CV cut into overlapping pieces
+#   wishlist  an invented advert for the job this person would be hired for next
+#
+# style: how the VACANCIES are indexed. Fixed at `structured`: 3.1 settled that
+# with numbers on this corpus and the brief says not to reopen it without a
+# reason. The question here is the other side of the comparison.
+#
+# The local variants are not there to win. 3.1 found that which document style is
+# best is a property of the embedding model rather than of the data -- the
+# ordering reversed between qwen3 and gemini-2 -- so a conclusion drawn on one
+# model only is not yet a conclusion.
+
+[[run]]
+name = "gemini-2 raw CV"
+cv_style = "raw"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 profile"
+cv_style = "profile"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 roles"
+cv_style = "roles"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 chunks"
+cv_style = "chunks"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 wishlist"
+cv_style = "wishlist"
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "local raw CV"
+cv_style = "raw"
+style = "structured"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+
+[[run]]
+name = "local profile"
+cv_style = "profile"
+style = "structured"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"
+
+[[run]]
+name = "local roles"
+cv_style = "roles"
+style = "structured"
+provider = "ollama"
+base_url = "http://localhost:11434/v1"
+model = "qwen3-embedding:0.6b"

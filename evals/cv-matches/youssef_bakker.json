@@ -1,0 +1,39 @@
+{
+  "cv": "youssef_bakker",
+  "corpus": "raw",
+  "judged_by": "Claude (Opus 5), 2026-09-21, reviewed by nobody yet",
+  "relevant": [
+    "jobdataapi:56725311",
+    "jobdataapi:56848308",
+    "jobdataapi:56848323",
+    "jobdataapi:56852531",
+    "jobdataapi:56832218",
+    "jobdataapi:56851545"
+  ],
+  "maybe": [
+    "jobdataapi:56826121",
+    "jobdataapi:56848317",
+    "jobdataapi:56848298",
+    "jobdataapi:56752578"
+  ],
+  "judged": [
+    "jobdataapi:56826121",
+    "jobdataapi:56725311",
+    "jobdataapi:56828213",
+    "jobdataapi:56848317",
+    "jobdataapi:56848308",
+    "jobdataapi:56848323",
+    "jobdataapi:56852531",
+    "jobdataapi:56832218",
+    "jobdataapi:56851545",
+    "jobdataapi:56848298",
+    "jobdataapi:56840812",
+    "jobdataapi:56883151",
+    "jobdataapi:56848937",
+    "jobdataapi:56752578",
+    "jobdataapi:56466870",
+    "jobdataapi:56466871",
+    "jobdataapi:56736181"
+  ],
+  "note": "Voorman magazijn, 8+ years, mbo-3, wants permanent fulltime work around Tilburg or Eindhoven. His CV states that region, so a job outside it is at most 'maybe' however well the work fits. A 16-24 hour job and an internship are 'no': he asks for fulltime. Sales and teaching are 'no'."
+}
