@@ -37,7 +37,7 @@ def main() -> int:
     parser.add_argument("query")
     parser.add_argument("--corpus", choices=NAMES, default="samples")
     parser.add_argument("--top", type=int, default=10)
-    parser.add_argument("--style", default="structured_raw", choices=STYLES)
+    parser.add_argument("--style", default="structured", choices=STYLES)
     parser.add_argument(
         "--no-instruction",
         action="store_true",

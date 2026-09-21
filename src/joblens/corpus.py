@@ -15,13 +15,14 @@ is what labelled queries refer to, so one query file format fits both.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from joblens.extraction.schema import VacancyDetails
 from joblens.extraction.store import DetailsStore
-from joblens.sources.base import Vacancy
+from joblens.sources.base import Vacancy, dedupe
 from joblens.sources.store import VacancyStore
 
 # src/joblens/corpus.py -> src/joblens -> src -> the repo root.
@@ -93,10 +94,30 @@ def _load_samples(directory: Path, root: Path) -> Corpus:
     return Corpus("samples", vacancies, details)
 
 
+# "Open sollicitatie", "Open application": a page inviting you to send a CV when
+# nothing fits. It is not a job, so it can never be the right answer to a search
+# -- and it is the worst kind of wrong answer, because its text ("tell us who you
+# are and what you are looking for") is shaped like a *query* rather than like a
+# vacancy, which puts it close to every query at once. Measured in milestone 3.1:
+# two such pages in 202 cost the weakest variant 22 points of hit@1.
+NOT_A_VACANCY = re.compile(
+    r"^\s*open\s+(sollicitatie|application|applications)\b", re.I
+)
+
+
+def is_vacancy(vacancy: Vacancy) -> bool:
+    """Whether this is an actual job rather than an invitation to write in."""
+    return not NOT_A_VACANCY.match(vacancy.title)
+
+
 def _load_raw(directory: Path) -> Corpus:
     store = VacancyStore(directory / "vacancies")
     sources = store.sources()
     records = DetailsStore(directory / "extracted").load_all(sources)
     vacancies = [vacancy for source in sources for vacancy in store.load(source)]
+    # Filtered on the way out rather than on the way in: the store keeps what the
+    # boards actually published, and what counts as searchable is a decision we
+    # can change and re-measure without fetching anything again.
+    vacancies = dedupe([v for v in vacancies if is_vacancy(v)])
     details = {key: record.details for key, record in records.items()}
     return Corpus("raw", vacancies, details)

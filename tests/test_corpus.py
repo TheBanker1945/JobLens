@@ -81,3 +81,66 @@ def test_extracted_drops_vacancies_that_have_no_details(tmp_path):
 
     assert len(corpus) == 1
     assert len(corpus.extracted()) == 0
+
+
+def test_an_open_application_page_is_not_a_vacancy(tmp_path):
+    root = build_root(tmp_path)
+    store = VacancyStore(root / "data" / "raw" / "vacancies")
+    store.add(
+        [
+            Vacancy(
+                source="recruitee",
+                source_id="1",
+                url="https://example.test/1",
+                title="Open sollicitatie",
+                text="Stuur ons een open sollicitatie.",
+            ),
+            Vacancy(
+                source="recruitee",
+                source_id="2",
+                url="https://example.test/2",
+                title="Open Application",
+                text="We are always open to receiving applications.",
+            ),
+            Vacancy(
+                source="recruitee",
+                source_id="3",
+                url="https://example.test/3",
+                title="Open Source Engineer",  # "open" alone is not the signal
+                text="Je werkt aan open source software.",
+            ),
+        ]
+    )
+
+    corpus = load_corpus("raw", root=root)
+
+    assert [v.title for v in corpus.vacancies if v.source == "recruitee"] == [
+        "Open Source Engineer"
+    ]
+
+
+def test_a_job_stored_twice_is_loaded_once(tmp_path):
+    root = build_root(tmp_path)
+    store = VacancyStore(root / "data" / "raw" / "vacancies")
+    first = Vacancy(
+        source="indeed",
+        source_id="1",
+        url="https://example.test/1",
+        title="Algemeen of Gespecialiseerd Verpleegkundige",
+        city="Utrecht",
+        text="Ben jij verpleegkundige en toe aan iets anders?",
+    )
+    again = first.model_copy(update={"source_id": "2", "city": "UT"})
+    # Appended straight to the file: this is a store written before `add` could
+    # catch it, which is exactly the state data/raw/ was found in.
+    path = store.path_for("indeed")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        first.model_dump_json() + "\n" + again.model_dump_json() + "\n",
+        encoding="utf-8",
+    )
+    assert len(store.load("indeed")) == 2  # both really are on disk
+
+    corpus = load_corpus("raw", root=root)
+
+    assert [v.key for v in corpus.vacancies if v.source == "indeed"] == ["indeed:1"]

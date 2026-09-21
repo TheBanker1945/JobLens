@@ -641,3 +641,62 @@ data, which is not something the fictional set could ever have told us.
 points. The gaps that survive that: gemini-2 structured over everything (both
 splits), gemini-2 raw and no-instruction at the bottom (both splits). The middle of
 the table is not separated.
+
+## 3.2 — Cleaning the corpus, and what the instruction was really worth
+
+Three fixes from what 3.1 exposed, each measured before and after.
+
+**Open-application pages are not vacancies** and are dropped when the corpus is
+loaded (`joblens.corpus.is_vacancy`). Filtering happens on the way *out* of the
+store, not on the way in: the store keeps what the boards published, and what
+counts as searchable stays a decision we can change and re-measure without
+fetching anything again.
+
+**Duplicate detection was too trusting of labels.** `Vacancy.fingerprint` compares
+title, company and place, and the real corpus beat it twice: one nursing job was
+listed by indeed with no company and the city written "Utrecht" once and "UT" the
+other time, and one job was advertised under two names of the same business
+(BOSMAN and MediReva). Both pairs are byte-identical text.
+
+So there is a second mark now, `content_fingerprint` — the simplified title plus a
+hash of the text. Two refinements, both forced by real data rather than guessed:
+
+- **Identical text alone is not enough.** Catawiki posted a Category Manager for
+  Coins & Banknotes and one for E-Commerce with the same description pasted into
+  both. Two real jobs, one description — so the title has to match as well, and
+  those two survive.
+- **Place is compared separately, not hashed in.** A test we already had says a
+  Data Engineer in Amsterdam and one in Rotterdam are two jobs; the corpus says
+  "UT" and "Utrecht" are one place. A set of strings cannot express "compatible",
+  so `SeenJobs` holds the places seen per content and `same_place` decides: equal,
+  or one missing, or an abbreviation of three characters or fewer that the other
+  starts with. Amsterdam and Amersfoort stay apart.
+
+202 vacancies become **198**: two open applications, two duplicates.
+
+**What the cleanup bought** (hit@1, dev / holdout):
+
+| Variant | before | after |
+|---|---|---|
+| local structured, no instruction | 40% / 50% | **67% / 62%** |
+| gemini-2 raw | 60% / 38% | 73% / 38% |
+| gemini-2 structured | 87% / 88% | 87% / 88% |
+| local raw | 80% / 75% | 80% / 75% |
+
+The variants that were already good do not move at all — they were never fooled by
+the junk. The bad ones recover most of the gap. That is the clearest statement of
+what those two documents were doing: not making search a bit worse everywhere, but
+destroying the variants that had nothing else to go on.
+
+**This overturns what 3.1 said about the query instruction.** That entry read the
+40% → 67% gap as the instruction being worth far more on real data than on the
+samples. It was not: **once the two junk pages are gone the instruction is worth
+nothing on hit@1** (67% against 67% on dev, 62% against 62% on holdout) and only a
+little on MRR (0.74 against 0.71). What the instruction had been doing was keeping
+one specific junk document off the top spot, and with the junk gone there is
+nothing left to correct. The lesson is not about instructions: **a broken corpus
+makes every other measurement mean something other than what it appears to.**
+
+**New defaults**: `gemini-embedding-2`, document style `structured`. `.env.example`
+carries the local block, commented, one edit away — it costs about 13 points of
+hit@1 and sends nothing anywhere.
