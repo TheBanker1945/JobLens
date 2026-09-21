@@ -8,7 +8,8 @@ def vacancy(source_id: str, title: str = "Developer", **fields) -> Vacancy:
         source_id=source_id,
         url="https://example.test",
         title=title,
-        text="Tekst",
+        # Distinct per vacancy: identical text is itself a sign of a duplicate.
+        text=f"Tekst over vacature {source_id}",
         **fields,
     )
 
@@ -61,20 +62,61 @@ def test_a_different_job_at_the_same_company_is_kept(tmp_path):
     assert store.add([first, other_city, other_role]) == StoreResult(stored=3)
 
 
-def test_without_a_company_nothing_is_called_a_duplicate(tmp_path):
+def test_without_a_company_two_different_adverts_are_two_jobs(tmp_path):
     """Two "Developer" vacancies from different boards may well be two jobs."""
     store = VacancyStore(tmp_path)
     nameless = vacancy("1")
-    elsewhere = nameless.model_copy(update={"source": "greenhouse", "source_id": "2"})
+    elsewhere = vacancy("2").model_copy(update={"source": "greenhouse"})
 
     store.add([nameless])
 
     assert store.add([elsewhere]) == StoreResult(stored=1)
 
 
+def test_without_a_company_the_same_advert_is_still_one_job(tmp_path):
+    """indeed listed one nursing job twice, with no company and no same city."""
+    store = VacancyStore(tmp_path)
+    first = vacancy("1", "Algemeen of Gespecialiseerd Verpleegkundige", city="Utrecht")
+    again = first.model_copy(
+        update={
+            "source_id": "2",
+            "title": "(Algemeen of Gespecialiseerd) verpleegkundige",
+            "city": "UT",  # the same place, abbreviated
+        }
+    )
+
+    store.add([first])
+
+    assert store.add([again]) == StoreResult(duplicate=1)
+
+
+def test_the_same_advert_under_two_company_names_is_one_job(tmp_path):
+    """BOSMAN and MediReva are one business advertising one job."""
+    store = VacancyStore(tmp_path)
+    first = vacancy(
+        "1", "Adviserend Verpleegkundige", company="BOSMAN", city="Maarssen"
+    )
+    again = first.model_copy(update={"source_id": "2", "company": "MediReva"})
+
+    store.add([first])
+
+    assert store.add([again]) == StoreResult(duplicate=1)
+
+
+def test_one_description_pasted_into_two_roles_stays_two_jobs(tmp_path):
+    """Catawiki gave two Category Manager vacancies the same description."""
+    store = VacancyStore(tmp_path)
+    coins = vacancy("1", "Category Manager Coins & Banknotes", company="Catawiki")
+    ecommerce = coins.model_copy(
+        update={"source_id": "2", "title": "Category Manager E-Commerce"}
+    )
+
+    assert store.add([coins, ecommerce]) == StoreResult(stored=2)
+
+
 def test_sources_are_stored_separately(tmp_path):
     store = VacancyStore(tmp_path)
-    other = vacancy("1").model_copy(update={"source": "greenhouse"})
+    other = vacancy("2").model_copy(update={"source": "greenhouse"})
 
     store.add([vacancy("1")])
     store.add([other])

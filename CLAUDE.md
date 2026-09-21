@@ -53,10 +53,15 @@ conceptually, not just have working code.
   says where CV text goes), prefer providers whose paid API does not train on the
   data, and only send what the task needs.
 - A CV, a vacancy and a query must share one embedding space, so opening CVs to the
-  cloud also opens cloud embeddings for the whole corpus. The 2.2 retrieval eval
-  had gemini-embedding-2 perfect (hit@1 100%, MRR 1.00) against 0.84 MRR local, so
-  this is worth re-measuring on the real corpus before switching. Current embedder:
-  qwen3-embedding:0.6b on Ollama.
+  cloud also opens cloud embeddings for the whole corpus. Re-measured on the 202
+  real vacancies in milestone 3.1: the embedder is now **gemini-embedding-2** with
+  the **structured** document style (holdout 88% hit@1 / 0.91 MRR, against 75% /
+  0.88 for qwen3-embedding:0.6b on raw text). Ollama stays the local alternative,
+  in the eval and one edit of .env away, and costs about 13 points of hit@1.
+- Do not carry a retrieval conclusion from data/samples/ to the real corpus. In 3.1
+  every 2.2 answer changed sign: gemini-2 on raw text was perfect on the ten
+  fictional vacancies and came last on the real ones. Ten invented vacancies have
+  no shared employer boilerplate and no junk postings, and both decide the result.
 - Embedding models truncate silently. Measured 2026-09-20: Ollama serves
   qwen3-embedding:0.6b with a 4,096-token window (~22,000 chars), whatever the
   model card says; gemini-embedding-001 cuts at ~10,500 chars. Check

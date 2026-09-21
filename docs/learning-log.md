@@ -558,3 +558,203 @@ a job prints, so silence is the success signal. On WSL, cron only runs while WSL
 does, so Windows Task Scheduler is the more reliable trigger.
 `scripts/data_status.py` answers the question a demo depends on: how fresh is this,
 and did the last run go well?
+
+## 3.1 — The retrieval eval on 202 real vacancies: every 2.2 answer changed
+
+Milestone 2.2 chose what to embed using ten vacancies I wrote myself. This re-runs
+the same eval over the 202 real ones, and almost every conclusion flips. The
+fictional set was not a small version of the real thing; it was a different thing.
+
+**The eval now takes a corpus.** `joblens.corpus` loads `samples` or `raw` into one
+`Vacancy` type, and `search_vacancies.py` and `eval_retrieval.py` share it — search
+and the measurement of search have to see the same vacancies. Vacancies are
+identified by `Vacancy.key` everywhere, so one query-file format fits both corpora.
+
+**23 labelled queries** (15 dev, 8 holdout) in `evals/queries/raw.json`, with the
+rules behind them in the README there and every decision in `raw-review.md`.
+**Labelled by Claude, not by me** — worth remembering before quoting these numbers.
+Candidates were **pooled**: the union of the top 10 of all eight variants, 607
+judgements. Judging only what today's default retrieves would score a better
+variant wrong for finding something nobody was asked about.
+
+**Results** (`evals/results/2026-09-21_1510_retrieval_raw.json`):
+
+| Variant | dev hit@1 / MRR | holdout hit@1 / MRR |
+|---|---|---|
+| local raw | 80% / 0.85 | 75% / 0.88 |
+| local structured | 67% / 0.73 | 62% / 0.75 |
+| local title only | 67% / 0.70 | 62% / 0.74 |
+| local structured, no instruction | 40% / 0.57 | 50% / 0.63 |
+| gemini-001 structured | 73% / 0.80 | 75% / 0.88 |
+| **gemini-2 structured** | **87% / 0.90** | **88% / 0.91** |
+| gemini-2 raw | 60% / 0.71 | 38% / 0.54 |
+| local structured + raw | 80% / 0.84 | 62% / 0.79 |
+
+**`gemini-2 raw` went from best to worst.** It scored a perfect 100% / 1.00 on both
+splits of the fictional set. On real vacancies it is the weakest variant in the
+table, below every local one. Had we trusted 2.2 and shipped it, search would have
+got worse and the sample eval would still have said it was perfect.
+
+**Why: the fictional vacancies had no boilerplate and no junk.**
+
+*Boilerplate.* Twenty-nine Adyen vacancies all open with the same 600 words. Under
+`raw` a company's vacancies sit far closer together than two vacancies picked at
+random (Adyen +0.225 above the baseline cosine for gemini-2, +0.325 for the local
+model); the structured summary roughly halves that (+0.123). Embedding the raw text
+partly embeds *the employer*, not the job. Ten vacancies from ten invented
+companies could not show this.
+
+*Junk.* `recruitee:396939` and `recruitee:312680` are open-application pages — "tell
+us who you are and what you're looking for". That is not a vacancy, it is a
+*query*, which is exactly why it embeds so close to one. They were left in
+deliberately, to price them:
+
+| Variant | ranked #1 | in top 10 | hit@1 → without them |
+|---|---|---|---|
+| local structured, no instruction | 12 / 23 | 21 / 23 | 43% → **65%** |
+| gemini-2 raw | 5 / 23 | 21 / 23 | 52% → 61% |
+| gemini-2 structured | 0 | 0 | 87% → 87% |
+| local raw | 0 | 0 | 78% → 78% |
+
+Two documents out of 202 cost the worst variant **22 points of hit@1**. The
+structured styles are largely immune because neither page has extracted fields to
+summarise — so the structured document is nearly empty, and an empty document
+attracts nothing.
+
+**recall@3 is no longer readable and recall@10 replaces it.** With 202 vacancies a
+broad query has more than three right answers: "logistiek medewerker magazijn" has
+seven, so recall@3 caps at 43% however good the ranking is. On ten vacancies
+recall@10 was 100% for every variant — it measured nothing there and does the work
+here.
+
+**The query instruction is worth far more than 2.2 suggested**: local structured
+drops from 67% to 40% hit@1 without it (2.2 said 80% → 70%). Most of that gap is
+the junk pages, which the instruction keeps off the top spot.
+
+**What still holds from 2.2.** Raw text beats a structured summary *for the local
+model* (80% vs 67%), the lossy-extraction argument intact. What does not hold is
+that this generalises: for `gemini-2` the ordering reverses, structured 87% against
+raw 60%. "Which style is best" turns out to be a property of the model, not of the
+data, which is not something the fictional set could ever have told us.
+
+**Noise.** 15 dev queries means one query is 6.7 points, 8 holdout queries 12.5
+points. The gaps that survive that: gemini-2 structured over everything (both
+splits), gemini-2 raw and no-instruction at the bottom (both splits). The middle of
+the table is not separated.
+
+## 3.2 — Cleaning the corpus, and what the instruction was really worth
+
+Three fixes from what 3.1 exposed, each measured before and after.
+
+**Open-application pages are not vacancies** and are dropped when the corpus is
+loaded (`joblens.corpus.is_vacancy`). Filtering happens on the way *out* of the
+store, not on the way in: the store keeps what the boards published, and what
+counts as searchable stays a decision we can change and re-measure without
+fetching anything again.
+
+**Duplicate detection was too trusting of labels.** `Vacancy.fingerprint` compares
+title, company and place, and the real corpus beat it twice: one nursing job was
+listed by indeed with no company and the city written "Utrecht" once and "UT" the
+other time, and one job was advertised under two names of the same business
+(BOSMAN and MediReva). Both pairs are byte-identical text.
+
+So there is a second mark now, `content_fingerprint` — the simplified title plus a
+hash of the text. Two refinements, both forced by real data rather than guessed:
+
+- **Identical text alone is not enough.** Catawiki posted a Category Manager for
+  Coins & Banknotes and one for E-Commerce with the same description pasted into
+  both. Two real jobs, one description — so the title has to match as well, and
+  those two survive.
+- **Place is compared separately, not hashed in.** A test we already had says a
+  Data Engineer in Amsterdam and one in Rotterdam are two jobs; the corpus says
+  "UT" and "Utrecht" are one place. A set of strings cannot express "compatible",
+  so `SeenJobs` holds the places seen per content and `same_place` decides: equal,
+  or one missing, or an abbreviation of three characters or fewer that the other
+  starts with. Amsterdam and Amersfoort stay apart.
+
+202 vacancies become **198**: two open applications, two duplicates.
+
+**What the cleanup bought** (hit@1, dev / holdout):
+
+| Variant | before | after |
+|---|---|---|
+| local structured, no instruction | 40% / 50% | **67% / 62%** |
+| gemini-2 raw | 60% / 38% | 73% / 38% |
+| gemini-2 structured | 87% / 88% | 87% / 88% |
+| local raw | 80% / 75% | 80% / 75% |
+
+The variants that were already good do not move at all — they were never fooled by
+the junk. The bad ones recover most of the gap. That is the clearest statement of
+what those two documents were doing: not making search a bit worse everywhere, but
+destroying the variants that had nothing else to go on.
+
+**This overturns what 3.1 said about the query instruction.** That entry read the
+40% → 67% gap as the instruction being worth far more on real data than on the
+samples. It was not: **once the two junk pages are gone the instruction is worth
+nothing on hit@1** (67% against 67% on dev, 62% against 62% on holdout) and only a
+little on MRR (0.74 against 0.71). What the instruction had been doing was keeping
+one specific junk document off the top spot, and with the junk gone there is
+nothing left to correct. The lesson is not about instructions: **a broken corpus
+makes every other measurement mean something other than what it appears to.**
+
+**New defaults**: `gemini-embedding-2`, document style `structured`. `.env.example`
+carries the local block, commented, one edit away — it costs about 13 points of
+hit@1 and sends nothing anywhere.
+
+## 3.3 — Chunking: it rescues raw text, and still does not beat the summary
+
+The last question from the CV-matching brief: does one vector per vacancy lose
+things? Answered as three more eval variants rather than as a rewrite of
+`VacancyIndex`, because the expected answer was "no" and a negative result should
+be cheap.
+
+**What chunking is for, and what it is not for.** Two problems get confused here.
+*Truncation* is the document being longer than the model's window, so the tail is
+silently dropped — ruled out for this corpus in 2.4 (longest vacancy 11,188
+characters, gemini-2 cuts at ~42,000). *Dilution* is one vector being the average
+meaning of the whole text, so a query about one narrow part matches it weakly.
+Dilution happens at every window size; a model with a bigger window would simply
+average more text into the one vector. Only the second is a reason for us.
+
+`chunk_text` splits on paragraph breaks, packs to ~900 characters and carries a
+150-character tail into the next chunk. A vacancy then scores as its **best**
+chunk (`rank_all_pooled`, a scatter-max over the chunk-query cosines), not its
+average.
+
+| Variant | dev hit@1 / MRR | holdout hit@1 / MRR |
+|---|---|---|
+| gemini-2 raw | 73% / 0.80 | 38% / 0.56 |
+| **gemini-2 raw, chunked** | **87% / 0.92** | **75% / 0.84** |
+| gemini-2 structured *(the default)* | 87% / 0.90 | 88% / 0.91 |
+| gemini-2 structured+raw, chunked | 87% / 0.89 | 75% / 0.84 |
+| local raw | 80% / 0.85 | 75% / 0.88 |
+| local raw, chunked | 80% / 0.85 | 62% / 0.76 |
+
+**Chunking repairs raw text almost exactly as predicted.** `gemini-2 raw` went
+from the worst variant in 3.1 to 87% / 75%, a jump of 14 and 37 points. The
+mechanism is the one 3.1 identified: the employer boilerplate ends up in chunks of
+its own, and a chunk of Adyen's company story never wins a max-pool against a
+chunk that actually describes the job. Chunking does not remove the boilerplate;
+it *quarantines* it.
+
+**And it still does not beat the summary.** Against the `structured` default,
+chunked raw ties on dev (87% both, MRR 0.92 against 0.90) and loses holdout by one
+query (75% against 88%). One holdout query is 12.5 points, so this is a tie we
+cannot call — which is the point. Chunking buys nothing measurable over a document
+that never had the dilution problem, because `structured` is already ten fields
+and no prose.
+
+**So cost decides.** Chunking `raw` is 1,628 vectors instead of 198, and
+`structured_raw` is 1,737 — **8 to 9 times** the embeddings to store, refresh and
+pay for, for no gain we can demonstrate. `structured` stays the default, one vector
+per vacancy.
+
+**What this does not settle.** The dilution argument was always weaker for a
+vacancy (one advert, one job) than for a **CV** (five jobs, education and skills in
+one vector). Nothing here measures that, and the 3.4 CV work is where the question
+actually bites. The chunker and the pooled ranking stay, tested and unused, because
+that is the side they were really built for.
+
+**Method note.** Deciding this as eval variants cost an afternoon; the
+`VacancyIndex` rewrite it replaced would have cost a day and would now be carrying
+a feature the numbers say not to use.

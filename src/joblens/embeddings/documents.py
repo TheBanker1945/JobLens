@@ -15,6 +15,7 @@ becomes education_level=null, so a summary drops the very words people search
 with. structured_raw keeps both.
 """
 
+import re
 from typing import Literal
 
 from joblens.extraction.schema import VacancyDetails
@@ -77,3 +78,58 @@ def _range(low, high) -> str | None:
     if high is None or low == high:
         return f"{low:g}"
     return f"{low:g}-{high:g}"
+
+
+# One vacancy is one vector today, which makes that vector the *average* of
+# everything the advert says: the job, the team, the benefits and the company
+# story. A query about one narrow part matches that average weakly. Chunking
+# splits the text and lets a vacancy be scored by its best part instead.
+#
+# This is not about the model's context window -- measured in 2.4, no vacancy in
+# the corpus comes close to being truncated. It is about dilution, which happens
+# at every window size.
+CHUNK_CHARS = 900
+CHUNK_OVERLAP = 150
+
+
+def chunk_text(
+    text: str, size: int = CHUNK_CHARS, overlap: int = CHUNK_OVERLAP
+) -> list[str]:
+    """Split a text into overlapping pieces, on paragraph breaks where possible.
+
+    Paragraphs are kept whole while they fit, because a paragraph is usually one
+    idea and cutting mid-idea is what makes a chunk mean nothing. The overlap
+    carries the tail of one chunk into the next, so a sentence that straddles a
+    boundary still appears complete somewhere.
+
+    `size` bounds the *new* text in a chunk; the carried-over tail sits on top of
+    it, so a chunk holds at most `size + overlap` characters.
+    """
+    if size <= 0:
+        raise ValueError("chunk size must be positive")
+    if overlap >= size:
+        raise ValueError("overlap must be smaller than the chunk size")
+
+    pieces: list[str] = []
+    for paragraph in re.split(r"\n\s*\n", text.strip()):
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+        # A paragraph longer than a whole chunk has to be cut somewhere.
+        while len(paragraph) > size:
+            cut = paragraph.rfind(" ", 0, size) or size
+            pieces.append(paragraph[:cut].strip())
+            paragraph = paragraph[max(cut - overlap, 0) :].strip()
+        if paragraph:
+            pieces.append(paragraph)
+
+    chunks: list[str] = []
+    current = ""
+    for piece in pieces:
+        if current and len(current) + len(piece) + 2 > size:
+            chunks.append(current)
+            current = current[-overlap:].strip()
+        current = f"{current}\n\n{piece}".strip() if current else piece
+    if current:
+        chunks.append(current)
+    return chunks or [text.strip()]

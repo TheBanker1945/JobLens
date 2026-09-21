@@ -14,7 +14,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from joblens.sources.base import Vacancy
+from joblens.sources.base import SeenJobs, Vacancy
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class StoreResult:
 class VacancyStore:
     def __init__(self, directory: Path):
         self.directory = directory
-        self._fingerprints: set[str] | None = None
+        self._seen: SeenJobs | None = None
 
     def path_for(self, source: str) -> Path:
         return self.directory / f"{source}.jsonl"
@@ -48,19 +48,18 @@ class VacancyStore:
     def sources(self) -> list[str]:
         return sorted(path.stem for path in self.directory.glob("*.jsonl"))
 
-    def fingerprints(self) -> set[str]:
+    def seen(self) -> SeenJobs:
         """Every job already stored, whichever source it came from.
 
         Read once and then kept up to date by `add`: a run adds a few dozen
-        vacancies and would otherwise re-read the whole store for each search.
+        vacancies and would otherwise re-read the whole store for each check.
         """
-        if self._fingerprints is None:
-            self._fingerprints = {
-                vacancy.fingerprint
-                for source in self.sources()
-                for vacancy in self.load(source)
-            }
-        return self._fingerprints
+        if self._seen is None:
+            self._seen = SeenJobs()
+            for source in self.sources():
+                for vacancy in self.load(source):
+                    self._seen.add(vacancy)
+        return self._seen
 
     def add(self, vacancies: list[Vacancy]) -> StoreResult:
         """Append the ones we do not have yet, from any source."""
@@ -68,18 +67,18 @@ class VacancyStore:
             return StoreResult()
         source = vacancies[0].source
         known = self.existing_keys(source)
-        seen = self.fingerprints()
+        seen = self.seen()
         fresh: list[Vacancy] = []
         known_again = duplicates = 0
         for vacancy in vacancies:
             if vacancy.key in known:
                 known_again += 1
                 continue
-            if vacancy.fingerprint in seen:
+            if seen.has(vacancy):
                 duplicates += 1
                 continue
             known.add(vacancy.key)
-            seen.add(vacancy.fingerprint)
+            seen.add(vacancy)
             fresh.append(vacancy)
 
         if fresh:

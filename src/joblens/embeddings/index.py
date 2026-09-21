@@ -62,9 +62,15 @@ class VacancyIndex:
         vacancies: list[Vacancy],
         details: dict[str, VacancyDetails],
         embedder: Embedder,
-        style: Style = "structured_raw",
+        style: Style = "structured",
     ) -> "VacancyIndex":
         """An index over the vacancies that can be written in this style.
+
+        `structured` is the default since milestone 3.1, where it won on the real
+        corpus with gemini-embedding-2 (88% hit@1 against 38% for the raw text).
+        Real vacancies repeat their employer's boilerplate -- 29 Adyen adverts
+        open with the same 600 words -- so embedding the raw text embeds the
+        company as much as the job. The summary has none of that.
 
         Every style but `raw` is built from extracted fields, and a vacancy that
         has not been extracted yet has none. It is left out rather than quietly
