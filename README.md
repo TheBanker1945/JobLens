@@ -33,7 +33,9 @@ guesswork. Current choice:
   In the milestone 1.5 eval it made no invented values, at about 1.6 s and $1.68 per
   1,000 vacancies.
 - **Local fallback:** Ollama with `qwen3:8b`.
-- **CVs and other personal data:** local models only, by default.
+- **CVs and other personal data:** local by default today; cloud models are allowed
+  when they measurably improve matching. Where CV text goes is a configured,
+  documented choice, never a silent one.
 
 ## Setup
 
