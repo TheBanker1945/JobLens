@@ -157,6 +157,25 @@ guessing, and a wrong guess deletes a skill instead.
 
 Reading a scanned CV fails loudly rather than quietly matching an empty document.
 
+## Matching a CV against the vacancies
+
+```bash
+uv run python scripts/match_cv.py data/samples/cvs/sanne_vermeulen.md
+uv run python scripts/match_cv.py your_cv.pdf --strip-name "Your Name" --top 20
+uv run python scripts/eval_cv_matching.py        # which representation is best
+```
+
+The CV and the vacancies are embedded into the same space and ranked by cosine
+similarity. How a CV should be turned into a query was decided by measurement,
+not by taste: sending the **whole redacted CV as one query** beat a structured
+profile, one query per job, chunking, and having a model write the advert the
+person would be hired for next. The table is in the 3.5 entry of
+`docs/learning-log.md`.
+
+Scores are comparable **inside one list and nowhere else** — not between two CVs,
+not between two runs over a corpus that has changed. Why a vacancy matched, and
+what is missing from the CV for it, is the next milestone.
+
 ## Data & privacy
 
 `data/raw/` is in `.gitignore` and is **never committed**. It holds scraped
