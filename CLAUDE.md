@@ -46,9 +46,16 @@ conceptually, not just have working code.
   model qwen3:8b. Keep it working and in the eval.
 - Reasoning/"thinking" must be switchable per model, via verified profiles in
   src/joblens/llm/providers.py. Use exact model IDs, never "-latest" aliases.
-- Personal data (CVs) goes to local models only by default — GDPR. This is why
-  the embedder is local and primary, not a fallback: a query, a vacancy and a CV
-  must share one model, and the CV half may not leave the machine. Embeddings:
+- Personal data (CVs) may go to cloud models when that makes the app measurably
+  better (Mahdi's decision, 2026-09-21). Local-only is no longer the rule; being
+  over-cautious at the cost of quality is not wanted. Conditions: the choice stays
+  visible and configurable (its own settings prefix, default written down, README
+  says where CV text goes), prefer providers whose paid API does not train on the
+  data, and only send what the task needs.
+- A CV, a vacancy and a query must share one embedding space, so opening CVs to the
+  cloud also opens cloud embeddings for the whole corpus. The 2.2 retrieval eval
+  had gemini-embedding-2 perfect (hit@1 100%, MRR 1.00) against 0.84 MRR local, so
+  this is worth re-measuring on the real corpus before switching. Current embedder:
   qwen3-embedding:0.6b on Ollama.
 - Embedding models truncate silently. Measured 2026-09-20: Ollama serves
   qwen3-embedding:0.6b with a 4,096-token window (~22,000 chars), whatever the
