@@ -128,18 +128,53 @@ schtasks /create /tn "JobLens update" /sc daily /st 07:15 ^
 ```text
 src/joblens/     package code
 scripts/         small runnable experiments and the scheduled update
-data/samples/    example vacancies (committed)
+data/samples/    example vacancies and CVs, all invented (committed)
 data/raw/        scraped or personal data (never committed)
 docs/            learning log and notes
 tests/           tests
 ```
 
+## Reading a CV
+
+```bash
+uv run python scripts/read_cv.py data/samples/cvs/lisa_de_vries.pdf
+uv run python scripts/read_cv.py your_cv.pdf --strip-name "Your Name" --show-sent
+uv run python scripts/read_cv.py your_cv.pdf --no-extract      # sends nothing
+```
+
+A CV is read from PDF, plain text or markdown, stripped of everything matching
+does not need, and turned into a structured profile: jobs with dates and skills,
+education, certificates, languages. Three invented CVs are committed in
+`data/samples/cvs/`, so the whole thing runs after a clone.
+
+**What is removed before anything is sent:** e-mail addresses, phone numbers,
+street addresses, postcodes, dates of birth, links, and bank or citizen service
+numbers. The script prints every removal, and `--show-sent` prints the exact text
+that would leave the machine. Your **city** is kept on purpose -- it decides
+whether a job is commutable. Your **name** is kept unless you pass
+`--strip-name`, because finding a name in free text without being told it means
+guessing, and a wrong guess deletes a skill instead.
+
+Reading a scanned CV fails loudly rather than quietly matching an empty document.
+
 ## Data & privacy
 
 `data/raw/` is in `.gitignore` and is **never committed**. It holds scraped
-vacancies and personal data such as CVs. To stay in line with the GDPR, personal data
-is processed with local models by default and is never sent to a cloud provider
-unless you configure one.
+vacancies and personal data such as CVs.
+
+Personal data may go to a cloud model when that measurably improves the result
+(the owner's decision, 2026-09-21). Two settings control it and both are written
+down in `.env.example`:
+
+| Setting | Default | What it sees |
+|---------|---------|--------------|
+| `CV_*` | `gemini-3.8-flash` | your CV, redacted as described above |
+| `EMBED_*` | `gemini-embedding-2` | vacancies, and your CV when it is matched against them |
+
+Swapping either for the commented-out Ollama block keeps that data on your own
+machine. For embeddings that costs about 13 points of hit@1, measured; what it
+costs for CV work is measured in milestone 3.6. A CV, a vacancy and a query have
+to share one vector space, so `EMBED_*` is necessarily one choice for all three.
 
 ## License
 

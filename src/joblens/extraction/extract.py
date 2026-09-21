@@ -1,26 +1,36 @@
-"""Vacancy text -> validated VacancyDetails, with one repair attempt.
+"""Vacancy text -> validated VacancyDetails.
 
-Flow: prompt (rules + JSON schema) -> LLM -> parse and validate with pydantic.
-If validation fails, the model gets its own output back plus the exact errors and
-tries again. Models are good at fixing a mistake once they are told what it is.
+The prompt, the JSON schema and the repair loop live in llm/structured.py, which
+knows nothing about vacancies. What is here is what is specific to a vacancy:
+the rules a model has to follow to read a Dutch job advert correctly.
 
-Two modes, same prompt:
-- "schema": the server constrains decoding so the output must match the schema
-  (shape guaranteed, content not).
-- "prompt": we only ask for JSON; the model may add text around it or break the shape.
+`ExtractionResult` and `ExtractionError` are the names the rest of JobLens
+already used before the loop was shared with CV reading; they are the generic
+ones under a vacancy-shaped name.
 """
 
-import json
-from typing import Literal
-
-from pydantic import BaseModel, ValidationError
-
-from joblens.config import LLMSettings
 from joblens.extraction.schema import VacancyDetails
-from joblens.llm.providers import supports_json_schema
-from joblens.llm.types import ChatClient, ChatResult, Message
+from joblens.llm.structured import (
+    MAX_OUTPUT_TOKENS,
+    Mode,
+    StructuredError,
+    StructuredResult,
+    default_mode,
+    extract_structured,
+)
+from joblens.llm.types import ChatClient
 
-Mode = Literal["schema", "prompt"]
+ExtractionResult = StructuredResult[VacancyDetails]
+ExtractionError = StructuredError
+
+__all__ = [
+    "MAX_OUTPUT_TOKENS",
+    "ExtractionError",
+    "ExtractionResult",
+    "Mode",
+    "default_mode",
+    "extract_vacancy",
+]
 
 SYSTEM_PROMPT = """\
 You extract structured data from job vacancies (usually Dutch, sometimes English).
@@ -40,38 +50,6 @@ Rules:
 Return one JSON object matching this JSON schema:
 {schema}"""
 
-# A normal extraction needs ~300 output tokens, or ~1,500 with thinking. The cap
-# stops a model that loops in its reasoning (qwen3 does at temperature 0) instead of
-# letting it block the server until its context is full.
-MAX_OUTPUT_TOKENS = 3000
-
-REPAIR_PROMPT = """\
-Your JSON was not valid:
-{errors}
-
-Check these fields against the vacancy text again. If the text does not state a
-value, use null instead of a placeholder or a guess.
-Return the corrected JSON object only."""
-
-
-class ExtractionResult(BaseModel):
-    details: VacancyDetails
-    mode: Mode
-    attempts: int
-    prompt_tokens: int
-    output_tokens: int  # answer + reasoning, summed over attempts
-    latency_s: float
-
-
-class ExtractionError(Exception):
-    def __init__(self, message: str, attempts: list[ChatResult]):
-        super().__init__(message)
-        self.attempts = attempts  # the raw replies, for debugging
-
-
-def default_mode(settings: LLMSettings) -> Mode:
-    return "schema" if supports_json_schema(settings) else "prompt"
-
 
 def extract_vacancy(
     text: str,
@@ -80,73 +58,11 @@ def extract_vacancy(
     mode: Mode = "schema",
     max_attempts: int = 2,
 ) -> ExtractionResult:
-    if max_attempts < 1:
-        raise ValueError("max_attempts must be at least 1")
-    schema = VacancyDetails.model_json_schema()
-    messages: list[Message] = [
-        {"role": "system", "content": SYSTEM_PROMPT.format(schema=json.dumps(schema))},
-        {"role": "user", "content": text},
-    ]
-    response_format = (
-        {
-            "type": "json_schema",
-            "json_schema": {"name": "VacancyDetails", "schema": schema, "strict": True},
-        }
-        if mode == "schema"
-        else None
+    return extract_structured(
+        text,
+        client,
+        schema=VacancyDetails,
+        system_prompt=SYSTEM_PROMPT,
+        mode=mode,
+        max_attempts=max_attempts,
     )
-
-    attempts: list[ChatResult] = []
-    for _ in range(max_attempts):
-        result = client.chat(
-            messages,
-            temperature=0.0,
-            response_format=response_format,
-            max_tokens=MAX_OUTPUT_TOKENS,
-        )
-        attempts.append(result)
-        if result.finish_reason == "length":
-            # Cut-off JSON can't be repaired: asking again would restart the loop.
-            raise ExtractionError(
-                f"Output limit of {MAX_OUTPUT_TOKENS} tokens reached; the answer was "
-                "cut off (the model probably looped in its reasoning).",
-                attempts,
-            )
-        try:
-            details = VacancyDetails.model_validate_json(_json_text(result.content))
-        except ValidationError as err:
-            # Show the model its own answer and what was wrong with it.
-            messages = [
-                *messages,
-                {"role": "assistant", "content": result.content},
-                {"role": "user", "content": REPAIR_PROMPT.format(errors=_errors(err))},
-            ]
-            last_error = err
-            continue
-        return ExtractionResult(
-            details=details,
-            mode=mode,
-            attempts=len(attempts),
-            prompt_tokens=sum(a.usage.prompt_tokens for a in attempts if a.usage),
-            output_tokens=sum(a.usage.output_tokens for a in attempts if a.usage),
-            latency_s=sum(a.latency_s for a in attempts),
-        )
-
-    errors = _errors(last_error)
-    raise ExtractionError(
-        f"No valid VacancyDetails after {max_attempts} attempts:\n{errors}", attempts
-    )
-
-
-def _json_text(content: str) -> str:
-    """Cut the JSON object out of a reply like 'Here you go: ```json {...} ```'."""
-    start, end = content.find("{"), content.rfind("}")
-    return content[start : end + 1] if start != -1 and end > start else content
-
-
-def _errors(err: ValidationError, limit: int = 10) -> str:
-    lines = [
-        f"- {'.'.join(str(p) for p in e['loc']) or 'object'}: {e['msg']}"
-        for e in err.errors(include_url=False)[:limit]
-    ]
-    return "\n".join(lines)

@@ -1,0 +1,106 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2137 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+56 790 Td
+(Lisa de Vries) Tj T*
+() Tj T*
+(Keizersgracht 412, 1016 GC Amsterdam) Tj T*
+(lisa.devries@example.com | 06-24871903) Tj T*
+(linkedin.com/in/lisadevries) Tj T*
+(Geboortedatum: 14-06-1998) Tj T*
+(Nederlandse nationaliteit) Tj T*
+() Tj T*
+(Profiel) Tj T*
+() Tj T*
+(Data-analist met ruim vier jaar ervaring in e-commerce. Ik werk het liefst dicht op de) Tj T*
+(business: eerst begrijpen welke beslissing iemand moet nemen, dan pas een dashboard) Tj T*
+(bouwen. Op zoek naar een rol waarin ik meer met modellering en voorspellingen kan) Tj T*
+(doen. Beschikbaar per 1 november, 32-40 uur, bij voorkeur hybride.) Tj T*
+() Tj T*
+(Werkervaring) Tj T*
+() Tj T*
+(Data-analist — Coolblue, Rotterdam) Tj T*
+(september 2023 - heden) Tj T*
+(Rapportages en dashboards voor het team Retentie. Dagelijkse ETL in Python en SQL,) Tj T*
+(dashboards in Power BI. Opgezet: een wekelijks churn-rapport dat nu door drie teams) Tj T*
+(gebruikt wordt. A/B-tests uitgewerkt en geanalyseerd samen met de product owner.) Tj T*
+() Tj T*
+(Junior data-analist — Bol, Utrecht) Tj T*
+(maart 2022 - augustus 2023) Tj T*
+(Ad-hoc analyses voor de afdeling Logistiek. Veel SQL \(BigQuery\), Excel en Looker) Tj T*
+(Studio. Eerste kennismaking met dbt voor het opschonen van de bronmodellen.) Tj T*
+() Tj T*
+(Stage: business intelligence — Gemeente Utrecht) Tj T*
+(februari 2021 - juli 2021) Tj T*
+(Onderzoek naar wachttijden bij de afdeling Burgerzaken. Data-analyse in Excel en) Tj T*
+(SPSS, eindpresentatie aan het MT.) Tj T*
+() Tj T*
+(Opleiding) Tj T*
+() Tj T*
+(HBO Bedrijfskunde, afstudeerrichting Business Intelligence — Hogeschool Utrecht) Tj T*
+(2018 - 2022, diploma behaald) Tj T*
+() Tj T*
+(VWO — Vossius Gymnasium, Amsterdam) Tj T*
+(2012 - 2018, diploma behaald) Tj T*
+() Tj T*
+(Cursussen en certificaten) Tj T*
+() Tj T*
+(- DataCamp: Data Scientist with Python \(2023\)) Tj T*
+(- Microsoft PL-300: Power BI Data Analyst \(2024\)) Tj T*
+(- Rijbewijs B) Tj T*
+() Tj T*
+(Vaardigheden) Tj T*
+() Tj T*
+(SQL, Python \(pandas, scikit-learn\), Power BI, Looker Studio, BigQuery, dbt, Excel,) Tj T*
+(Git, A/B-testen, statistiek) Tj T*
+() Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 126 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+56 790 Td
+(Talen) Tj T*
+() Tj T*
+(Nederlands \(moedertaal\), Engels \(vloeiend\), Duits \(basis\)) Tj T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000218 00000 n 
+0000000344 00000 n 
+0000002533 00000 n 
+0000002659 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+2836
+%%EOF

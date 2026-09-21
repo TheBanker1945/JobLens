@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from conftest import FakeClient
 
 from joblens.config import LLMSettings
 from joblens.extraction.extract import (
@@ -11,7 +12,6 @@ from joblens.extraction.extract import (
     default_mode,
     extract_vacancy,
 )
-from joblens.llm.types import ChatResult, Usage
 
 VALID = {
     "title": "Junior Data Analist",
@@ -31,33 +31,6 @@ VALID = {
     "contract_type": "temporary",
 }
 VACANCY_TEXT = "Junior Data Analist bij Bakkerij De Vries in Utrecht..."
-
-
-class FakeClient:
-    """Satisfies the ChatClient interface; returns scripted replies in order."""
-
-    def __init__(self, *replies: str):
-        self.replies = list(replies)
-        self.calls = []
-
-    def chat(self, messages, *, temperature=0.0, response_format=None, max_tokens=None):
-        self.calls.append(
-            {
-                "messages": list(messages),
-                "format": response_format,
-                "max_tokens": max_tokens,
-            }
-        )
-        content, finish_reason = self.replies.pop(0), "stop"
-        if isinstance(content, tuple):
-            content, finish_reason = content
-        return ChatResult(
-            finish_reason=finish_reason,
-            content=content,
-            usage=Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150),
-            model="fake",
-            latency_s=0.5,
-        )
 
 
 def test_schema_mode_sends_schema_and_parses_valid_reply():

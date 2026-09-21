@@ -23,10 +23,16 @@ EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 # years are never touched:
 #   international, country code then digits: +31 6 12345678, +31 (0)70 700 0510
 #   national, always starting with 0:        06-12345678, 070 7000510
+#
+# Up to three characters may separate two digits, because people write a number
+# with spaces around the dash ("06 - 3318 2245", found on a sample CV in 3.4).
+# That stays safe because both shapes must begin with a 0 or a country code: a
+# range like "3200 - 3800" has neither, and neither does a year.
+SEPARATOR = r"[\s.-]{0,3}"
 PHONE = re.compile(
     r"(?<![\w-])(?:"
-    r"\+\d{1,3}[\s.-]?(?:\(0\)[\s.-]?)?\d(?:[\s.-]?\d){6,11}"
-    r"|0\d(?:[\s.-]?\d){7,10}"
+    rf"\+\d{{1,3}}{SEPARATOR}(?:\(0\){SEPARATOR})?\d(?:{SEPARATOR}\d){{6,11}}"
+    rf"|0\d(?:{SEPARATOR}\d){{7,10}}"
     r")(?![\w-])"
 )
 
