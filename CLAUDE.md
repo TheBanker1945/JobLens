@@ -52,6 +52,11 @@ conceptually, not just have working code.
   visible and configurable (its own settings prefix, default written down, README
   says where CV text goes), prefer providers whose paid API does not train on the
   data, and only send what the task needs.
+- That settings prefix is CV_* (default gemini-3.8-flash, local Ollama block
+  commented in .env.example). "Only what the task needs" is src/joblens/cv/clean.py:
+  e-mail, phone, address, postcode, date of birth, links and id numbers go; city
+  and nationality stay because a vacancy can require them; the name goes only when
+  --strip-name says exactly what it is.
 - A CV, a vacancy and a query must share one embedding space, so opening CVs to the
   cloud also opens cloud embeddings for the whole corpus. Re-measured on the 202
   real vacancies in milestone 3.1: the embedder is now **gemini-embedding-2** with
@@ -105,6 +110,7 @@ conceptually, not just have working code.
 - uv run python scripts/index_vacancies.py                  # extract, then embed
 - uv run python scripts/search_vacancies.py "query" --corpus raw
 - uv run python scripts/data_status.py                      # freshness and health
+- uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV
 
 ## Rules
 

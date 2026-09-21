@@ -758,3 +758,86 @@ that is the side they were really built for.
 **Method note.** Deciding this as eval variants cost an afternoon; the
 `VacancyIndex` rewrite it replaced would have cost a day and would now be carrying
 a feature the numbers say not to use.
+
+## 3.4 — Reading a CV: what is removed, and what a run costs
+
+The first half of CV matching. A CV goes in as a PDF, a .txt or a .md; what comes
+out is a `CVProfile` — jobs with dates and skills, education, certificates,
+languages — and, before that, a printed list of everything that was stripped out
+of it. `scripts/read_cv.py` is deliberately its own script: you get to see what
+would be sent before anything is.
+
+**One extraction loop, two things to extract.** Vacancy extraction already had the
+part worth keeping: schema in the prompt, parse, and on a validation failure show
+the model its own answer plus the exact errors and let it try again. That moved to
+`llm/structured.py` and now takes any pydantic model; `extraction/extract.py` is
+the vacancy prompt and nothing else. The 11 existing extraction tests passed
+unchanged, which is the only evidence worth having that a refactor did nothing.
+
+**What a CV costs to read** (gemini-3.8-flash, the three sample CVs):
+
+| CV | tokens in / out | cost | time |
+|---|---|---|---|
+| Lisa de Vries (PDF) | 2,378 / 813 | 0.48 cent | 2.9 s |
+| Youssef Bakker | 2,418 / 864 | 0.51 cent | 2.9 s |
+| Ingrid Solheim | 2,251 / 704 | 0.43 cent | 2.8 s |
+
+So **half a cent and three seconds per CV**, once. That answers half of question 2
+in the brief. The other half is an estimate until 3.6 measures it: a judge call
+over one vacancy is ~2,700 tokens in and ~400 out, which is **0.35 cent**, so
+judging the top 20 comes to about **$0.07 per run** and judging all 198 to
+**$0.70**. Prices live in `llm/pricing.py`, keyed by exact model ID with the date
+they were read; a model with no entry prints "unknown", never "free".
+
+**The sample CVs found three bugs that invented-looking text would not have.**
+They were written to look like real Dutch CVs, and that alone was enough:
+
+- `06 - 3318 2245` — a phone number with spaces around the dash — was **not
+  removed**. The vacancy pattern allowed one separator character between digits.
+  Widened to three, which is still safe because both shapes have to start with a
+  `0` or a country code, so "3200 - 3800" and "2016 - 2019" stay put.
+- "augustus 2023\nAd-hoc analyses" was read as a **postcode** and deleted. So was
+  "sinds 2019 en 2021". Four digits and two letters is a postcode; four digits and
+  the word "en" is a sentence. The pattern now refuses a line break as the
+  separator, refuses a hyphenated word after the letters, and refuses a short
+  lowercase word — "1016 EN" is a real Amsterdam postcode and still goes.
+
+The general point: redaction fails in two directions and only one of them is
+visible. A missed phone number is a leak; a deleted job date is a worse match with
+no explanation. Printing every removal is what makes the second kind findable, so
+the removal list is a feature and not debug output.
+
+**Where redaction stops working, kept visible.** `ingrid_solheim.md` is Norwegian:
+her e-mail, phone and date of birth go, and "Storgata 71, 9008 Tromsø" stays,
+because the patterns are Dutch. That is left in the repository rather than patched,
+so the limit is something you can see rather than something you assume is handled.
+
+**"Years of experience" is not one number, and saying so was the fix.** Youssef's
+CV says "ruim acht jaar"; adding up his dates gives **13.7**. Both are right: he
+lists a supermarket side job through three years of school, and a CV does not say
+how many hours a week any job was. The method is now named for what it does —
+calendar years covered by the jobs listed, overlaps merged so two concurrent jobs
+are not counted twice — and the script prints "13.7 years covered by listed jobs".
+Experience as a judgement belongs to the matching step, which can read the whole
+CV; arithmetic that a model would have guessed at is done in code, where it is
+tested.
+
+**Question 1 from the brief, on invented CVs**, answered as far as it can be
+answered yet: they keep the repo runnable, and they will flatter retrieval,
+because whoever writes one has already read the vacancies. `data/samples/cvs/`
+says so, and the rule for 3.5 is that eval numbers are reported per CV and never
+pooled — the same discipline that would have caught the 2.2 mistake.
+
+**A scanned CV is refused.** A PDF with no text layer extracts to an empty string,
+and an empty CV would otherwise produce a confident, meaningless ranking. It raises
+with an explanation instead. `scripts/make_sample_pdf.py` (a small PDF writer, no
+dependency) produces both the committed sample PDF and the no-text fixture the test
+uses.
+
+**New dependency: pypdf** — MIT, pure Python, no transitive dependencies. Rejected:
+pdfplumber (heavier, better at columns — add it the day a real CV needs it),
+PyMuPDF (AGPL, wrong for a public repo), OCR (out of scope; the error says so).
+
+**Not settled here.** Nothing in this milestone matches anything. Whether a CV
+should reach the index as its whole text, as a structured profile, as one query per
+job, or as an invented "ideal vacancy" is 3.5, and it is a question for the eval.
