@@ -165,28 +165,93 @@ class Embedded:
     seconds: float
 
 
+class EmbedderPool:
+    """One embedder per model, kept open for the length of a run.
+
+    Without this, every variant builds its own `CachedEmbedder`, and building one
+    means reading the whole cache file: for gemini-embedding-2 that file is 171 MB
+    of JSON, and the CV eval asks for eight variants across three CVs. Reading it
+    twenty-four times took longer than every embedding call put together.
+
+    Keyed by provider, base URL and model, because that is what decides which
+    vector space you are in -- two variants that differ only in which document
+    style they embed share everything here.
+    """
+
+    def __init__(self, cache_dir: Path):
+        self.cache_dir = cache_dir
+        self._embedders: dict[tuple[str, str, str], CachedEmbedder] = {}
+        self._clients: list[EmbeddingClient] = []
+
+    def get(self, config: RetrievalConfig) -> CachedEmbedder:
+        settings = config.settings()
+        key = (settings.provider, settings.base_url, settings.model)
+        if key not in self._embedders:
+            client = EmbeddingClient(settings)
+            self._clients.append(client)
+            path = (
+                self.cache_dir / f"embeddings-{settings.model.replace(':', '-')}.json"
+            )
+            self._embedders[key] = CachedEmbedder(client, path)
+        return self._embedders[key]
+
+    def close(self) -> None:
+        for client in self._clients:
+            client.close()
+
+    def __enter__(self) -> "EmbedderPool":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+
 def embed(
-    config: RetrievalConfig, documents: list[str], queries: list[str], cache_dir: Path
+    config: RetrievalConfig,
+    documents: list[str],
+    queries: list[str],
+    cache_dir: Path,
+    pool: EmbedderPool | None = None,
 ) -> Embedded:
     """Put documents and queries in one variant's vector space.
 
     Shared by the eval and by scripts/label_queries.py: the candidates a human
     judges must come out of exactly the same embedding as the numbers reported
     afterwards, or the labelling is describing a different system.
+
+    Pass a `pool` when several variants run in one go; without one, this opens a
+    client and reads the cache file for itself and closes both afterwards.
     """
+    if pool is not None:
+        return _embed_with(pool.get(config), config, documents, queries)
     cache_path = cache_dir / f"embeddings-{config.model.replace(':', '-')}.json"
-    start = time.perf_counter()
     with EmbeddingClient(config.settings()) as client:
-        embedder = CachedEmbedder(client, cache_path)
-        doc_vectors = embedder.embed_documents(documents)
-        query_vectors = [
-            embedder.embed_query(query)
-            if config.instruction
-            else embedder.embed_documents([query])[0]
-            for query in queries
-        ]
+        return _embed_with(
+            CachedEmbedder(client, cache_path), config, documents, queries
+        )
+
+
+def _embed_with(
+    embedder: CachedEmbedder,
+    config: RetrievalConfig,
+    documents: list[str],
+    queries: list[str],
+) -> Embedded:
+    """A pooled embedder is reused, so what it cost is counted per call."""
+    before = embedder.misses
+    start = time.perf_counter()
+    doc_vectors = embedder.embed_documents(documents)
+    query_vectors = [
+        embedder.embed_query(query)
+        if config.instruction
+        else embedder.embed_documents([query])[0]
+        for query in queries
+    ]
     return Embedded(
-        doc_vectors, query_vectors, embedder.misses, time.perf_counter() - start
+        doc_vectors,
+        query_vectors,
+        embedder.misses - before,
+        time.perf_counter() - start,
     )
 
 
