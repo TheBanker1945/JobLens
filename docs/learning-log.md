@@ -1013,3 +1013,101 @@ anything.
 
 **Still open for 3.7**: the gap list across the whole run ("what keeps coming up
 that you do not have"), and the refusal itself.
+
+## 3.6.1 — The first real CV, and the three things four invented ones could not find
+
+Everything up to here was measured on four CVs that we wrote. They were written
+to look like real Dutch CVs and they earned their keep: in 3.4 they found two
+redaction bugs on their own. Then the app was pointed at a real PDF for the first
+time and broke in three places at once, all of them downstream of one property no
+invented CV has — **it was made by a real PDF exporter.**
+
+**The PDF has a text layer that does not say what the page shows.** Its font is a
+subset, and its own `ToUnicode` map points at the private use area:
+
+```
+<0551> <0555> <E073>          the CMap the file itself carries
+Founder & Full-Stack Developer Dec   Sep …
+```
+
+114 characters over 33 of 144 lines, including every year in the work history and
+the `+` of the phone number. This is not a parsing failure that a better library
+fixes: the file does not contain the characters it displays, and only the glyph
+outlines know, so reading them back is OCR. `pdfplumber` would return exactly the
+same thing, more slowly.
+
+**1. The phone number was sent to the cloud.** `PHONE` requires a `+` or a
+leading `0`; the `+` was ``, so `+31 6 18295250` arrived as `31 6 18295250`
+and matched nothing. It went to Gemini in the extraction call, in all fifteen
+judge calls, and — because the redacted text is also the query — to the embedding
+API, where it is still a cache key in `data/cache/`. Two new rules, both in
+`cv/clean.py`: an explicit calling code with no `+` in front of it, and any run of
+eight or more digits. The calling code is an explicit short list rather than
+`\d{1,3}` because a generic prefix reads `2021 2022 2023 2024` as a phone number,
+and nine digits are required after it because eight would eat `32.000 - 38.000`.
+
+**2. The model invented the dates, and nothing in the output admitted it.** Given
+`Founder & Full-Stack Developer Dec   Sep`, it answered `2024-12 - 2025-09` with
+no hedge. Two of the five periods it produced were wrong, and the report printed
+"1.1 years covered by listed jobs" underneath them as a fact. That number is
+computed in code precisely so it cannot be guessed — and it was, because the
+arithmetic was honest about dates that were not.
+
+Two fixes, in the order they act. An unreadable character is now replaced by `?`
+rather than dropped, so the model is handed `Dec ???? ? Sep ????`: a hole it can
+see instead of a gap it can fill. And `verify_dates` (`cv/extract.py`) applies
+3.6's rule one step earlier — **a year in the profile must appear in the CV text
+or the field becomes null** — using the same comparison as the quote check, now
+in `cv/verify.py` so there is one of it and not two.
+
+The marker turned out to do the work on its own: on the re-run the model returned
+`null` for every date rather than a plausible one, and the report says "no dated
+jobs". `verify_dates` caught nothing, which is what a backstop looks like when it
+is working.
+
+**3. The 96% faithfulness was the check being right, not the judge being wrong.**
+Four of 105 quotes were dropped, the first time below 100%, and the obvious story
+was that the glyph damage had made the judge hallucinate. Re-judging those two
+vacancies says otherwise:
+
+```
+CV text (what was sent):   supabase postgresql, mongodb, sqlite
+the judge's quote:         Supabase (PostgreSQL), MongoDB, SQLite
+```
+
+Three of the four were the model **silently repairing the broken glyphs** and
+quoting the CV as a human would read it; the fourth quoted `Stack: Python 3.13, …`
+as `Python, …`, dropping a version. All four are correctly dropped. The temptation
+was to teach `_searchable` to ignore brackets, and that is exactly the loosening
+the 3.6 rule forbids: normalising formatting is safe because a meaningless
+character cannot make two claims look alike, but accepting the model's repair as
+evidence means accepting its guess. So nothing was loosened. The run report now
+prints the glyph warning next to the dropped-quote count, because they are one
+event. With the holes marked, the same CV over 15 vacancies came back **106
+quotes, 100% found** — one run, and the judge is not deterministic, so it is a
+sign rather than a proof.
+
+**Refuse or warn?** A scan is refused because there is nothing to read. This CV is
+98.7% readable, and refusing it would make JobLens useless on the one CV it exists
+for. So: refused above 10% unreadable characters, and below that read, marked and
+warned about — loudly, with the damaged lines printed. The guarantee that matters
+is not the threshold, it is that the unreadable *parts* are never guessed at, and
+that holds for a CV with one broken glyph, which no threshold would ever catch.
+
+**Also**: `--show-sent` now exists on `match_cv.py` as well as `read_cv.py`, and
+pypdf's 64 log lines about broken CMap entries — which arrived before the first
+word of output — are collected and reported as one line.
+
+**What this says about invented test data.** 3.5 predicted that invented CVs would
+flatter retrieval, because whoever writes one has already read the vacancies. The
+real failure was duller and worse: an invented CV is *typed*, so it is clean
+Unicode, and every bug above lives in the gap between "text" and "what a PDF
+exporter produced". The same shape as 3.1, where ten fictional vacancies had no
+shared employer boilerplate and no junk postings and therefore reversed every
+conclusion. The fixture that now guards these three bugs (`tests/conftest.py`)
+carries invented content and **real damage**, which is the part that had to be
+copied.
+
+Unchanged on purpose: the judge prompt, so `PROMPT_VERSION` stays 3.6 and the
+eval still reads every judgement bought in 3.6. It reports the same numbers it
+did then — 244 quotes, 100% found, 0 `strong` on a "would not apply" — for $0.
