@@ -1365,3 +1365,122 @@ measured that the judge can (0 strong, 0 possible, 10 weak, top fit 5 — top fi
   `evals/cv-matches/README.md` has said this since 3.5 and it is still the single
   largest hole in the evidence. The real test is one real CV, labelled by the
   person it belongs to, and it is one file in a gitignored directory away.
+
+## 4.1 — The 267 rejections nobody could see
+
+Phase 3 is a developer-facing UI and the data work it needs, and this is the data
+work. A run stored the ~12 vacancies it judged. The other 267 were rejected by
+retrieval with no score, no position and no record that they had ever been
+considered — and a rejection you cannot see is one you cannot argue with.
+
+**It was already being computed and then thrown away.** `rank_pooled` scores
+every vacancy and returns `hits[:top_k]`; `search_with_cv` asked for ten.
+`rank_with_cv` asks for all of them, judging reads the head of that list, and the
+rest is stored with its score, its position and which part of the CV it was
+compared against. **Zero extra API calls**: the vectors are in memory, the cosines
+were already calculated, and the run got 46 KB bigger.
+
+### What it found on the first real run
+
+Mahdi labelled his own CV in 3.7.2 — nine vacancies he would apply to, pooled
+from every variant in the eval. Here is where this configuration's ranking puts
+them (`--top 12`, the run he labelled against):
+
+| his label: would apply | rank | score | read by the judge? |
+|---|---|---|---|
+| Full-stack Developer | 3 | 0.709 | yes |
+| Python Software Engineer – AI team | 6 | 0.698 | yes |
+| Python Software Engineer – Product team | 10 | 0.682 | yes |
+| Full Stack Developer @ Bos Logistics | 11 | 0.681 | yes |
+| **Student AI Developer** | **13** | **0.679** | **no** |
+| Software Engineer | 17 | 0.677 | no |
+| Frontend Engineer | 35 | 0.658 | no |
+| Front-end Developer | 50 | 0.646 | no |
+| Full-Stack Java Developer | 62 | 0.640 | no |
+
+**Five of the nine never reached the judge.** The judge disagreed with Mahdi five
+times out of ten in 3.7.2, which is the number that started phase 3; retrieval
+disagreed with him five times as well, silently, and those are a different five.
+
+**The first one it cut costs a thousandth of a point.** #12 scored 0.680 and #13
+scored 0.679 — and #13 is a job he would apply to. That gap is now printed at the
+end of every run, because it is the honest size of the decision `--top 12` makes:
+
+```
+the shortlist was cut between #12 Medior /Senior Java Software Engi… (0.680) and
+#13 Student AI Developer (studying in… (0.679) — a gap of 0.001.
+```
+
+The whole ranking is that flat at the top: #1 is 0.711, #12 is 0.680, #50 is
+0.646, #279 is 0.529. Thirty-one thousandths separate the best vacancy in the
+corpus from the twelfth, and 3.5 already measured that a cosine cannot tell a
+good CV from the control at twelve hundredths. Reading a *band* of the ranking
+and not a number applies here too.
+
+**What depth would cost.** At 0.51 cent per judgement on this CV (it is longer
+than the invented ones: 4,455 tokens in per call against ~2,700 in 3.6):
+
+| `--top` | applications reached | cost | model time |
+|---|---|---|---|
+| **12** (today) | 4 of 9 | $0.06 | 38 s |
+| 20 | 6 of 9 | $0.10 | 63 s |
+| 35 | 7 of 9 | $0.18 | 111 s |
+| 50 | 8 of 9 | $0.25 | 158 s |
+| **62** | **9 of 9** | $0.32 | 196 s |
+
+Six workers, so 196 seconds of model time is about half a minute of waiting. This
+is not yet an argument for `--top 62`: 13 vacancies he labelled "would not apply"
+also rank above #62, so a deeper shortlist buys five applications and thirteen
+more things to read past. What it is, is the first time that trade has had
+numbers on both sides. Whether the judge sorts those 18 correctly is a judge
+question, and this milestone does not touch the judge.
+
+**The labels are doing their job.** Those five were pooled from other variants'
+top tens, so they are not newly discovered jobs — they are jobs *this* variant
+ranks below its cut and another variant ranked above. That is exactly the case
+`label_cv_matches.py` pools for, and it would have been invisible in a run that
+stores only what it judged.
+
+### The rejections that never even got a score
+
+A ranking explains why #83 was not read. It cannot say anything about a vacancy
+that was not in the ranking at all, and three filters run before it: an
+open-application page is not a job (3.1), the same job from two boards is loaded
+once, and a vacancy with no extracted fields cannot be embedded like the rest.
+`Corpus.funnel` counts all three where they happen and every run stores it:
+
+```
+279 of 283 stored vacancies could be ranked; 4 never had a chance:
+2 open applications, 2 duplicates
+```
+
+Four out of 283 today, and the point is not the four. It is that the number is
+printed rather than assumed: the day an extraction run half-fails, `never
+extracted: 60` appears on the line above the results instead of sixty vacancies
+quietly not existing.
+
+### Two decisions worth naming
+
+**The ranking is stored self-contained**, with each vacancy's title and company
+copied in — 279 rows, 46 KB. The alternative was keys and scores alone, resolving
+the rest from the corpus when viewing, which is smaller and wrong: `daily_update.sh`
+rewrites the corpus and boards take adverts down, so a run has to stay readable
+when the vacancy it names is gone. `JudgedRow` already copied titles for that
+reason; `RankedRow` does the same.
+
+**A vacancy whose judge call failed is still marked `judged`.** It was sent and
+it cost money, so filing it with the 267 that were never read would hide a
+failure among the things it is least like. The `failures` list says which ones
+came back with nothing.
+
+Old runs still open: `ranking` and `funnel` default to empty, so the five run
+files from 3.7 — the only "before" this milestone has — load unchanged.
+
+### And one thing that was not a milestone at all
+
+`evals/cv-matches/mohammed.json` was untracked but **not ignored**, so a single
+`git add -A` would have committed which real jobs a real person would apply to,
+to a public repository. `.gitignore` now allowlists the four invented CVs' label
+files and ignores the rest, so the next real CV is ignored by default. Being
+wrong in that direction costs a `git add -f`; being wrong in the other direction
+cannot be undone.

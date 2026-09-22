@@ -218,7 +218,7 @@ def test_an_empty_run_summarises_to_nothing_rather_than_raising():
 
 
 def test_one_vacancy_saying_a_thing_twice_counts_once():
-    """"in 2 of 10" has to mean two adverts, not one advert with two sections."""
+    """ "in 2 of 10" has to mean two adverts, not one advert with two sections."""
     runs = [
         judged(
             1,

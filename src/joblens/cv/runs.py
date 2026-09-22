@@ -35,8 +35,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from joblens.corpus import Funnel
 from joblens.cv.gaps import GapSummary
 from joblens.cv.judge import Judged, Verdict
+from joblens.cv.match import CVMatch
 from joblens.cv.outcome import Fit, Outcome
 from joblens.sources.base import Vacancy
 
@@ -98,6 +100,32 @@ class JudgedRow(BaseModel):
     dropped: int = 0
 
 
+class RankedRow(BaseModel):
+    """Where retrieval put a vacancy, and whether that was near enough to be read.
+
+    One of these per vacancy in the corpus, not per vacancy judged. A run used to
+    store its twelve judgements and nothing else, so the other 267 rejections had
+    no score, no position and no record that they had ever been considered -- and
+    a rejection you cannot see is one you cannot argue with. The judgement of the
+    head of this list is in `RunRecord.rows`, joined on `key`.
+
+    The title and company are copied in rather than looked up later on purpose:
+    daily_update.sh rewrites the corpus, boards take adverts down, and a stored
+    run has to stay readable when the vacancy it names is gone. `JudgedRow` does
+    the same, for the same reason.
+    """
+
+    rank: int  # 1 is the closest
+    key: str
+    title: str
+    company: str | None = None
+    city: str | None = None
+    url: str = ""
+    score: float  # the cosine it was ranked on
+    part: str = ""  # which piece of the CV matched it best
+    judged: bool = False  # was it sent to the judge? a failed call is still True
+
+
 class GroupRow(BaseModel):
     term: str
     count: int
@@ -111,6 +139,9 @@ class RunRecord(BaseModel):
     stamp: RunStamp
     outcome: Fit
     rows: list[JudgedRow]
+    # The whole corpus in order, judged or not. Empty on runs stored before 4.1.
+    ranking: list[RankedRow] = []
+    funnel: Funnel = Funnel()  # and what never reached the ranking at all
     groups: list[GroupRow] = []
     ungrouped: int = 0
     already_on_cv: int = 0
@@ -122,6 +153,21 @@ class RunRecord(BaseModel):
 
     def by_key(self) -> dict[str, JudgedRow]:
         return {row.key: row for row in self.rows}
+
+    def ranked_by_key(self) -> dict[str, RankedRow]:
+        return {row.key: row for row in self.ranking}
+
+    def boundary(self) -> tuple[RankedRow, RankedRow] | None:
+        """The last vacancy that was read and the first that was not.
+
+        The shortlist is a cut through a list of very close numbers -- on the
+        first real run the twelve judged vacancies spanned 0.680 to 0.711 -- so
+        the interesting thing about the cut is how little separates the two
+        vacancies on either side of it. None when nothing was cut off.
+        """
+        last = next((row for row in reversed(self.ranking) if row.judged), None)
+        first = next((row for row in self.ranking if not row.judged), None)
+        return (last, first) if last and first else None
 
 
 def digest(text: str) -> str:
@@ -143,6 +189,9 @@ def build_record(
     outcome: Outcome,
     summary: GapSummary | None = None,
     *,
+    ranking: list[CVMatch] | None = None,
+    shortlisted: int = 0,
+    funnel: Funnel | None = None,
     failures: list[str] | None = None,
     cost_usd: float | None = None,
 ) -> RunRecord:
@@ -170,10 +219,29 @@ def build_record(
         )
         for one in judged
     ]
+    # `shortlisted` and not "whichever ones came back": a vacancy whose judge
+    # call failed was read, and lumping it in with the 267 that were never sent
+    # would hide the failure behind the number it is least like.
+    ranked = [
+        RankedRow(
+            rank=position,
+            key=match.vacancy.key,
+            title=match.vacancy.title,
+            company=match.vacancy.company,
+            city=match.vacancy.city,
+            url=match.vacancy.url,
+            score=match.score,
+            part=match.part.label,
+            judged=position <= shortlisted,
+        )
+        for position, match in enumerate(ranking or [], 1)
+    ]
     return RunRecord(
         stamp=stamp,
         outcome=outcome.fit,
         rows=rows,
+        ranking=ranked,
+        funnel=funnel or Funnel(),
         groups=[
             GroupRow(
                 term=group.term,

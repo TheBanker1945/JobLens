@@ -132,6 +132,21 @@ def search_with_cv(
     ]
 
 
+def rank_with_cv(
+    index: VacancyIndex, parts: list[QueryPart], *, instruction: bool = True
+) -> list[CVMatch]:
+    """Every vacancy in the index, best first. The shortlist is its head.
+
+    Retrieval always ranked the whole corpus -- `rank_pooled` scores all of it
+    and then throws away everything past `top_k`. Until 4.1 that is where 267 of
+    279 vacancies went: rejected with no score, no record and no reason, which is
+    the one rejection you cannot review afterwards. It costs nothing to keep. The
+    vectors are already in memory, so this is the same arithmetic and not one
+    extra API call.
+    """
+    return search_with_cv(index, parts, top_k=len(index), instruction=instruction)
+
+
 def _wishlist(
     prepared: PreparedCV,
     client: ChatClient | None,

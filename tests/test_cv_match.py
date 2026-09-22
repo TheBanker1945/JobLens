@@ -6,7 +6,7 @@ from conftest import SAMPLE_CVS, FakeClient
 from conftest import details as make_details
 
 from joblens.cv.documents import QueryPart
-from joblens.cv.match import prepare_cv, queries_for, search_with_cv
+from joblens.cv.match import prepare_cv, queries_for, rank_with_cv, search_with_cv
 from joblens.cv.store import CVCache
 from joblens.embeddings.index import VacancyIndex
 from joblens.sources.base import Vacancy
@@ -148,3 +148,23 @@ def test_one_part_still_works_and_names_itself():
 
 def _part(label: str, text: str) -> QueryPart:
     return QueryPart(label, text)
+
+
+def test_a_vacancy_past_the_shortlist_is_still_ranked_and_still_scored():
+    """What 4.1 changed: `search_with_cv` stops at ten, `rank_with_cv` does not.
+
+    The ones it drops are the rejection nobody can review -- no score, no
+    position, no record that they were ever considered.
+    """
+    many = [
+        vacancy(str(n), f"Data Analist {n}", "data pipelines") for n in range(1, 13)
+    ]
+    parts = [_part("the whole CV", "data")]
+
+    shortlist = search_with_cv(index_of(*many), parts)
+    ranked = rank_with_cv(index_of(*many), parts)
+
+    assert len(shortlist) == 10  # the default top_k, and the other two vanish
+    assert len(ranked) == 12
+    assert [m.vacancy.key for m in ranked[:10]] == [m.vacancy.key for m in shortlist]
+    assert all(match.score > 0 for match in ranked)  # including the ones not read
