@@ -1,8 +1,10 @@
 """What leaves the machine when a CV is read, and what does not."""
 
 import pytest
+from conftest import DAMAGED_CV
 
 from joblens.cv.clean import redact_cv
+from joblens.cv.read import read_cv
 from joblens.sources.clean import EMAIL, PHONE
 
 CV = """Lisa de Vries
@@ -115,3 +117,54 @@ def test_a_birth_line_disappears_entirely():
     assert "1994" not in redacted.text
     assert "februari" not in redacted.text
     assert "Opleiding: mbo" in redacted.text
+
+
+def test_a_phone_number_whose_plus_was_eaten_by_the_font(tmp_path):
+    """The privacy failure of 3.6.1, end to end. In a real PDF the "+" of
+    "+31 6 ..." was a private-use glyph, so `PHONE` -- which needs a "+" or a
+    leading "0" -- matched nothing and the number went to a cloud model."""
+    path = tmp_path / "damaged.txt"
+    path.write_text(DAMAGED_CV, encoding="utf-8")
+
+    redacted = redact_cv(read_cv(path).text)
+
+    assert "18295250" not in redacted.text
+    assert "31 6 18295250" not in redacted.text
+    assert redacted.counts()["phone"] == 1
+
+
+@pytest.mark.parametrize(
+    "phone",
+    [
+        "Tel 31 6 18295250",  # the "+" never survived the PDF
+        "Tel 0031 70 700 0510",  # written for dialling from abroad
+        "Bel 0612345678",  # one run of digits, no separators
+        "Mobiel 49 176 12345678",  # a German number without its "+"
+    ],
+)
+def test_phone_numbers_that_lost_their_plus(phone):
+    assert not any(character.isdigit() for character in redact_cv(phone).text)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Salaris 32.000 - 38.000 per jaar",  # starts with a calling code
+        "Salaris 3200 - 3800 per maand",
+        "Beschikbaar 32-40 uur per week",
+        "2021 2022 2023 2024 2025 2026",  # a row of years, not a number
+        "Team van 44 mensen, 5000 orders per dag",
+        "Python 3.11, Angular 15",
+    ],
+)
+def test_numbers_that_are_not_a_phone_number_are_kept(line):
+    assert redact_cv(line).text == line
+
+
+def test_a_long_run_of_digits_goes_whatever_it_is():
+    """Nine digits is a burgerservicenummer, eleven is a phone number typed
+    solid, and a CV has no honest use for either."""
+    redacted = redact_cv("BSN 123456789 en klantnummer 88001234567")
+
+    assert "123456789" not in redacted.text
+    assert "88001234567" not in redacted.text

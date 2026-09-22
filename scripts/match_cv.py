@@ -58,6 +58,12 @@ def main() -> int:
     parser.add_argument("--top", type=int, default=10, help="how many to judge")
     parser.add_argument("--strip-name", metavar="NAME")
     parser.add_argument(
+        "--show-sent",
+        action="store_true",
+        help="print the redacted CV text: exactly what leaves this machine. "
+        "read_cv.py shows the same thing before anything is sent at all",
+    )
+    parser.add_argument(
         "--no-explain", action="store_true", help="retrieval only: no model calls"
     )
     args = parser.parse_args()
@@ -98,6 +104,11 @@ def main() -> int:
                 matches = search_with_cv(index, parts, top_k=args.top)
 
             header(prepared, args, len(index), len(parts), embed_settings, cv_settings)
+            report_cv_problems(prepared)
+            if args.show_sent:
+                print("\n--- text that was sent " + "-" * 55)
+                print(prepared.text)
+                print("-" * 78 + "\n")
             if args.no_explain:
                 for position, match in enumerate(matches, 1):
                     print(f"{position:>2}. {match.score:.3f}  {match.vacancy.title}")
@@ -136,6 +147,26 @@ def header(prepared, args, indexed, parts, embed_settings, cv_settings) -> None:
         f"({parts} query part(s))"
     )
     print(f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}\n")
+
+
+def report_cv_problems(prepared) -> None:
+    """Whatever is wrong with the CV itself, before any vacancy is discussed."""
+    damage = prepared.document.damage
+    if damage.reader_warnings:
+        print(
+            f"note: pypdf reported {damage.reader_warnings} warnings about broken "
+            "font data in this file."
+        )
+    for line in damage.report():
+        print(line)
+    if prepared.dropped_dates:
+        dates = ", ".join(f"{d.value} ({d.where})" for d in prepared.dropped_dates[:6])
+        print(
+            f"!! {len(prepared.dropped_dates)} date(s) the model produced are not "
+            f"in the CV and were dropped: {dates}"
+        )
+    if damage or prepared.dropped_dates:
+        print()
 
 
 def show(position: int, one: Judged) -> None:
@@ -181,6 +212,16 @@ def footer(judged, prepared, corpus, args, cv_settings, embed_settings) -> None:
         + f"  |  {quotes} quotes checked, {verified:.0%} found in the source"
         + (f", {dropped} dropped" if dropped else "")
     )
+    if dropped and prepared.document.damage:
+        # Measured on a real CV in 3.6.1: every dropped quote but one was the
+        # model quietly repairing a glyph the font had eaten -- writing
+        # "Supabase (PostgreSQL)" where the text it was given says
+        # "Supabase ?PostgreSQL?". The check is right to refuse it, and the
+        # thing to fix is the PDF, so the two numbers are printed together.
+        print(
+            "This CV has unreadable characters in it, which is the likeliest "
+            "reason: a\nquote of a damaged line cannot match the damaged line."
+        )
     cost = cost_usd(cv_settings, tokens_in, tokens_out)
     print(
         f"{tokens_in} tokens in, {tokens_out} out  |  {format_cost(cost)}  |  "

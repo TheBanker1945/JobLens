@@ -28,7 +28,7 @@ for a file that gets committed.
 import re
 from dataclasses import dataclass
 
-from joblens.sources.clean import EMAIL, PHONE
+from joblens.sources.clean import EMAIL, PHONE, SEPARATOR
 
 # A Dutch postcode: "1017 AB". Four digits never starting at zero, then two
 # letters. Three restrictions, all earned by a false positive on a real CV:
@@ -75,11 +75,40 @@ BARE_PROFILE = re.compile(
     r"\b(?:linkedin|github|gitlab|instagram|facebook|x)\.com/\S+", re.I
 )
 
-# A burgerservicenummer is nine digits, and an IBAN is unmistakable. Neither
-# belongs on a CV, and both are the worst thing to leak, so they are removed
-# even though they are rare.
-BSN = re.compile(r"(?<![\w-])\d{9}(?![\w-])")
+# An IBAN is unmistakable and never belongs on a CV.
 IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z]{4}\d{10}\b")
+
+# A phone number whose "+" did not survive the PDF. On a real CV the "+" of
+# "+31 6 ..." was a private-use glyph (see cv/read.py), so `PHONE` -- which
+# needs a "+" or a leading "0" -- matched nothing and the number was sent to a
+# cloud model. This rule needs neither.
+#
+# It is anchored on an explicit calling code rather than "one to three digits",
+# because a generic prefix turns a row of years ("2021 2022 2023 2024") into a
+# phone number. The list is short and Dutch-first, and it is a known limit in
+# the same way Ingrid Solheim's Norwegian address is: a number from a country
+# not listed here is caught only if it is written with its "+" or as one run of
+# digits.
+CALLING_CODES = ("31", "32", "33", "44", "47", "49")
+# Nine digits after the code, not eight, and that is what keeps a salary range
+# out: "32.000 - 38.000" starts with a calling code and has eight.
+COUNTRY_CODE_PHONE = re.compile(
+    r"(?<![\w+])(?:00" + SEPARATOR + r")?"
+    r"(?:"
+    + "|".join(CALLING_CODES)
+    + r")"
+    + SEPARATOR
+    + r"(?:\(0\)"
+    + SEPARATOR
+    + r")?"
+    r"\d(?:" + SEPARATOR + r"\d){8,11}(?![\w-])"
+)
+
+# Eight or more digits in a row. A burgerservicenummer is nine of them, a phone
+# number written solid is ten, and a bank or customer number is whatever it is:
+# a CV has no honest use for a run this long, and the removal list shows what
+# went if a very large figure ever matches.
+DIGIT_RUN = re.compile(r"(?<![\w-])\d{8,}(?![\w-])")
 
 # Order matters: a URL is removed before the e-mail inside it can be, and the
 # birth *line* before the date on it, so the removal is reported as one thing.
@@ -90,8 +119,12 @@ RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("iban", IBAN),
     ("date of birth", BIRTH_LINE),
     ("date of birth", FULL_DATE),
+    # The country-code rule goes first: "0031 70 700 0510" starts with a zero,
+    # so PHONE matches it as a national number and stops at the first place it
+    # can, leaving the last block on the page.
+    ("phone", COUNTRY_CODE_PHONE),
     ("phone", PHONE),
-    ("id number", BSN),
+    ("long number", DIGIT_RUN),
     ("address", STREET),
     ("postcode", POSTCODE),
 )

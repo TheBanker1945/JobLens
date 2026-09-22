@@ -62,6 +62,12 @@ conceptually, not just have working code.
   it is shown (src/joblens/cv/judge.py). Never loosen that check into a fuzzy
   match; normalising formatting is safe, accepting a paraphrase is not. Bump
   PROMPT_VERSION when the prompt or the bands change.
+- A PDF can carry characters it does not contain: a subset font whose ToUnicode
+  map points into the private use area (measured on a real CV, 2026-09-22 — 114
+  glyphs, every year in the work history). src/joblens/cv/read.py marks each one
+  "?" so a hole stays visible, refuses a file that is more than 10% of them, and
+  src/joblens/cv/extract.py nulls any year in a profile that is not in the CV
+  text. Never repair this by loosening the quote check in src/joblens/cv/verify.py.
 - A CV reaches the index as its whole redacted text, one query (3.5, measured on
   four invented CVs: best worst-case nDCG@10 of five representations, and the
   cheapest). Splitting it per job or per chunk lost. Do not reopen without a CV

@@ -25,6 +25,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from joblens.cv.match import CVMatch
+from joblens.cv.verify import quoted, searchable
 from joblens.llm.structured import Mode, StructuredError, extract_structured
 from joblens.llm.types import ChatClient
 
@@ -230,19 +231,19 @@ class Checked:
 
 def verify(judgement: MatchJudgement, cv_text: str, vacancy_text: str) -> Checked:
     """Drop every claim whose quote is not in the text it says it came from."""
-    cv, vacancy = _searchable(cv_text), _searchable(vacancy_text)
+    cv, vacancy = searchable(cv_text), searchable(vacancy_text)
     dropped: list[DroppedQuote] = []
 
     kept_evidence = []
     for item in judgement.evidence:
-        if _quoted(item.cv_quote, cv):
+        if quoted(item.cv_quote, cv):
             kept_evidence.append(item)
         else:
             dropped.append(DroppedQuote("cv", item.requirement, item.cv_quote))
 
     kept_gaps = []
     for gap in judgement.gaps:
-        if _quoted(gap.vacancy_quote, vacancy):
+        if quoted(gap.vacancy_quote, vacancy):
             kept_gaps.append(gap)
         else:
             dropped.append(DroppedQuote("vacancy", gap.requirement, gap.vacancy_quote))
@@ -254,39 +255,6 @@ def verify(judgement: MatchJudgement, cv_text: str, vacancy_text: str) -> Checke
         dropped=dropped,
         quotes=len(judgement.evidence) + len(judgement.gaps),
     )
-
-
-# Characters a model swaps without meaning to: a CV writes ' and the answer comes
-# back with the typographic version, or an em dash arrives as a hyphen.
-SUBSTITUTIONS = str.maketrans(
-    {"’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-"}
-)
-
-# Formatting, not words. The first version of this check threw away a perfectly
-# real quote from Sanne's CV, because the source line is
-#
-#     **MBO Verpleegkunde niveau 4 — ROC Midden Nederland, Utrecht**
-#
-# and the model quoted it without the asterisks -- which is the right thing to
-# do, and failed a literal comparison. Removing these from both sides is safe in
-# a way that accepting a paraphrase would not be: a character that carries no
-# meaning cannot make two different claims look like the same one.
-MARKUP = str.maketrans(dict.fromkeys("*_`#>|•·", None))
-
-
-def _searchable(text: str) -> str:
-    """Case, whitespace and formatting removed; every word kept.
-
-    Whitespace is collapsed so that a quote crossing a line break in the original
-    still matches the one the model wrote on a single line.
-    """
-    plain = text.translate(SUBSTITUTIONS).translate(MARKUP)
-    return " ".join(plain.casefold().split())
-
-
-def _quoted(quote: str, source: str) -> bool:
-    cleaned = _searchable(quote).strip("\"'. ")
-    return bool(cleaned) and cleaned in source
 
 
 @dataclass(frozen=True)
