@@ -6,6 +6,9 @@ prints a difference between two different measuring sticks, or refuses every rea
 pair of runs a week apart.
 """
 
+import json
+
+from joblens.corpus import Funnel
 from joblens.cv.documents import QueryPart
 from joblens.cv.judge import Judged, MatchJudgement
 from joblens.cv.match import CVMatch
@@ -130,3 +133,91 @@ def test_a_run_survives_a_round_trip_to_disk(tmp_path):
     path = save_run(original, tmp_path)
     assert list_runs(tmp_path) == [path]
     assert load_run(path) == original
+
+
+def match(number: int, score: float) -> CVMatch:
+    return CVMatch(vacancy(number), score, "document", QueryPart("the whole CV", "cv"))
+
+
+def ranking(count: int) -> list[CVMatch]:
+    """Five vacancies whose scores sit within two hundredths of each other."""
+    return [match(n, 0.71 - n / 100) for n in range(1, count + 1)]
+
+
+def test_the_whole_ranking_is_stored_and_says_which_ones_were_read():
+    runs = [judged(1, "strong", 80), judged(2, "weak", 20)]
+
+    stored = build_record(
+        stamp(top=2),
+        runs,
+        assess(runs, corpus=5),
+        ranking=ranking(5),
+        shortlisted=2,
+        funnel=Funnel(loaded=7, not_a_vacancy=1, duplicates=1),
+    )
+
+    assert [row.rank for row in stored.ranking] == [1, 2, 3, 4, 5]
+    assert [row.judged for row in stored.ranking] == [True, True, False, False, False]
+    # The point of the milestone: a vacancy nobody read still carries the number
+    # it was rejected on, and the part of the CV it was compared against.
+    rejected = stored.ranked_by_key()["indeed:5"]
+    assert round(rejected.score, 3) == 0.66
+    assert rejected.part == "the whole CV"
+    assert stored.funnel.dropped == 2
+
+
+def test_a_vacancy_whose_judge_call_failed_still_counts_as_read():
+    """It was sent, it cost money, and it is not one of the never-shortlisted."""
+    runs = [judged(1, "strong", 80)]
+
+    stored = build_record(
+        stamp(top=2),
+        runs,
+        assess(runs, corpus=5),
+        ranking=ranking(5),
+        shortlisted=2,
+        failures=["indeed:2: the model returned nothing"],
+    )
+
+    assert stored.ranked_by_key()["indeed:2"].judged is True
+    assert stored.by_key().keys() == {"indeed:1"}  # no judgement to show, though
+
+
+def test_the_boundary_is_the_pair_either_side_of_the_cut():
+    runs = [judged(1, "strong", 80)]
+    stored = build_record(
+        stamp(top=1), runs, assess(runs, corpus=5), ranking=ranking(5), shortlisted=1
+    )
+
+    last, first = stored.boundary()
+
+    assert (last.rank, first.rank) == (1, 2)
+    assert round(last.score - first.score, 3) == 0.01
+
+
+def test_nothing_was_cut_off_when_every_vacancy_was_judged():
+    runs = [judged(1, "strong", 80), judged(2, "weak", 20)]
+    stored = build_record(
+        stamp(top=2), runs, assess(runs, corpus=2), ranking=ranking(2), shortlisted=2
+    )
+
+    assert stored.boundary() is None
+
+
+def test_a_run_stored_before_4_1_still_loads(tmp_path):
+    """The five runs already in data/raw/cv-runs/ predate the ranking.
+
+    They are the only "before" this milestone has, so they have to keep opening:
+    a stored artifact that a later version cannot read is not an artifact.
+    """
+    old = record([judged(1, "strong", 80)]).model_dump(mode="json")
+    del old["ranking"], old["funnel"]
+    path = tmp_path / "2026-09-22_1443_mahdi.json"
+    path.write_text(json.dumps(old), encoding="utf-8")
+
+    loaded = load_run(path)
+
+    assert loaded.ranking == []
+    assert loaded.funnel.loaded == 0
+    assert loaded.boundary() is None
+    assert loaded.rows[0].fit == 80

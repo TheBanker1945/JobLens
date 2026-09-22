@@ -144,3 +144,56 @@ def test_a_job_stored_twice_is_loaded_once(tmp_path):
     corpus = load_corpus("raw", root=root)
 
     assert [v.key for v in corpus.vacancies if v.source == "indeed"] == ["indeed:1"]
+
+
+def test_the_funnel_counts_what_never_reached_the_ranking(tmp_path):
+    """The rejections with no score: filtered, deduped, or never extracted.
+
+    A stored ranking can explain why vacancy #83 was not read. It cannot say
+    anything about a vacancy that is not in the ranking at all, so the three
+    ways of leaving before that point are counted where they happen.
+    """
+    root = build_root(tmp_path)
+    store = VacancyStore(root / "data" / "raw" / "vacancies")
+    store.add(
+        [
+            Vacancy(
+                source="recruitee",
+                source_id="1",
+                url="https://example.test/1",
+                title="Open sollicitatie",
+                text="Stuur ons een open sollicitatie.",
+            )
+        ]
+    )
+    analyst = Vacancy(
+        source="indeed",
+        source_id="1",
+        url="https://example.test/1",
+        title="Data Analist",
+        city="Utrecht",
+        text="Je werkt met SQL.",
+    )
+    path = store.path_for("indeed")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        analyst.model_dump_json()
+        + "\n"
+        + analyst.model_copy(update={"source_id": "2"}).model_dump_json()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    corpus = load_corpus("raw", root=root)
+
+    assert corpus.funnel.loaded == 4  # one greenhouse, one recruitee, two indeed
+    assert corpus.funnel.not_a_vacancy == 1
+    assert corpus.funnel.duplicates == 1
+    assert corpus.funnel.not_extracted == 0  # not known until extracted() is asked
+
+    extracted = corpus.extracted()
+
+    assert len(extracted) == 1  # only the greenhouse one has details
+    assert extracted.funnel.not_extracted == 1
+    assert extracted.funnel.dropped == 3
+    assert "3 never had a chance" in extracted.funnel.line()

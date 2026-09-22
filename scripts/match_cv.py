@@ -37,7 +37,7 @@ from joblens.corpus import NAMES, load_corpus
 from joblens.cv.documents import CV_STYLES
 from joblens.cv.gaps import GapSummary, summarise_gaps
 from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
-from joblens.cv.match import prepare_cv, queries_for, search_with_cv
+from joblens.cv.match import prepare_cv, queries_for, rank_with_cv
 from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
 from joblens.cv.runs import (
@@ -119,9 +119,21 @@ def main() -> int:
                     corpus.details,
                     CachedEmbedder(embedder, CACHE_DIR / f"embeddings-{name}.json"),
                 )
-                matches = search_with_cv(index, parts, top_k=args.top)
+                # The whole corpus, not the shortlist: judging reads the head
+                # of this list and the rest is stored, so a rejection by
+                # retrieval has a position and a score you can go and look at.
+                ranking = rank_with_cv(index, parts)
+                matches = ranking[: args.top]
 
-            header(prepared, args, len(index), len(parts), embed_settings, cv_settings)
+            header(
+                prepared,
+                args,
+                corpus,
+                len(index),
+                len(parts),
+                embed_settings,
+                cv_settings,
+            )
             report_cv_problems(prepared)
             if args.show_sent:
                 print("\n--- text that was sent " + "-" * 55)
@@ -130,7 +142,11 @@ def main() -> int:
             if args.no_explain:
                 for position, match in enumerate(matches, 1):
                     print(f"{position:>2}. {match.score:.3f}  {match.vacancy.title}")
-                print("\nno explanations asked for: nothing was judged.")
+                print(
+                    f"\nno explanations asked for: nothing was judged, and "
+                    f"nothing was stored.\nthe other {len(ranking) - len(matches)} "
+                    f"ranked vacancies are only kept by a run that judges."
+                )
                 return 0
 
             print(f"judging {len(matches)} vacancies ...", flush=True)
@@ -168,11 +184,21 @@ def main() -> int:
         prompt_version=PROMPT_VERSION,
         top=args.top,
     )
-    footer(judged, prepared, stamp, summary, failures, cv_settings)
+    footer(
+        judged,
+        prepared,
+        stamp,
+        summary,
+        failures,
+        cv_settings,
+        ranking=ranking,
+        shortlisted=len(matches),
+        funnel=corpus.funnel,
+    )
     return 0
 
 
-def header(prepared, args, indexed, parts, embed_settings, cv_settings) -> None:
+def header(prepared, args, corpus, indexed, parts, embed_settings, cv_settings) -> None:
     counts = prepared.redacted.counts()
     removed = ", ".join(f"{n}x {kind}" for kind, n in counts.items()) or "nothing"
     print(f"{prepared.name}: {prepared.profile.headline}  |  removed: {removed}")
@@ -181,6 +207,10 @@ def header(prepared, args, indexed, parts, embed_settings, cv_settings) -> None:
         f"{embed_settings.model}; shortlist of {args.top} as {args.style} "
         f"({parts} query part(s))"
     )
+    # What never made it into those `indexed` vacancies, and why. A vacancy
+    # dropped here is rejected before it can be given so much as a score.
+    if line := corpus.funnel.line():
+        print(line)
     print(f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}\n")
 
 
@@ -293,7 +323,18 @@ def show_gaps(summary: GapSummary, outcome: Outcome) -> None:
         print("\n  " + outcome.headline())
 
 
-def footer(judged, prepared, stamp, summary, failures, cv_settings) -> None:
+def footer(
+    judged,
+    prepared,
+    stamp,
+    summary,
+    failures,
+    cv_settings,
+    *,
+    ranking=None,
+    shortlisted=0,
+    funnel=None,
+) -> None:
     tokens_in = sum(one.prompt_tokens for one in judged)
     tokens_out = sum(one.output_tokens for one in judged)
     seconds = sum(one.latency_s for one in judged)
@@ -327,9 +368,18 @@ def footer(judged, prepared, stamp, summary, failures, cv_settings) -> None:
     )
     outcome = assess(judged, corpus=stamp.corpus_size, corpus_name=stamp.corpus)
     record = build_record(
-        stamp, judged, outcome, summary, failures=failures, cost_usd=cost
+        stamp,
+        judged,
+        outcome,
+        summary,
+        ranking=ranking,
+        shortlisted=shortlisted,
+        funnel=funnel,
+        failures=failures,
+        cost_usd=cost,
     )
     path = save_run(record, RUNS_DIR)
+    show_boundary(record)
     print(f"run: {stamp.line()}")
     print(f"saved: {path.relative_to(ROOT)}  (compare_runs.py reads these)")
     print(
@@ -337,6 +387,31 @@ def footer(judged, prepared, stamp, summary, failures, cv_settings) -> None:
         "embedder or another prompt version is a different scale, and "
         "compare_runs.py refuses those rather than subtracting them."
     )
+
+
+def show_boundary(record) -> None:
+    """Where the shortlist was cut, and by how little.
+
+    The whole ranking is stored, so the line that used to be invisible can be
+    printed: the last vacancy that was read, the first that was not, and the
+    distance between them. On a corpus whose top scores sit within a few
+    hundredths of each other, that distance is the honest measure of how much
+    the number 12 decided.
+    """
+    if not record.ranking:
+        return
+    print(
+        f"{len(record.ranking)} vacancies ranked, {record.stamp.top} judged: "
+        f"the whole ranking is in the run, with the score of every one of them."
+    )
+    if pair := record.boundary():
+        last, first = pair
+        print(
+            f"the shortlist was cut between #{last.rank} {shorten(last.title, 34)} "
+            f"({last.score:.3f}) and\n#{first.rank} "
+            f"{shorten(first.title, 34)} ({first.score:.3f}) — a gap of "
+            f"{last.score - first.score:.3f}."
+        )
 
 
 def shorten(value: str, limit: int = 96) -> str:

@@ -16,9 +16,11 @@ is what labelled queries refer to, so one query file format fits both.
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
+
+from pydantic import BaseModel
 
 from joblens.extraction.schema import VacancyDetails
 from joblens.extraction.store import DetailsStore
@@ -32,6 +34,48 @@ Name = Literal["samples", "raw"]
 NAMES: tuple[Name, ...] = ("samples", "raw")
 
 
+class Funnel(BaseModel):
+    """What was dropped before anything could be ranked, and why.
+
+    Every count here is a rejection with no score attached. A stored ranking
+    explains why vacancy #83 was not read; it cannot say a word about a vacancy
+    that was never in the ranking at all, because it was an open-application
+    page, a copy of a job from another board, or had never been extracted and so
+    was never embedded. Those are the quietest rejections in the system, so they
+    are counted where they happen and carried on the corpus.
+
+    A pydantic model rather than a dataclass because it is stored: a run keeps
+    the funnel it was ranked out of (cv/runs.py).
+    """
+
+    loaded: int = 0  # what the store held
+    not_a_vacancy: int = 0  # open applications; see NOT_A_VACANCY below
+    duplicates: int = 0  # the same job found on two boards
+    not_extracted: int = 0  # no fields, so it cannot be embedded like the rest
+
+    @property
+    def dropped(self) -> int:
+        return self.not_a_vacancy + self.duplicates + self.not_extracted
+
+    def line(self) -> str:
+        """One line, and it says nothing when nothing was dropped."""
+        if not self.loaded:
+            return ""
+        reasons = [
+            (self.not_a_vacancy, "open applications"),
+            (self.duplicates, "duplicates"),
+            (self.not_extracted, "never extracted"),
+        ]
+        named = ", ".join(f"{count} {what}" for count, what in reasons if count)
+        kept = self.loaded - self.dropped
+        if not named:
+            return f"{kept} of {self.loaded} stored vacancies could be ranked"
+        return (
+            f"{kept} of {self.loaded} stored vacancies could be ranked; "
+            f"{self.dropped} never had a chance: {named}"
+        )
+
+
 @dataclass(frozen=True)
 class Corpus:
     """Vacancies plus whatever has been extracted from them."""
@@ -39,6 +83,7 @@ class Corpus:
     name: str
     vacancies: list[Vacancy]
     details: dict[str, VacancyDetails]  # by Vacancy.key; missing = not extracted yet
+    funnel: Funnel = field(default_factory=Funnel)  # dropped on the way here
 
     def extracted(self) -> "Corpus":
         """Only the vacancies that have been extracted.
@@ -50,7 +95,10 @@ class Corpus:
         incomparable -- so it is dropped from all of them, here, once.
         """
         keep = [v for v in self.vacancies if v.key in self.details]
-        return Corpus(self.name, keep, self.details)
+        funnel = self.funnel.model_copy(
+            update={"not_extracted": len(self.vacancies) - len(keep)}
+        )
+        return Corpus(self.name, keep, self.details, funnel)
 
     def by_key(self) -> dict[str, Vacancy]:
         return {vacancy.key: vacancy for vacancy in self.vacancies}
@@ -91,7 +139,7 @@ def _load_samples(directory: Path, root: Path) -> Corpus:
         vacancies.append(vacancy)
         if found:
             details[vacancy.key] = found
-    return Corpus("samples", vacancies, details)
+    return Corpus("samples", vacancies, details, Funnel(loaded=len(vacancies)))
 
 
 # "Open sollicitatie", "Open application": a page inviting you to send a CV when
@@ -117,7 +165,14 @@ def _load_raw(directory: Path) -> Corpus:
     vacancies = [vacancy for source in sources for vacancy in store.load(source)]
     # Filtered on the way out rather than on the way in: the store keeps what the
     # boards actually published, and what counts as searchable is a decision we
-    # can change and re-measure without fetching anything again.
-    vacancies = dedupe([v for v in vacancies if is_vacancy(v)])
+    # can change and re-measure without fetching anything again. Counted on the
+    # way out too, for the same reason: this is where a vacancy disappears.
+    jobs = [v for v in vacancies if is_vacancy(v)]
+    kept = dedupe(jobs)
+    funnel = Funnel(
+        loaded=len(vacancies),
+        not_a_vacancy=len(vacancies) - len(jobs),
+        duplicates=len(jobs) - len(kept),
+    )
     details = {key: record.details for key, record in records.items()}
-    return Corpus("raw", vacancies, details)
+    return Corpus("raw", kept, details, funnel)

@@ -17,3 +17,13 @@ data/raw/cv/
 
 # Derived data (embedding cache)
 data/cache/
+
+# Labels for a real CV are personal data: they say which real jobs a real
+# person would apply to. An allowlist rather than a blocklist, so the next real
+# CV is ignored by default -- the safe direction to be wrong in. The four
+# invented CVs' labels are the repo's public evidence and stay committed.
+evals/cv-matches/*.json
+!evals/cv-matches/ingrid_solheim.json
+!evals/cv-matches/lisa_de_vries.json
+!evals/cv-matches/sanne_vermeulen.json
+!evals/cv-matches/youssef_bakker.json
