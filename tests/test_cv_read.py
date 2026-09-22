@@ -9,6 +9,7 @@ from joblens.cv.read import (
     REFUSE_ABOVE,
     UnreadableCVError,
     _collect_pypdf_warnings,
+    find_cv,
     read_cv,
 )
 
@@ -153,3 +154,33 @@ class _Record(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         self.into.append(record)
+
+
+def test_a_cv_is_found_by_the_name_a_labels_file_uses():
+    found = find_cv("lisa_de_vries")
+
+    assert found is not None
+    assert found.name == "lisa_de_vries.md"  # text before PDF: no font to break
+
+
+def test_a_pdf_is_found_when_it_is_the_only_copy(tmp_path):
+    """The real CV is a PDF and nothing else. Skipping every .pdf is what kept
+    the evals from ever reading it."""
+    (tmp_path / "mahdi.pdf").write_bytes(b"%PDF-1.4\n")
+
+    assert find_cv("mahdi", (tmp_path,)) == tmp_path / "mahdi.pdf"
+
+
+def test_the_first_directory_wins_and_a_missing_one_is_skipped(tmp_path):
+    real = tmp_path / "raw"
+    real.mkdir()
+    (real / "mahdi.md").write_text("x")
+
+    assert find_cv("mahdi", (tmp_path / "gone", real)) == real / "mahdi.md"
+    assert find_cv("nobody", (real,)) is None
+
+
+def test_a_file_that_is_not_a_cv_format_is_not_offered(tmp_path):
+    (tmp_path / "mahdi.docx").write_text("x")
+
+    assert find_cv("mahdi", (tmp_path,)) is None

@@ -45,6 +45,17 @@ from pypdf import PdfReader
 TEXT_SUFFIXES = frozenset({".txt", ".md"})
 PDF_SUFFIX = ".pdf"
 
+# src/joblens/cv/read.py -> src/joblens/cv -> src/joblens -> src -> the repo root.
+ROOT = Path(__file__).resolve().parents[3]
+
+# Where a CV named in a labels file actually lives. The samples are committed and
+# invented; data/raw/cv/ is gitignored and holds the real one. Both are searched,
+# because an eval reads a name ("mohammed") rather than a path.
+CV_DIRECTORIES = (
+    ROOT / "data" / "samples" / "cvs",
+    ROOT / "data" / "raw" / "cv",
+)
+
 # A CV with fewer characters than this is not a CV. A scanned PDF usually
 # extracts to nothing at all, but one with a text header over a scanned body
 # yields a handful of characters, and that is the same failure.
@@ -245,3 +256,26 @@ def _tidy(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.split("\n")]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+def find_cv(name: str, directories: tuple[Path, ...] = CV_DIRECTORIES) -> Path | None:
+    """The file a CV is named after, or None.
+
+    Text before PDF when both exist: `lisa_de_vries.md` and `lisa_de_vries.pdf`
+    are the same CV, and the markdown has no font to be broken. A PDF is still
+    found when it is the only copy -- which is the normal case for a real CV, and
+    was a bug until 2026-09-22: the eval scripts skipped every .pdf and could
+    therefore never read the one CV that matters.
+    """
+    for directory in directories:
+        if not directory.is_dir():
+            continue
+        found = sorted(
+            path
+            for path in directory.glob(f"{name}.*")
+            if path.suffix.lower() in TEXT_SUFFIXES | {PDF_SUFFIX}
+        )
+        text_first = [p for p in found if p.suffix.lower() != PDF_SUFFIX]
+        if text_first or found:
+            return (text_first or found)[0]
+    return None
