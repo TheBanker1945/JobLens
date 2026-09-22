@@ -97,8 +97,11 @@ def main() -> int:
     try:
         with LLMClient(settings) as client, EmbedderPool(CACHE_DIR) as pool:
             prepared = {
+                # The name has to reach prepare_cv: without it the real CV was
+                # sent to the extraction model and the embedder with the name
+                # in it, and ranked as a different text from the one labelled.
                 one.cv: find_and_prepare(
-                    args.cv_dir, one, client, settings.model, cache
+                    args.cv_dir, one, client, settings.model, cache, args.strip_name
                 )
                 for one in labels
             }
