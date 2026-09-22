@@ -1,0 +1,87 @@
+/* One local page. No framework here either: a few custom properties, flexbox,
+   and a dark mode that follows the system rather than a toggle nobody sets. */
+:root {
+  --bg: #fbfbfa; --panel: #fff; --ink: #1c1c1a; --dim: #6b6b66;
+  --line: #e3e3de; --accent: #2f6f4f; --warn: #9a4f1b; --cold: #7a7a74;
+  --strong: #2f6f4f; --possible: #9a6b1b; --weak: #8a8a84;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17181a; --panel: #1e2023; --ink: #e8e8e4; --dim: #9a9a94;
+    --line: #2e3136; --accent: #7fc4a0; --warn: #e0a06a; --cold: #8a8a84;
+    --strong: #7fc4a0; --possible: #e0b86a; --weak: #8a8a84;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+header {
+  display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+  padding: .75rem 1.25rem; border-bottom: 1px solid var(--line);
+  background: var(--panel); position: sticky; top: 0; z-index: 5;
+}
+h1 { font-size: 1.05rem; margin: 0; letter-spacing: .02em; }
+.tabs { display: flex; gap: .25rem; }
+.tab {
+  border: 1px solid var(--line); background: none; color: var(--dim);
+  padding: .3rem .8rem; border-radius: 999px; cursor: pointer; font-size: .85rem;
+}
+.tab[aria-current="true"] { color: var(--ink); border-color: var(--ink); }
+.picker { margin-left: auto; font-size: .82rem; color: var(--dim); }
+select, input[type=search] {
+  font: inherit; font-size: .85rem; padding: .35rem .5rem; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+}
+main { padding: 1.25rem; max-width: 62rem; margin: 0 auto; }
+input[type=search] { width: 100%; margin: .75rem 0; }
+.meta { color: var(--dim); font-size: .82rem; font-family: ui-monospace, monospace; }
+.meta div { margin: .15rem 0; }
+h2 { font-size: 1rem; margin: 1.5rem 0 .25rem; }
+.banner {
+  border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px;
+  padding: .7rem .9rem; margin: 1rem 0; background: var(--panel);
+}
+.banner p { margin: .35rem 0 0; color: var(--dim); font-size: .88rem; }
+.banner strong { color: var(--warn); }
+.buckets { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: 1rem; }
+.bucket {
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 6px; padding: .45rem .8rem; cursor: pointer; font-size: .85rem;
+}
+.bucket[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
+.bucket small { color: var(--dim); display: block; font-size: .72rem; }
+.rows { display: flex; flex-direction: column; gap: .3rem; }
+.row {
+  border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+  padding: .5rem .7rem; cursor: pointer;
+}
+.row:hover { border-color: var(--cold); }
+.row .line { display: flex; gap: .6rem; align-items: baseline; }
+.rank { color: var(--dim); font-family: ui-monospace, monospace; font-size: .78rem;
+        min-width: 3.2rem; }
+.title { flex: 1; }
+.where { color: var(--dim); font-size: .82rem; }
+.badge {
+  font-family: ui-monospace, monospace; font-size: .72rem; padding: .05rem .4rem;
+  border-radius: 4px; border: 1px solid currentColor;
+}
+.strong { color: var(--strong); }
+.possible { color: var(--possible); }
+.weak { color: var(--weak); }
+.detail { margin-top: .6rem; border-top: 1px solid var(--line); padding-top: .6rem; }
+.detail h4 { margin: .7rem 0 .2rem; font-size: .82rem; text-transform: uppercase;
+             letter-spacing: .05em; color: var(--dim); }
+.claim { margin: .3rem 0 .3rem .4rem; }
+.claim q { color: var(--dim); display: block; font-size: .88rem; }
+pre.text {
+  white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: .7rem; max-height: 26rem; overflow: auto;
+  font-size: .82rem;
+}
+table { border-collapse: collapse; font-size: .84rem; width: 100%; }
+td { border-top: 1px solid var(--line); padding: .25rem .4rem; vertical-align: top; }
+td:first-child { color: var(--dim); width: 12rem; }
+.empty { color: var(--dim); padding: 1rem 0; }
+a { color: var(--accent); }

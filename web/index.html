@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobLens viewer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>JobLens</h1>
+  <nav class="tabs">
+    <button class="tab" data-tab="run" aria-current="true">Run</button>
+    <button class="tab" data-tab="corpus">Corpus</button>
+  </nav>
+  <label class="picker">run
+    <select id="run-picker"></select>
+  </label>
+</header>
+
+<main>
+  <section id="run" class="panel">
+    <div id="run-head"></div>
+    <div id="run-banner"></div>
+    <nav id="buckets" class="buckets"></nav>
+    <input id="filter" type="search" placeholder="filter these by title, company or city">
+    <div id="rows" class="rows"></div>
+    <div id="gaps"></div>
+  </section>
+
+  <section id="corpus" class="panel" hidden>
+    <div id="corpus-head"></div>
+    <input id="corpus-search" type="search" placeholder="search the vacancy text, title, company or city">
+    <div id="corpus-rows" class="rows"></div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
