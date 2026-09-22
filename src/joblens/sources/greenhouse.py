@@ -22,7 +22,14 @@ class GreenhouseSource:
         self.slug = slug
         self.client = client
 
-    def fetch(self, limit: int = 100) -> list[Vacancy]:
+    def fetch(self, limit: int | None = None) -> list[Vacancy]:
+        """The whole board unless `limit` says otherwise.
+
+        One request returns every job worldwide, so a limit here saves no
+        request -- and applied before the Dutch filter it only loses Dutch
+        jobs. The fetch script asks for the whole board and caps after the
+        filter (sources/netherlands.py).
+        """
         url = f"https://boards-api.greenhouse.io/v1/boards/{self.slug}/jobs"
         data = get_json(self.client, url, self.name, params={"content": "true"})
         return [self._vacancy(job) for job in data.get("jobs", [])[:limit]]

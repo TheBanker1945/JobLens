@@ -21,7 +21,9 @@ class RecruiteeSource:
         self.slug = slug
         self.client = client
 
-    def fetch(self, limit: int = 100) -> list[Vacancy]:
+    def fetch(self, limit: int | None = None) -> list[Vacancy]:
+        """The whole board unless `limit` says otherwise: one request returns
+        every offer, so the script caps after the Dutch filter instead."""
         url = f"https://{self.slug}.recruitee.com/api/offers/"
         offers = get_json(self.client, url, self.name).get("offers", [])
         return [self._vacancy(offer) for offer in offers[:limit]]
