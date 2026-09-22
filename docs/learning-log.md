@@ -1242,6 +1242,13 @@ changed corpus is reported instead: the size, a digest of the sorted keys (279
 and 279 can be two different 279s), what entered the shortlist, what left it, and
 how the vacancies in both were judged this time.
 
+**And the first thing it measured was the judge.** Two runs of the same control
+CV six minutes apart, everything else identical: **8 of 10 judgements identical,
+2 changed, both by a few points of `fit` and neither across a verdict boundary**
+(weak 5 → weak 2, weak 5 → weak 4). So the non-determinism is real, it is small
+at this temperature, and it lives inside the bands rather than across them --
+which is the argument for reading the band and not the number, made with a number.
+
 ### The corpus grew from 198 to 279, and it moved every eval number but one
 
 This was meant to be a footnote and is the most interesting result in the
