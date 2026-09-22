@@ -1534,3 +1534,63 @@ one was testing.
 Eleven new tests, and the four that matter are: an id is not a path, a missing
 run raises rather than returning an empty record, a new CV's labels are private,
 and a committed CV's labels stay committed.
+
+## 4.3 — The viewer, and what 267 rejections look like when you can see them
+
+The brief asked for a read-only page over a stored run: recommended,
+judged-and-rejected, never-shortlisted, with the vacancy text and the extracted
+fields one click away. `uv run python scripts/serve.py` and
+<http://127.0.0.1:8000>.
+
+**Built by hand, and here is exactly what that cost.** CLAUDE.md says no
+framework until the thing has been built once. What FastAPI would have given us
+is routing, JSON serialisation and static files; all three are in
+`web/server.py` and together they are about a hundred lines. The page is
+`web/index.html` plus 260 lines of plain DOM JavaScript and a stylesheet — no
+build step, no node, no dependency added to `pyproject.toml`. What we do not have
+is request validation, an OpenAPI schema and async. None of those is needed by a
+page one person opens on their own laptop, and all of them will be the argument
+for a framework the day this is hosted.
+
+**The split that matters is in the API, not in the page.** `web/api.py` returns
+three lists, because there are three genuinely different things:
+
+| bucket | what it is | what it carries |
+|---|---|---|
+| recommended | strong or possible | a verdict, a fit, evidence, gaps |
+| judged and rejected | a model read it and said no | the same, plus the reason it failed |
+| never shortlisted | nobody read it | a rank, a score, and the part of the CV that matched it |
+
+The difference between the second and the third is a fact about the run, so the
+page is not allowed to decide it. And it is the difference the whole milestone is
+for: a rejection with a reason can be argued with, and until 4.1 the third kind
+had no reason, no score and no record at all.
+
+**On the real run, the three buckets are 2, 10 and 267.** Opening
+"never shortlisted" puts **Student AI Developer at #13, 0.679** against #12's
+0.680 at the top of the list — a job Mahdi labelled "would apply", one
+thousandth of a point below the cut, and the first thing the page shows him about
+what he has been missing.
+
+**One sentence has one author.** The refusal banner ("nothing here fits you") is
+rendered from `cv/outcome.py`'s own `headline()` and `advice()`, sent over the
+wire as strings. Rebuilding that logic in JavaScript would have created a second
+opinion that drifts from the first, and 3.7 was careful about what that sentence
+is allowed to claim.
+
+**Three things the server refuses**, all tested against a real socket rather than
+a mocked handler, because these are exactly the paths a unit test would stub out:
+`/api/runs/..%2F..%2Fsecret` (a run id is a file stem, enforced in the store
+since 4.2), `/../.env` and `/app.js/../../pyproject.toml` (static serving is
+`web/` only, and only five extensions), and a missing key or a non-numeric limit,
+which are 400s rather than tracebacks.
+
+**What it deliberately cannot do.** It has no login, because with one user a fake
+one is worse than an honest none. It binds to 127.0.0.1 and nothing else — it
+serves a real CV and real vacancies. And it starts nothing: matching is still
+`match_cv.py`, scraping is still the schedule. A page that could spend money by
+being refreshed is not a read-only viewer.
+
+**Every piece of data goes onto the page with `textContent`.** A vacancy is text
+somebody else wrote, and a page that pastes it in as HTML is one advert away from
+being a different page than the one you read.
