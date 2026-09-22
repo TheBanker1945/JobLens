@@ -2,11 +2,19 @@
 
 import json
 
+import pytest
 from conftest import SAMPLE_CVS, FakeClient
 from conftest import details as make_details
 
 from joblens.cv.documents import QueryPart
-from joblens.cv.match import prepare_cv, queries_for, rank_with_cv, search_with_cv
+from joblens.cv.match import (
+    prepare_cv,
+    queries_for,
+    rank_cv,
+    rank_with_cv,
+    search_with_cv,
+    styles_of,
+)
 from joblens.cv.store import CVCache
 from joblens.embeddings.index import VacancyIndex
 from joblens.sources.base import Vacancy
@@ -168,3 +176,50 @@ def test_a_vacancy_past_the_shortlist_is_still_ranked_and_still_scored():
     assert len(ranked) == 12
     assert [m.vacancy.key for m in ranked[:10]] == [m.vacancy.key for m in shortlist]
     assert all(match.score > 0 for match in ranked)  # including the ones not read
+
+
+def test_a_style_can_name_several_ways_of_asking():
+    assert styles_of("raw") == ["raw"]
+    assert styles_of("raw+wishlist") == ["raw", "wishlist"]
+    with pytest.raises(ValueError, match="unknown CV style 'vibes'"):
+        styles_of("raw+vibes")
+
+
+def _sanne(tmp_path, advert: str):
+    cache = CVCache(tmp_path / "cache.json")
+    prepared = prepare_cv(
+        SAMPLE_CVS / "sanne_vermeulen.md",
+        FakeClient(json.dumps(PROFILE)),
+        model="fake",
+        cache=cache,
+    )
+    queries_for(
+        prepared, "wishlist", client=FakeClient(advert), model="fake", cache=cache
+    )
+    return prepared, cache
+
+
+def test_one_style_ranks_exactly_as_it_did_before(tmp_path):
+    prepared, cache = _sanne(tmp_path, "Gezocht: data-analist, data data")
+    index = index_of(CARE, DATA)
+
+    alone = rank_cv(index, prepared, "raw", model="fake", cache=cache)
+    before = rank_with_cv(index, queries_for(prepared, "raw"))
+
+    assert alone == before
+
+
+def test_fused_styles_rank_by_position_and_keep_the_part_that_placed_it(tmp_path):
+    """The whole CV (a nurse) puts care first; an advert about data puts data
+    first. Each is first in one list and second in the other: a dead heat in
+    fused points, which keeps the first list's order."""
+    prepared, cache = _sanne(tmp_path, "Gezocht: data-analist, data data")
+    index = index_of(CARE, DATA)
+
+    fused = rank_cv(index, prepared, "raw+wishlist", model="fake", cache=cache)
+
+    assert [m.vacancy.key for m in fused] == ["indeed:1", "indeed:2"]
+    assert fused[0].part.label == "the whole CV"
+    assert fused[1].part.label == "the job you would be hired for next"
+    assert fused[0].score == pytest.approx(1 / 61 + 1 / 62)  # rank points
+    assert fused[0].score == fused[1].score

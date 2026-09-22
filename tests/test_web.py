@@ -129,7 +129,7 @@ def test_the_page_is_told_where_the_cut_was_and_how_close_it_was(tmp_path):
 
     assert view["boundary"]["last_read"]["rank"] == 3
     assert view["boundary"]["first_unread"]["rank"] == 4
-    assert view["boundary"]["gap"] == 0.01
+    assert view["boundary"]["gap"] == pytest.approx(0.01)
     assert "duplicates" in view["funnel_line"]
 
 

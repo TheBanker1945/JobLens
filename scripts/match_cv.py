@@ -37,7 +37,7 @@ from joblens.corpus import NAMES, load_corpus
 from joblens.cv.documents import CV_STYLES
 from joblens.cv.gaps import GapSummary, summarise_gaps
 from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
-from joblens.cv.match import prepare_cv, queries_for, rank_with_cv
+from joblens.cv.match import DEFAULT_STYLE, prepare_cv, rank_cv, styles_of
 from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
 from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
@@ -64,7 +64,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("cv", type=Path)
     parser.add_argument("--corpus", choices=NAMES, default="raw")
-    parser.add_argument("--style", choices=CV_STYLES, default="raw")
+    parser.add_argument(
+        "--style",
+        type=cv_style,
+        default=DEFAULT_STYLE,
+        help=f"how the CV asks: one of {', '.join(CV_STYLES)}, or several joined "
+        f"by '+' and fused by rank (default {DEFAULT_STYLE}; 'raw' is the 3.5 way)",
+    )
     parser.add_argument("--top", type=int, default=10, help="how many to judge")
     parser.add_argument("--strip-name", metavar="NAME")
     parser.add_argument(
@@ -97,13 +103,6 @@ def main() -> int:
                 mode=default_mode(cv_settings),
                 cache=cache,
             )
-            parts = queries_for(
-                prepared,
-                args.style,
-                client=client,
-                model=cv_settings.model,
-                cache=cache,
-            )
             with EmbeddingClient(embed_settings) as embedder:
                 index = VacancyIndex.build(
                     corpus.vacancies,
@@ -115,7 +114,14 @@ def main() -> int:
                 # The whole corpus, not the shortlist: judging reads the head
                 # of this list and the rest is stored, so a rejection by
                 # retrieval has a position and a score you can go and look at.
-                ranking = rank_with_cv(index, parts)
+                ranking = rank_cv(
+                    index,
+                    prepared,
+                    args.style,
+                    client=client,
+                    model=cv_settings.model,
+                    cache=cache,
+                )
                 matches = ranking[: args.top]
 
             header(
@@ -123,7 +129,6 @@ def main() -> int:
                 args,
                 corpus,
                 len(index),
-                len(parts),
                 embed_settings,
                 cv_settings,
             )
@@ -134,7 +139,8 @@ def main() -> int:
                 print("-" * 78 + "\n")
             if args.no_explain:
                 for position, match in enumerate(matches, 1):
-                    print(f"{position:>2}. {match.score:.3f}  {match.vacancy.title}")
+                    shown = score(match.score, args.style)
+                    print(f"{position:>2}. {shown}  {match.vacancy.title}")
                 print(
                     f"\nno explanations asked for: nothing was judged, and "
                     f"nothing was stored.\nthe other {len(ranking) - len(matches)} "
@@ -193,20 +199,33 @@ def main() -> int:
     return 0
 
 
-def header(prepared, args, corpus, indexed, parts, embed_settings, cv_settings) -> None:
+def header(prepared, args, corpus, indexed, embed_settings, cv_settings) -> None:
     counts = prepared.redacted.counts()
     removed = ", ".join(f"{n}x {kind}" for kind, n in counts.items()) or "nothing"
     print(f"{prepared.name}: {prepared.profile.headline}  |  removed: {removed}")
     print(
         f"{indexed} vacancies from the {args.corpus} corpus, embedded by "
-        f"{embed_settings.model}; shortlist of {args.top} as {args.style} "
-        f"({parts} query part(s))"
+        f"{embed_settings.model}; shortlist of {args.top} as {args.style}"
+        + (
+            " (fused by rank: scores are rank points, not cosines)"
+            if "+" in args.style
+            else ""
+        )
     )
     # What never made it into those `indexed` vacancies, and why. A vacancy
     # dropped here is rejected before it can be given so much as a score.
     if line := corpus.funnel.line():
         print(line)
     print(f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}\n")
+
+
+def cv_style(value: str) -> str:
+    """argparse type: a style, or several joined by '+'."""
+    try:
+        styles_of(value)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
+    return value
 
 
 def report_cv_problems(prepared) -> None:
@@ -402,6 +421,7 @@ def show_boundary(record) -> None:
     """
     if not record.ranking:
         return
+    style = record.stamp.cv_style
     print(
         f"{len(record.ranking)} vacancies ranked, {record.stamp.top} judged: "
         f"the whole ranking is in the run, with the score of every one of them."
@@ -410,10 +430,17 @@ def show_boundary(record) -> None:
         last, first = pair
         print(
             f"the shortlist was cut between #{last.rank} {shorten(last.title, 34)} "
-            f"({last.score:.3f}) and\n#{first.rank} "
-            f"{shorten(first.title, 34)} ({first.score:.3f}) — a gap of "
-            f"{last.score - first.score:.3f}."
+            f"({score(last.score, style)}) and\n#{first.rank} "
+            f"{shorten(first.title, 34)} ({score(first.score, style)}) — a gap of "
+            f"{score(last.score - first.score, style)}."
         )
+
+
+def score(value: float, style: str) -> str:
+    """A cosine reads to three decimals. Fused rank points sit between 0.018
+    and 0.033 for a whole corpus, so three decimals would call two different
+    positions equal: they get five."""
+    return f"{value:.5f}" if "+" in style else f"{value:.3f}"
 
 
 def shorten(value: str, limit: int = 96) -> str:

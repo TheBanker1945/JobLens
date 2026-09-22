@@ -259,7 +259,9 @@ def _boundary(pair: tuple[RankedRow, RankedRow] | None) -> dict | None:
     return {
         "last_read": _rank_only(last),
         "first_unread": _rank_only(first),
-        "gap": round(last.score - first.score, 4),
+        # Unrounded: a fused run's gap between neighbours is a few hundred-
+        # thousandths, and rounding to four places called it zero.
+        "gap": last.score - first.score,
     }
 
 
