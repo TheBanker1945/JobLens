@@ -255,6 +255,14 @@ def build_handler(viewer: Viewer) -> type[BaseHTTPRequestHandler]:
     return _Handler
 
 
+class _Server(ThreadingHTTPServer):
+    # How many connections may wait to be accepted. The standard library says
+    # 5, and a page that opens a run fires several requests at once; past the
+    # fifth the kernel drops the connection and the browser retries a second
+    # later -- or, under a burst, gives up (found by the concurrency test).
+    request_queue_size = 64
+
+
 def serve(viewer: Viewer, port: int = 8000) -> ThreadingHTTPServer:
     """Bound to localhost only: this serves a real CV and real vacancies."""
-    return ThreadingHTTPServer(("127.0.0.1", port), build_handler(viewer))
+    return _Server(("127.0.0.1", port), build_handler(viewer))
