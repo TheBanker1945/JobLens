@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from joblens.config import LLMSettings
 from joblens.embeddings.client import EmbeddingClient, Vector
 from joblens.embeddings.documents import Style
-from joblens.embeddings.store import CachedEmbedder
+from joblens.embeddings.store import CachedEmbedder, cache_path
 
 
 class RetrievalConfig(BaseModel):
@@ -189,13 +189,13 @@ class EmbedderPool:
         if key not in self._embedders:
             client = EmbeddingClient(settings)
             self._clients.append(client)
-            path = (
-                self.cache_dir / f"embeddings-{settings.model.replace(':', '-')}.json"
-            )
+            path = cache_path(self.cache_dir, settings.model)
             self._embedders[key] = CachedEmbedder(client, path)
         return self._embedders[key]
 
     def close(self) -> None:
+        for embedder in self._embedders.values():
+            embedder.close()
         for client in self._clients:
             client.close()
 
@@ -224,11 +224,12 @@ def embed(
     """
     if pool is not None:
         return _embed_with(pool.get(config), config, documents, queries)
-    cache_path = cache_dir / f"embeddings-{config.model.replace(':', '-')}.json"
     with EmbeddingClient(config.settings()) as client:
-        return _embed_with(
-            CachedEmbedder(client, cache_path), config, documents, queries
-        )
+        embedder = CachedEmbedder(client, cache_path(cache_dir, config.model))
+        try:
+            return _embed_with(embedder, config, documents, queries)
+        finally:
+            embedder.close()
 
 
 def _embed_with(

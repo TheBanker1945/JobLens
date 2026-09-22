@@ -33,7 +33,7 @@ from joblens.config import load_llm_settings
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.documents import STYLES
 from joblens.embeddings.index import VacancyIndex
-from joblens.embeddings.store import CachedEmbedder
+from joblens.embeddings.store import CachedEmbedder, cache_path
 from joblens.evals.runner import load_configs
 from joblens.extraction.extract import ExtractionError, extract_vacancy
 from joblens.extraction.store import DetailsStore, ExtractedVacancy
@@ -134,7 +134,7 @@ def embed(
 ) -> int:
     """Embed every vacancy that has details, filling the cache search reads."""
     settings = load_llm_settings(prefix="EMBED")
-    cache = CACHE_DIR / f"embeddings-{settings.model.replace(':', '-')}.json"
+    cache = cache_path(CACHE_DIR, settings.model)
     vacancies = [vacancy for source in sources for vacancy in store.load(source)]
     details = {
         key: record.details for key, record in details_store.load_all(sources).items()
