@@ -25,7 +25,7 @@ from joblens.corpus import NAMES, load_corpus
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.documents import STYLES
 from joblens.embeddings.index import Match, VacancyIndex
-from joblens.embeddings.store import CachedEmbedder
+from joblens.embeddings.store import CachedEmbedder, cache_path
 from joblens.sources.base import Vacancy
 
 ROOT = Path(__file__).parent.parent
@@ -51,7 +51,7 @@ def main() -> int:
         return 1
 
     settings = load_llm_settings(prefix="EMBED")
-    cache = CACHE_DIR / f"embeddings-{settings.model.replace(':', '-')}.json"
+    cache = cache_path(CACHE_DIR, settings.model)
     try:
         with EmbeddingClient(settings) as client:
             embedder = CachedEmbedder(client, cache)

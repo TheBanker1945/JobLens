@@ -24,7 +24,7 @@ from pathlib import Path
 from joblens.config import load_llm_settings
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.documents import build_document
-from joblens.embeddings.store import CachedEmbedder
+from joblens.embeddings.store import CachedEmbedder, cache_path
 from joblens.extraction.store import DetailsStore
 from joblens.sources.base import Vacancy
 from joblens.sources.report import RunReport
@@ -137,7 +137,7 @@ def ago(delta: timedelta) -> str:
 def embedded(vacancies: dict[str, list[Vacancy]], details: dict, style: str) -> str:
     """How many documents already have a vector, asking only the local cache."""
     settings = load_llm_settings(prefix="EMBED")
-    cache = CACHE_DIR / f"embeddings-{settings.model.replace(':', '-')}.json"
+    cache = cache_path(CACHE_DIR, settings.model)
     embedder = CachedEmbedder(EmbeddingClient(settings), cache)
     ready = wanted = 0
     for group in vacancies.values():

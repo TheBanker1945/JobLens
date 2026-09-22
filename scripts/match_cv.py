@@ -44,7 +44,7 @@ from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
-from joblens.embeddings.store import CachedEmbedder
+from joblens.embeddings.store import CachedEmbedder, cache_path
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd, format_cost
 from joblens.llm.structured import StructuredError, default_mode
@@ -105,11 +105,12 @@ def main() -> int:
                 cache=cache,
             )
             with EmbeddingClient(embed_settings) as embedder:
-                name = embed_settings.model.replace(":", "-")
                 index = VacancyIndex.build(
                     corpus.vacancies,
                     corpus.details,
-                    CachedEmbedder(embedder, CACHE_DIR / f"embeddings-{name}.json"),
+                    CachedEmbedder(
+                        embedder, cache_path(CACHE_DIR, embed_settings.model)
+                    ),
                 )
                 # The whole corpus, not the shortlist: judging reads the head
                 # of this list and the rest is stored, so a rejection by
