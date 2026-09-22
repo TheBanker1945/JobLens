@@ -17,7 +17,7 @@ from pathlib import Path
 
 from joblens.cv.clean import Redacted, redact_cv
 from joblens.cv.documents import CVStyle, QueryPart, build_queries
-from joblens.cv.extract import extract_cv
+from joblens.cv.extract import DroppedDate, extract_cv, verify_dates
 from joblens.cv.read import CVDocument, read_cv
 from joblens.cv.schema import CVProfile
 from joblens.cv.store import CVCache
@@ -35,7 +35,8 @@ class PreparedCV:
     name: str  # the file stem: what the eval and the labels call this CV
     document: CVDocument
     redacted: Redacted
-    profile: CVProfile
+    profile: CVProfile  # dates checked against the CV text; see extract.verify_dates
+    dropped_dates: tuple[DroppedDate, ...] = ()
     prompt_tokens: int = 0
     output_tokens: int = 0
     latency_s: float = 0.0
@@ -67,12 +68,17 @@ def prepare_cv(
     """Read, redact and extract. `cache` makes the second run free."""
     document = read_cv(path)
     redacted = redact_cv(document.text, name=name)
+    # What the model answered is what gets cached, exactly as 3.6 stores the
+    # judge's raw answer: the check is cheap and re-running it over an old entry
+    # is how a change to `verify_dates` is measured without paying again.
     if cache and (hit := cache.get("profile", model, redacted.text)):
+        checked = verify_dates(CVProfile.model_validate(hit), redacted.text)
         return PreparedCV(
             name=path.stem,
             document=document,
             redacted=redacted,
-            profile=CVProfile.model_validate(hit),
+            profile=checked.profile,
+            dropped_dates=tuple(checked.dropped),
             from_cache=True,
         )
     result = extract_cv(redacted.text, client, mode=mode or "schema")
@@ -80,11 +86,13 @@ def prepare_cv(
         cache.put(
             "profile", model, redacted.text, result.details.model_dump(mode="json")
         )
+    checked = verify_dates(result.details, redacted.text)
     return PreparedCV(
         name=path.stem,
         document=document,
         redacted=redacted,
-        profile=result.details,
+        profile=checked.profile,
+        dropped_dates=tuple(checked.dropped),
         prompt_tokens=result.prompt_tokens,
         output_tokens=result.output_tokens,
         latency_s=result.latency_s,
