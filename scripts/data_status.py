@@ -27,6 +27,7 @@ from joblens.embeddings.documents import build_document
 from joblens.embeddings.store import CachedEmbedder
 from joblens.extraction.store import DetailsStore
 from joblens.sources.base import Vacancy
+from joblens.sources.polite import FetchState
 from joblens.sources.report import RunReport
 from joblens.sources.store import VacancyStore
 
@@ -34,6 +35,7 @@ ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 EXTRACTED_DIR = ROOT / "data" / "raw" / "extracted"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
+STATE_PATH = ROOT / "data" / "raw" / "fetch-state.json"
 CACHE_DIR = ROOT / "data" / "cache"
 
 
@@ -93,6 +95,16 @@ def main() -> int:
             f"sources: {', '.join(sorted({s['source'] for s in report['searches']}))}"
         )
         problems += [f"last run: {problem}" for problem in report["problems"]]
+
+    # Informational: a site cooling down already shows up as a problem in the
+    # run that asked it, or as a stale source below. This says until when.
+    for site, entry in sorted(FetchState.load(STATE_PATH).sites.items()):
+        if entry.blocked_until > now:
+            print(
+                f"refusing us: {site}, not asked until "
+                f"{entry.blocked_until:%Y-%m-%d %H:%M} UTC "
+                f"({entry.reason}, {entry.strikes}x in a row)"
+            )
 
     # Per source, not per run: a run of one source says nothing about the rest.
     for source in sorted(enabled & set(sources)):

@@ -108,12 +108,27 @@ conceptually, not just have working code.
   version.
 - JobSpy is used for listings only. LinkedIn descriptions are fetched by us,
   paced, because its own description loop has no delay and swallows errors.
-  LinkedIn is off by default in sources.toml; turning it on is a deliberate
-  choice about your own IP.
+  LinkedIn stays off (Mahdi, 2026-09-22): its robots.txt disallows /jobs-guest/
+  for every crawler, Googlebot included.
+- Every request passes one gate, src/joblens/sources/polite.py, as an httpx
+  transport under the client: paced per *site* (all *.recruitee.com boards are
+  one site), capped per run, and a refusal (429, 403, a challenge page, a
+  redirect to a consent wall) is remembered in data/raw/fetch-state.json, so
+  later runs leave that site alone for 12h, doubling up to a week. Settings are
+  the [politeness] table in sources.toml. Never add a way around a refusal: no
+  proxies, rotating IPs, browser disguise or retries. A refusal marker is added
+  only after it was seen on a real response.
+- robots.txt governs what is *crawled* (web pages, sitemaps: from 5.4). A
+  documented public API is used as documented; jobdataapi and SmartRecruiters
+  disallow their own documented APIs in robots.txt.
+- Phase 5 (docs/vacancy-sources-phase-5.md) widens the sources. Scope decided
+  2026-09-22: Zuid-Holland, Noord-Holland, Utrecht and Zeeland, software and AI
+  engineering and similar. Only in-scope vacancies are indexed; the scope is
+  config, and it never removes stored vacancies that labels refer to.
 - Scraping never runs while someone is using JobLens: scripts/daily_update.sh
   fetches on a schedule, and search only reads what is already stored.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source
-  looks broken, throttled, or suspiciously empty.
+  looks broken, throttled, refused, or suspiciously empty.
 
 ## Project layout
 

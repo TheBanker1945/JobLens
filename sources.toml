@@ -1,10 +1,26 @@
 # Where vacancies come from. All of these are public endpoints: no key, no
 # registration, no trial. Adding a company is one line here.
 #
-# Fetching rules: one request per company, a pause in between, a User-Agent that
-# names the project, and nothing is fetched twice (see data/raw/, never committed).
+# Fetching rules: one request per company, a User-Agent that names the project,
+# nothing is fetched twice (see data/raw/, never committed), and every request
+# passes the gate configured below.
 
-delay_seconds = 1.5
+# The gate every request passes (src/joblens/sources/polite.py). All numbers are
+# per *site*, and a site is the platform: every *.recruitee.com board is one site.
+# A site that refuses us (429, 403, a challenge page) is written to
+# data/raw/fetch-state.json and left alone for first_cooldown_hours, doubling
+# with each refusal in a row up to max_cooldown_days. Delete its entry there to
+# ask again sooner. Nothing here gets around a refusal: no proxies, no retries.
+[politeness]
+delay_seconds = 1.5          # between two requests to the same site
+jitter_seconds = 1.0         # plus up to this much, so requests do not tick
+max_requests_per_site = 200  # per run; a runaway loop stops here
+first_cooldown_hours = 12    # refused once: tried again the next night
+max_cooldown_days = 7
+
+# Anonymous tier: ~10 requests an hour per IP, and refused ones count too (2.3).
+[politeness.sites."jobdataapi.com"]
+max_requests = 8
 
 # Dutch filter for boards that are global (Greenhouse lists jobs worldwide).
 # A vacancy is kept when country is NL, or the location mentions one of these.
@@ -106,9 +122,10 @@ city = "Amsterdam"
 term = "software engineer"
 city = "Utrecht"
 
-# Off by default, on purpose. LinkedIn's guest endpoints are the throttle-prone
-# half of scraping and its terms do not invite it, so switching this on is a
-# deliberate choice about your own IP. What it costs is capped: jobs already in
+# Off by default, on purpose, and staying off (decided 2026-09-22). LinkedIn's
+# guest endpoints are the throttle-prone half of scraping, its terms do not
+# invite it, and its robots.txt disallows /jobs-guest/ for every crawler,
+# Googlebot included. Switching this on is a deliberate choice about your own IP. What it costs is capped: jobs already in
 # data/raw/ are never requested again, a run fetches at most
 # max_descriptions_per_run descriptions, and delay_seconds sits between them.
 [linkedin]
