@@ -13,6 +13,7 @@ unhealthy, which is what makes cron send the mail.
 """
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -111,14 +112,9 @@ class RunReport:
 
     @staticmethod
     def latest(directory: Path) -> dict | None:
-        """The most recent run's report, or None if there has never been one.
-
-        Report names start with the date, so the newest name sorts last.
-        """
-        reports = sorted(directory.glob("*_fetch.json"))
-        if not reports:
-            return None
-        return json.loads(reports[-1].read_text(encoding="utf-8"))
+        """The most recent run's report, or None if there has never been one."""
+        reports = stored_reports(directory)
+        return reports[-1] if reports else None
 
     @staticmethod
     def last_fetched(directory: Path) -> dict[str, datetime]:
@@ -133,8 +129,7 @@ class RunReport:
         back empty does, because the board was asked and answered.
         """
         last: dict[str, datetime] = {}
-        for path in sorted(directory.glob("*_fetch.json")):  # oldest first
-            report = json.loads(path.read_text(encoding="utf-8"))
+        for report in stored_reports(directory):  # oldest first
             # The start, not the finish: a run takes minutes, and the earlier
             # of the two can only make a source look older, never fresher.
             started = datetime.fromisoformat(report["started_at"])
@@ -144,8 +139,39 @@ class RunReport:
         return last
 
     def write(self, directory: Path) -> Path:
-        """One file per run, so a bad week is visible next to a good one."""
+        """One file per run, so a bad week is visible next to a good one.
+
+        Never on top of another run. Three `--source` runs in one minute on
+        2026-09-22 left a single report, and the two it replaced were the only
+        record that Greenhouse and Recruitee had been fetched at all. The same
+        rule as `FileStore.save_run`: a second run in a minute gets `-2`.
+        """
         directory.mkdir(parents=True, exist_ok=True)
-        path = directory / f"{self.started_at:%Y-%m-%d_%H%M}_fetch.json"
+        stem = f"{self.started_at:%Y-%m-%d_%H%M}"
+        path, attempt = directory / f"{stem}_fetch.json", 2
+        while path.exists():
+            path, attempt = directory / f"{stem}-{attempt}_fetch.json", attempt + 1
         path.write_text(json.dumps(self.as_dict(), indent=2) + "\n", encoding="utf-8")
         return path
+
+
+def stored_reports(directory: Path) -> list[dict]:
+    """Every report in `directory`, oldest first.
+
+    Ordered by when each run started, not by file name: "..._2000-2_fetch.json"
+    sorts *before* "..._2000_fetch.json", because "-" comes before "_". Two runs
+    that started in the same second are ordered by their suffix, which is the
+    order they were written in.
+    """
+    loaded = [
+        (json.loads(path.read_text(encoding="utf-8")), _attempt(path))
+        for path in directory.glob("*_fetch.json")
+    ]
+    loaded.sort(key=lambda one: (datetime.fromisoformat(one[0]["started_at"]), one[1]))
+    return [report for report, _ in loaded]
+
+
+def _attempt(path: Path) -> int:
+    """1 for "2026-09-22_2000_fetch.json", 2 for "2026-09-22_2000-2_fetch.json"."""
+    found = re.search(r"-(\d+)$", path.name.removesuffix("_fetch.json"))
+    return int(found.group(1)) if found else 1

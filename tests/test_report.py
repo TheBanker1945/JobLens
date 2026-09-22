@@ -151,3 +151,23 @@ def test_a_search_that_broke_is_not_a_fetch_but_an_empty_one_is(tmp_path):
 
     assert "jobdataapi" not in last
     assert "recruitee" in last
+
+
+def test_three_runs_in_one_minute_leave_three_reports(tmp_path):
+    """2026-09-22 20:00: greenhouse, recruitee and jobdataapi were fetched one
+    after the other, and only jobdataapi's report survived."""
+    from datetime import UTC, datetime
+
+    minute = datetime(2026, 9, 22, 20, 0, tzinfo=UTC)
+    for source in ("greenhouse", "recruitee", "jobdataapi"):
+        report = RunReport(started_at=minute)
+        report.add(run(source=source, listed=10))
+        report.write(tmp_path)
+
+    assert len(list(tmp_path.glob("*_fetch.json"))) == 3
+    assert set(RunReport.last_fetched(tmp_path)) == {
+        "greenhouse",
+        "recruitee",
+        "jobdataapi",
+    }
+    assert RunReport.latest(tmp_path)["searches"][0]["source"] == "jobdataapi"
