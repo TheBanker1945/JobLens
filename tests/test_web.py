@@ -363,18 +363,21 @@ def test_marks_made_at_the_same_moment_are_all_kept(live, tmp_path):
     """Each request has its own thread; without a lock, one save erased another."""
     base, run_id = live
     url = f"{base}/api/runs/{run_id}/labels"
-    threads = [
-        threading.Thread(
-            target=post,
-            args=(url, {"key": f"indeed:{1 + n % 6}", "call": "no", "reason": f"r{n}"}),
-        )
-        for n in range(24)
-    ]
+    errors: list[Exception] = []
+
+    def mark(n: int) -> None:
+        try:
+            post(url, {"key": f"indeed:{1 + n % 6}", "call": "no", "reason": f"r{n}"})
+        except Exception as err:  # noqa: BLE001 - reported below, not swallowed
+            errors.append(err)
+
+    threads = [threading.Thread(target=mark, args=(n,)) for n in range(24)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
 
+    assert errors == []  # a request that failed would otherwise look like a lost mark
     store = FileStore(tmp_path)
     cv = store.load_run(run_id).stamp.cv_name
     assert len(store.load_labels(cv).decisions) == 24
