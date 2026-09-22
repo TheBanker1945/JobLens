@@ -57,6 +57,11 @@ conceptually, not just have working code.
   e-mail, phone, address, postcode, date of birth, links and id numbers go; city
   and nationality stay because a vacancy can require them; the name goes only when
   --strip-name says exactly what it is.
+- Explaining a match is an LLM call per shortlisted vacancy (0.36 cent, ~2s), and
+  every quote it returns is verified against the CV or the vacancy in code before
+  it is shown (src/joblens/cv/judge.py). Never loosen that check into a fuzzy
+  match; normalising formatting is safe, accepting a paraphrase is not. Bump
+  PROMPT_VERSION when the prompt or the bands change.
 - A CV reaches the index as its whole redacted text, one query (3.5, measured on
   four invented CVs: best worst-case nDCG@10 of five representations, and the
   cheapest). Splitting it per job or per chunk lost. Do not reopen without a CV
@@ -118,6 +123,7 @@ conceptually, not just have working code.
 - uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV
 - uv run python scripts/match_cv.py <cv> --top 10           # rank vacancies for a CV
 - uv run python scripts/eval_cv_matching.py                 # which CV style wins
+- uv run python scripts/eval_judge.py                       # is the judge honest?
 
 ## Rules
 
