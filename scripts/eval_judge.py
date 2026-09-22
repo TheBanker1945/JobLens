@@ -21,6 +21,11 @@ list.
 corpus, so every `strong` she is given is a false promise, and this is where the
 answer to "what should it do when nothing fits" has to come from.
 
+**The refusal** (3.7) is then checked against all four: the rule in cv/outcome.py
+must refuse the control and refuse nobody else. It is one rule over four CVs, so
+it is a check that it is not obviously wrong rather than a measurement of how
+often it is right.
+
 Answers are stored per (CV, vacancy, prompt version) so a rerun costs nothing.
 What is stored is the model's raw answer, and the quote check is re-run on load:
 a change to `verify` is measured against the answers already paid for.
@@ -45,6 +50,7 @@ from joblens.cv.judge import (
     verify,
 )
 from joblens.cv.match import prepare_cv, queries_for, search_with_cv
+from joblens.cv.outcome import Fit, assess
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
@@ -107,6 +113,7 @@ def main() -> int:
     print_faithfulness(rows)
     print_agreement(rows)
     print_control(rows)
+    print_refusal(rows, len(corpus))
     cost = cost_usd(cv_settings, tokens_in, tokens_out)
     print(f"\n{tokens_in} tokens in, {tokens_out} out  |  {format_cost(cost)} this run")
     return 0
@@ -245,6 +252,47 @@ def print_control(rows) -> None:
         print(
             "  every 'strong' here is a false promise; a corpus with no right "
             "answer should produce none."
+        )
+
+
+def print_refusal(rows, corpus: int) -> None:
+    """Does "nothing here fits you" fire on the CV it should, and only there?
+
+    A refusal cannot be scored against the labels -- a label says whether to
+    apply to one vacancy, not whether a whole run should have been refused. What
+    can be checked is the one thing that would make it useless in either
+    direction: refusing somebody who has matches, or reassuring the control.
+    """
+    print("\n===== the refusal =====")
+    print(f"{'cv':<18} {'strong':>6} {'possible':>9} {'weak':>5}  {'outcome':<13} ok?")
+    wrong = 0
+    for labels, judged in rows:
+        outcome = assess(judged, corpus=corpus, corpus_name="raw")
+        counts = outcome.counts
+        has_matches = bool(labels.relevant or labels.maybe)
+        # The control should be refused; a CV with labelled matches should not.
+        correct = outcome.refused is not has_matches
+        wrong += not correct
+        print(
+            f"{labels.cv:<18} {counts['strong']:>6} {counts['possible']:>9} "
+            f"{counts['weak']:>5}  {outcome.fit.value:<13} {'yes' if correct else 'NO'}"
+        )
+    print(
+        f"\n  {wrong} CV(s) got the wrong answer. The rule is two counts and no "
+        f"threshold:\n  no strong and no possible is a refusal, no strong alone "
+        f"is 'nothing is a clear fit'.\n  3.5 measured that the cosine cannot do "
+        f"this: 0.12 of separation on one control CV."
+    )
+    middle = [
+        labels.cv
+        for labels, judged in rows
+        if assess(judged, corpus=corpus).fit is Fit.NO_CLEAR_FIT
+    ]
+    if middle:
+        print(
+            "  the middle band caught: "
+            + ", ".join(middle)
+            + " -- a one-band rule would have refused them."
         )
 
 

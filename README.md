@@ -186,11 +186,41 @@ nothing in the corpus gets ten "weak" verdicts rather than a polite list.
 uv run python scripts/match_cv.py your_cv.pdf --top 20   # ~0.36 cent per vacancy
 uv run python scripts/match_cv.py your_cv.pdf --no-explain   # retrieval only
 uv run python scripts/eval_judge.py                      # is it honest? does it agree?
+uv run python scripts/compare_runs.py                    # this run against the last
+```
+
+### What keeps coming up that you do not have
+
+Across a whole run, the per-vacancy gaps are counted into the requirements that
+recur, weighted by how good each match was (`fit / 100`, summed) and traced back
+to a quote from one of the vacancies asking for it. **No extra model call**: the
+grouping uses the skill names already extracted from the corpus, so nothing on
+screen is a label a model invented about its own earlier answers. How much of a
+run this can group is printed next to it. Three further checks — education level,
+required languages, years — come straight from extracted fields and involve no
+judge at all.
+
+### When your CV fits nothing
+
+It says so, in the first line, and then still shows the closest few with the
+reason each one fails and the gap summary. The answer is built on the verdicts,
+not on the similarity score: a cosine separates a CV that fits nothing from one
+that fits by about 0.12, which is not a threshold, while the judge reading the
+vacancy gives the same CV zero strong, zero possible and ten weak.
+
+### Comparing two runs
+
+```bash
+uv run python scripts/compare_runs.py            # the two newest runs of one CV
+uv run python scripts/compare_runs.py --list
 ```
 
 Scores are comparable **inside one list and nowhere else** — not between two CVs,
-not between two runs over a corpus that has changed, not across prompt versions.
-Every run prints a stamp saying which of those it was.
+not across embedders, judge models or prompt versions. Every run is stored under
+`data/raw/cv-runs/` with a stamp of all of those, and `compare_runs.py` refuses
+to compare two runs whose stamps disagree, naming what moved. A corpus that has
+merely gained vacancies is the one difference it will compare across, because it
+changes by itself — it reports what entered and left the shortlist instead.
 
 ## Data & privacy
 

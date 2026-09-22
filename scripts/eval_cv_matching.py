@@ -184,16 +184,29 @@ def print_per_cv(results: list[MatchRun], labels: list[CVLabels]) -> None:
             continue  # a control CV: print_control has it
         print(f"\n===== {one.cv} =====")
         print(
-            f"{'variant':<22} {'hit@1':>6} {'recall@10':>10} {'MRR':>6} {'nDCG@10':>8}"
+            f"{'variant':<22} {'hit@1':>6} {'recall@10':>10} {'MRR':>6} "
+            f"{'nDCG@10':>8} {'labelled':>9}"
         )
+        judged = set(one.judged)
+        worst = 1.0
         for run in results:
             found = run.for_cv(one.cv)
             if not found:
                 continue
+            covered = found.labelled_share(judged)
+            worst = min(worst, covered)
             print(
                 f"{run.variant:<22} {found.hit_at_1:>6.0%} "
                 f"{found.recall_at(10):>10.0%} "
-                f"{found.reciprocal_rank:>6.2f} {found.ndcg_at(10):>8.2f}"
+                f"{found.reciprocal_rank:>6.2f} {found.ndcg_at(10):>8.2f} "
+                f"{covered:>9.0%}"
+            )
+        if worst < 1.0:
+            print(
+                f"  'labelled' is how much of each top 10 was pooled when "
+                f"{one.cv} was judged.\n  Below 100% the scores above are a "
+                f"floor: an unlabelled vacancy scores like a\n  bad one, so a "
+                f"variant is punished for finding something nobody read."
             )
 
 

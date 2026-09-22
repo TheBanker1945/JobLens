@@ -68,6 +68,26 @@ which is the only evidence a refusal threshold could be built from.
 
 ## What is missing
 
+**Coverage of the corpus (measured 2026-09-22, milestone 3.7).** These labels
+were pooled when the corpus was 198 vacancies. It is now 279, and the top ten no
+longer sits inside what was judged:
+
+| cv | share of the top 10 that carries a label |
+|---|---|
+| youssef_bakker | 100% |
+| lisa_de_vries | 60-80% depending on the variant |
+| sanne_vermeulen | 40-70% |
+
+An unlabelled vacancy scores gain 0 exactly like one judged "would not apply", so
+**every metric over Lisa and Sanne is now a floor** and a variant is punished for
+surfacing something nobody read. `scripts/eval_cv_matching.py` prints the share
+in a `labelled` column so this cannot be forgotten again. Youssef is the control
+for the claim: his coverage is 100% and his five scores are unchanged from 3.5,
+while both other CVs dropped across every variant.
+
+**Lisa and Sanne need re-pooling** against the current corpus. Not done in 3.7,
+because relabelling is an opinion and this file has to say whose.
+
 **Mahdi's own CV.** These four are invented, and an invented CV is written by
 someone who has already read the vacancies. The numbers per CV in the 3.5 entry
 of the learning log are never pooled for that reason.

@@ -53,7 +53,9 @@ def main() -> int:
     parser.add_argument("--source", help="only this source")
     parser.add_argument("--limit", type=int, help="at most this many new extractions")
     parser.add_argument("--run", default=DEFAULT_RUN, help="run name in the config")
-    parser.add_argument("--style", default="structured_raw", choices=STYLES)
+    # `structured` and not `structured_raw`: 3.1 measured the two on the real
+    # corpus and the summary won. The old default warmed a cache nothing reads.
+    parser.add_argument("--style", default="structured", choices=STYLES)
     parser.add_argument("--skip-embedding", action="store_true")
     parser.add_argument(
         "--reextract", action="store_true", help="redo vacancies that have details"

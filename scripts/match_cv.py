@@ -12,14 +12,20 @@ asks for that the CV does not show -- and **every quote it produces is checked
 against the source text before you see it**. A quote that is not there loses its
 claim.
 
+Then two things about the run as a whole, both free: whether anything here fits
+you at all (cv/outcome.py, counted off the verdicts because 3.5 measured that the
+cosine cannot tell), and what keeps coming up that you do not have (cv/gaps.py,
+counted off the gap lists and the extracted skills, with no extra model call).
+The run is stored under data/raw/cv-runs/ so scripts/compare_runs.py can put two
+of them side by side, or refuse to.
+
 Costs about 0.35 cent and a couple of seconds per vacancy judged. --no-explain
 skips that entirely and gives the retrieval order alone.
 """
 
 import argparse
-import hashlib
 import sys
-from datetime import datetime
+import textwrap
 from pathlib import Path
 
 import httpx
@@ -29,9 +35,18 @@ from dotenv import load_dotenv
 from joblens.config import load_llm_settings
 from joblens.corpus import NAMES, load_corpus
 from joblens.cv.documents import CV_STYLES
+from joblens.cv.gaps import GapSummary, summarise_gaps
 from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
 from joblens.cv.match import prepare_cv, queries_for, search_with_cv
+from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
+from joblens.cv.runs import (
+    RunStamp,
+    build_record,
+    corpus_digest,
+    digest,
+    save_run,
+)
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
@@ -42,6 +57,9 @@ from joblens.llm.structured import StructuredError, default_mode
 
 ROOT = Path(__file__).parent.parent
 CACHE_DIR = ROOT / "data" / "cache"
+# A run holds the CV and the text of real vacancies, so it is written where git
+# is told never to look.
+RUNS_DIR = ROOT / "data" / "raw" / "cv-runs"
 
 BADGE = {
     Verdict.STRONG: "STRONG  ",
@@ -129,11 +147,28 @@ def main() -> int:
         print(f"Cannot reach a server: {err}")
         return 1
 
+    outcome = assess(judged, corpus=len(corpus), corpus_name=args.corpus)
+    summary = summarise_gaps(judged, prepared.profile, corpus.details)
+
+    banner(outcome)
     for position, one in enumerate(judged, 1):
         show(position, one)
     for failure in failures:
         print(f"\n  could not be judged: {failure}")
-    footer(judged, prepared, corpus, args, cv_settings, embed_settings)
+    show_gaps(summary, outcome)
+    stamp = RunStamp(
+        cv_name=prepared.name,
+        cv_digest=digest(prepared.text),
+        corpus=corpus.name,
+        corpus_size=len(corpus),
+        corpus_digest=corpus_digest(corpus.vacancies),
+        embed_model=embed_settings.model,
+        judge_model=cv_settings.model,
+        cv_style=args.style,
+        prompt_version=PROMPT_VERSION,
+        top=args.top,
+    )
+    footer(judged, prepared, stamp, summary, failures, cv_settings)
     return 0
 
 
@@ -195,7 +230,70 @@ def show(position: int, one: Judged) -> None:
         print(f"    {vacancy.url}")
 
 
-def footer(judged, prepared, corpus, args, cv_settings, embed_settings) -> None:
+def banner(outcome: Outcome) -> None:
+    """The honest answer about the run, above the list rather than under it.
+
+    Above, because a refusal printed after ten formatted vacancies has already
+    been contradicted by the time you reach it. The list still prints either way:
+    the brief asks for "never silence, never a padded list", and a refusal that
+    hid the closest few would be the first of those.
+    """
+    if outcome.fit is Fit.OK:
+        return
+    rule = "=" * 78
+    print(f"\n{rule}\n{textwrap.fill(outcome.headline(), 78)}")
+    for line in outcome.advice():
+        print(textwrap.fill(line, 78, initial_indent="", subsequent_indent=""))
+    print(rule)
+
+
+def show_gaps(summary: GapSummary, outcome: Outcome) -> None:
+    """What keeps coming up that you do not have. No model was asked."""
+    print("\n" + "=" * 78)
+    print(f"WHAT KEEPS COMING UP THAT YOU DO NOT HAVE  ({summary.judged} judged)")
+    if not summary.groups and not summary.fields:
+        print("  Nothing appeared more than as itself: no requirement recurs.")
+        return
+
+    for position, group in enumerate(summary.groups[:8], 1):
+        example = group.example()
+        required = (
+            f", {group.required_count} as a requirement" if group.required_count else ""
+        )
+        print(
+            f"\n{position:>2}. {group.term}  —  in {group.count} of "
+            f"{summary.judged}{required} · avg fit {group.average_fit:.0f} · "
+            f"weight {group.weight:.1f}"
+        )
+        print(f"      e.g. {shorten(example.title, 60)}:")
+        print(f'      "{shorten(example.quote)}"')
+
+    if summary.fields:
+        print("\n  from the extracted fields, no judge involved:")
+        for one in summary.fields:
+            print(f"    - {one.label}: {one.count} of {one.total} — {one.detail}")
+
+    print(
+        "\n  weight is the sum of each match's fit/100, so a gap in a vacancy you "
+        "\n  nearly fit counts for more than the same gap in one you do not."
+    )
+    if summary.ungrouped:
+        print(
+            f"  {len(summary.ungrouped)} gap(s) named nothing these vacancies list "
+            f"as a skill and\n  could not be grouped "
+            f"({summary.grouped_share:.0%} of {summary.total_gaps} were)."
+        )
+    if summary.already_on_cv:
+        print(
+            f"  {len(summary.already_on_cv)} gap(s) asked for something your CV does "
+            "list, and are left out\n  of the count above: "
+            + ", ".join(sorted({one.requirement for one in summary.already_on_cv})[:3])
+        )
+    if outcome.fit is not Fit.OK:
+        print("\n  " + outcome.headline())
+
+
+def footer(judged, prepared, stamp, summary, failures, cv_settings) -> None:
     tokens_in = sum(one.prompt_tokens for one in judged)
     tokens_out = sum(one.output_tokens for one in judged)
     seconds = sum(one.latency_s for one in judged)
@@ -227,20 +325,17 @@ def footer(judged, prepared, corpus, args, cv_settings, embed_settings) -> None:
         f"{tokens_in} tokens in, {tokens_out} out  |  {format_cost(cost)}  |  "
         f"{seconds:.0f}s of model time"
     )
-    print(f"run: {stamp(prepared, corpus, args, cv_settings, embed_settings)}")
-    print(
-        "Scores compare vacancies inside this run only. Another CV, another day's "
-        "corpus or another prompt version is a different scale."
+    outcome = assess(judged, corpus=stamp.corpus_size, corpus_name=stamp.corpus)
+    record = build_record(
+        stamp, judged, outcome, summary, failures=failures, cost_usd=cost
     )
-
-
-def stamp(prepared, corpus, args, cv_settings, embed_settings) -> str:
-    """What would have to be equal for two runs to be comparable at all."""
-    digest = hashlib.sha256(prepared.text.encode()).hexdigest()[:8]
-    return (
-        f"cv {digest} · {corpus.name} corpus of {len(corpus)} · "
-        f"{embed_settings.model} · {cv_settings.model} · prompt {PROMPT_VERSION} · "
-        f"{datetime.now():%Y-%m-%d %H:%M}"
+    path = save_run(record, RUNS_DIR)
+    print(f"run: {stamp.line()}")
+    print(f"saved: {path.relative_to(ROOT)}  (compare_runs.py reads these)")
+    print(
+        "Scores compare vacancies inside this run only. Another CV, another "
+        "embedder or another prompt version is a different scale, and "
+        "compare_runs.py refuses those rather than subtracting them."
     )
 
 
