@@ -97,6 +97,20 @@ class CVResult(BaseModel):
                 return 1 / position
         return 0.0
 
+    def labelled_share(self, judged: set[str], k: int = 10) -> float:
+        """How much of the top k was ever looked at by whoever labelled this CV.
+
+        The number that says whether these labels still cover the corpus. A
+        vacancy nobody judged scores gain 0 exactly like one judged "would not
+        apply", so an unlabelled top-10 does not read as a warning -- it reads as
+        a worse variant. The labels were pooled over 198 vacancies and the corpus
+        is 279, so this has to be printed next to every score above it.
+        """
+        head = self.ranked[:k]
+        if not head:
+            return 1.0
+        return sum(key in judged for key in head) / len(head)
+
     def ndcg_at(self, k: int = 10) -> float:
         """Graded gain, discounted by position, against the best possible order.
 
