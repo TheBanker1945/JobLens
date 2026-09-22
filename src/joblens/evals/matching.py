@@ -17,10 +17,12 @@ Metrics per CV:
 
 import math
 from dataclasses import dataclass
+from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from joblens.cv.documents import CVStyle, QueryPart
 from joblens.embeddings.client import Vector
@@ -46,6 +48,43 @@ class MatchConfig(RetrievalConfig):
     cv_style: CVStyle = "profile"
 
 
+class Call(StrEnum):
+    """The three answers. The same three the CLI asked for, with a reason now."""
+
+    APPLY = "apply"
+    MAYBE = "maybe"
+    NO = "no"
+
+
+class Decision(BaseModel):
+    """One call by the person the CV belongs to, and **why**.
+
+    The why is the milestone. Until 4.4 a label was a key in one of three lists,
+    which is enough to score a ranking and not enough to improve one: Mahdi
+    disagreed with the judge five times out of ten and nobody -- including him a
+    week later -- could say whether the system or he was wrong, because the
+    disagreement carried no sentence.
+
+    What is stored next to the reason is what the judge had said at that moment.
+    A reason read a month later against a verdict that has since changed is a
+    different sentence, and the eval compares the two directly.
+
+    The reason is written down exactly as it was typed. Nothing summarises it,
+    groups it, or turns a pattern of answers into a rule -- that is the one thing
+    the brief said never to do, and a "rule" nobody stated is a rule nobody can
+    correct.
+    """
+
+    key: str
+    call: Call
+    reason: str
+    at: datetime = Field(default_factory=datetime.now)
+    run: str = ""  # the run that was on screen, so the numbers can be found again
+    verdict: str = ""  # what the judge said about it then
+    fit: int | None = None
+    rank: int | None = None  # where retrieval had put it
+
+
 class CVLabels(BaseModel):
     """What one person judged about one CV against one corpus."""
 
@@ -55,12 +94,38 @@ class CVLabels(BaseModel):
     relevant: list[str] = []  # vacancy keys: would apply
     maybe: list[str] = []  # would consider, would not be annoyed to see
     judged: list[str] = []  # every key that was looked at, including the bad ones
+    # Append-only, newest last: a person changing their mind about a vacancy is
+    # data, not a correction to be overwritten. `decision_for` reads the latest.
+    # The three lists above stay in step so every eval keeps working unchanged.
+    decisions: list[Decision] = []
     note: str = ""
 
     def grade(self, key: str) -> int:
         if key in self.relevant:
             return GAIN["relevant"]
         return GAIN["maybe"] if key in self.maybe else 0
+
+    def record(self, decision: Decision) -> "CVLabels":
+        """Add a call, and keep the three lists it is scored through in step."""
+        if not decision.reason.strip():
+            raise ValueError("a decision needs a reason: that is the whole point")
+        self.decisions.append(decision)
+        self.relevant = [key for key in self.relevant if key != decision.key]
+        self.maybe = [key for key in self.maybe if key != decision.key]
+        if decision.call is Call.APPLY:
+            self.relevant.append(decision.key)
+        elif decision.call is Call.MAYBE:
+            self.maybe.append(decision.key)
+        if decision.key not in self.judged:
+            self.judged.append(decision.key)
+        return self
+
+    def decision_for(self, key: str) -> Decision | None:
+        """The latest thing this person said about this vacancy."""
+        return next((one for one in reversed(self.decisions) if one.key == key), None)
+
+    def reasons(self) -> dict[str, Decision]:
+        return {one.key: one for one in self.decisions}  # later entries win
 
 
 class CVResult(BaseModel):

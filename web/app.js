@@ -6,7 +6,7 @@
    wrote, and a page that pastes it in as markup is one advert away from being a
    different page than the one you read. */
 
-const state = { run: null, bucket: "recommended", filter: "", open: null };
+const state = { run: null, bucket: "recommended", filter: "", open: null, labels: null };
 
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);
@@ -23,8 +23,12 @@ const el = (tag, attrs = {}, ...children) => {
   return node;
 };
 
-const ask = async (path) => {
-  const answer = await fetch(path);
+const ask = async (path, body) => {
+  const answer = await fetch(path, body ? {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  } : undefined);
   const payload = await answer.json();
   if (!answer.ok) throw new Error(payload.error || answer.statusText);
   return payload;
@@ -52,10 +56,16 @@ async function loadRuns() {
 }
 
 async function loadRun(id) {
-  state.run = await ask(`/api/runs/${encodeURIComponent(id)}`);
+  const run = encodeURIComponent(id);
+  [state.run, state.labels] = await Promise.all([
+    ask(`/api/runs/${run}`),
+    ask(`/api/runs/${run}/labels`),
+  ]);
   state.open = null;
   renderRun();
 }
+
+const myCall = (key) => (state.labels && state.labels.decisions[key]) || null;
 
 function renderRun() {
   const run = state.run;
@@ -97,6 +107,17 @@ function renderRun() {
 
   renderGaps();
   renderRows();
+  renderLabelCount();
+}
+
+function renderLabelCount() {
+  const counts = state.labels ? state.labels.counts : {};
+  const node = document.getElementById("label-count");
+  const reasons = counts.with_a_reason || 0;
+  node.replaceChildren(
+    `${reasons} vacanc${reasons === 1 ? "y" : "ies"} marked with a reason` +
+    (state.labels && state.labels.judged_by ? ` · judged by ${state.labels.judged_by}` : "")
+  );
 }
 
 function renderRows() {
@@ -126,7 +147,9 @@ function renderRow(row) {
       row.judged ? el("span", { class: `badge ${row.verdict}` }, `${row.verdict} ${row.fit}`)
                  : el("span", { class: "badge weak" }, row.score.toFixed(3)),
       el("span", { class: "title" }, row.title),
-      el("span", { class: "where" }, where(row))
+      el("span", { class: "where" }, where(row)),
+      myCall(row.key) ? el("span", { class: `badge mine ${myCall(row.key).call}` },
+        `you: ${myCall(row.key).call}`) : null
     ),
     row.judged ? el("div", { class: "where" }, row.summary) : null
   );
@@ -158,12 +181,53 @@ function renderDetail(row) {
   if (row.url && row.url.startsWith("http")) {
     detail.append(el("p", {}, el("a", { href: row.url, target: "_blank", rel: "noreferrer" }, row.url)));
   }
+  detail.append(renderMarking(row));
   const body = el("div", {}, el("p", { class: "empty" }, "loading the vacancy…"));
   detail.append(body);
   ask(`/api/vacancy?key=${encodeURIComponent(row.key)}&run=${encodeURIComponent(state.run.id)}`)
     .then((found) => body.replaceChildren(renderVacancy(found)))
     .catch((err) => body.replaceChildren(el("p", { class: "empty" }, `could not load it: ${err.message}`)));
   return detail;
+}
+
+/* Marking. A call needs a reason, and the reason is stored exactly as typed:
+   nothing here summarises it or turns a run of answers into a rule. */
+function renderMarking(row) {
+  const mine = myCall(row.key);
+  const reason = el("input", {
+    type: "text", class: "reason", value: mine ? mine.reason : "",
+    placeholder: "why? one line — e.g. 'they ask 4 years, I would apply anyway'",
+  });
+  const status = el("span", { class: "where" },
+    mine ? `you said ${mine.call} on ${mine.at.slice(0, 10)}` : "");
+
+  const mark = async (call) => {
+    if (!reason.value.trim()) {
+      status.textContent = "a reason is required — that is the point of this";
+      reason.focus();
+      return;
+    }
+    status.textContent = "saving…";
+    try {
+      state.labels = await ask(`/api/runs/${encodeURIComponent(state.run.id)}/labels`,
+        { key: row.key, call, reason: reason.value });
+      renderLabelCount();
+      renderRows();  // the row now carries "you: apply" next to the judge's badge
+    } catch (err) {
+      status.textContent = err.message;
+    }
+  };
+
+  return el("div", { class: "marking" },
+    el("h4", {}, row.judged
+      ? `the judge said ${row.verdict} ${row.fit}. what do you say?`
+      : "nobody read this one. what do you say?"),
+    el("div", { class: "marking-line" },
+      reason,
+      el("button", { class: "call apply", onclick: () => mark("apply") }, "would apply"),
+      el("button", { class: "call maybe", onclick: () => mark("maybe") }, "might"),
+      el("button", { class: "call no", onclick: () => mark("no") }, "no")),
+    status);
 }
 
 function renderVacancy(found) {

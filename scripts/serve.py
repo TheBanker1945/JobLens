@@ -3,14 +3,18 @@
     uv run python scripts/serve.py
     uv run python scripts/serve.py --port 8080 --corpus samples
 
-Read-only. It shows what a run recommended, what it read and turned down, and
+It shows what a run recommended, what it read and turned down, and
 what it never showed anybody -- the third of those being the rejection that was
 invisible until 4.1 stored the whole ranking. The vacancy text and the extracted
 fields are one click away, because a rejection is checked against the advert and
 not against a summary of it.
 
+Marking a vacancy writes to the labels the evals already read, and a mark needs a
+one-line reason -- a disagreement without one is what made the first set of
+labels unusable. Pass --judged-by so the file can say whose opinion it holds.
+
 Nothing here judges or fetches anything: matching is still scripts/match_cv.py,
-and scraping still happens on a schedule. This reads what is already on disk.
+and scraping still happens on a schedule. No model is ever called from a page.
 """
 
 import argparse
@@ -31,6 +35,12 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--corpus", choices=NAMES, default="raw")
     parser.add_argument("--open", action="store_true", help="open a browser too")
+    parser.add_argument(
+        "--judged-by",
+        default="",
+        help="your name, if you are going to mark vacancies. A labels file that "
+        "cannot say whose judgement it holds is worth nothing as evidence",
+    )
     args = parser.parse_args()
 
     corpus = load_corpus(args.corpus)
@@ -40,7 +50,7 @@ def main() -> int:
     if not runs:
         print("No runs stored yet. scripts/match_cv.py writes one each time it judges.")
 
-    server = serve(Viewer(store, corpus, WEB), args.port)
+    server = serve(Viewer(store, corpus, WEB, args.judged_by), args.port)
     address = f"http://127.0.0.1:{args.port}/"
     print(f"serving {address}  (ctrl-c to stop)")
     if args.open:

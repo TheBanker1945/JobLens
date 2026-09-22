@@ -76,13 +76,22 @@ class Viewer:
     to replace. `--corpus` is chosen once, when the server starts.
     """
 
-    def __init__(self, store: Store, corpus: Corpus, web_root: Path):
+    def __init__(
+        self, store: Store, corpus: Corpus, web_root: Path, judged_by: str = ""
+    ):
         self.store = store
         self.corpus = corpus
         self.web_root = web_root
+        # Whose opinion anything written from this page is. A labels file that
+        # cannot say whose judgement it holds is worth nothing as evidence, so
+        # the name comes from the command line and never from the browser.
+        self.judged_by = judged_by
+        labels = re.compile(r"^/api/runs/(?P<run_id>[^/]+)/labels$")
         self.routes: list[Route] = [
             ("GET", re.compile(r"^/api/runs$"), self.runs),
             ("GET", re.compile(r"^/api/runs/(?P<run_id>[^/]+)$"), self.run),
+            ("GET", labels, self.labels),
+            ("POST", labels, self.label),
             ("GET", re.compile(r"^/api/vacancy$"), self.vacancy),
             ("GET", re.compile(r"^/api/corpus$"), self.browse),
         ]
@@ -94,6 +103,13 @@ class Viewer:
 
     def run(self, request: Request, run_id: str) -> dict:
         return api.run_view(self.store, self.corpus, unquote(run_id))
+
+    def labels(self, request: Request, run_id: str) -> dict:
+        return api.labels_view(self.store, unquote(run_id))
+
+    def label(self, request: Request, run_id: str) -> dict:
+        body = request.json() | {"judged_by": self.judged_by}
+        return api.record_decision(self.store, self.corpus, unquote(run_id), body)
 
     def vacancy(self, request: Request) -> dict:
         key = request.get("key")
@@ -111,13 +127,22 @@ class Viewer:
     # -- the two things a route can be -------------------------------------
 
     def handle(self, method: str, path: str, query: dict, body: bytes) -> dict:
-        """Find the route or raise. KeyError is a 404, ValueError a 400."""
+        """Find the route or raise. KeyError is a 404, ValueError a 400.
+
+        Every route whose pattern matches is considered before giving up on the
+        method: one path answers both a GET and a POST (labels), and a table
+        that stopped at the first pattern would refuse the second one.
+        """
+        matched = False
         for route_method, pattern, handler in self.routes:
             found = pattern.match(path)
-            if found and route_method == method:
+            if not found:
+                continue
+            matched = True
+            if route_method == method:
                 return handler(Request(path, query, body), **found.groupdict())
-            if found:
-                raise PermissionError(f"{path} does not answer {method}")
+        if matched:
+            raise PermissionError(f"{path} does not answer {method}")
         raise KeyError(f"no route for {path}")
 
     def static(self, path: str) -> tuple[bytes, str]:
