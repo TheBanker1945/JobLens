@@ -51,7 +51,10 @@ max_age_days = 7
 enabled = true
 country = "netherlands"
 distance_km = 25
-hours_old = 72
+# A week rather than three days: the searches below are narrow (junior developer
+# roles in one corner of the Randstad) and a 72-hour window returns single
+# figures for them. Widen it back if a run starts costing too much to index.
+hours_old = 168
 results_per_search = 50
 
 # One search is one request that brings back up to 100 jobs with their
@@ -68,6 +71,40 @@ city = "Eindhoven"
 [[indeed.searches]]
 term = "beleidsmedewerker"
 city = "Den Haag"
+
+# Junior developer roles around Den Haag / Rotterdam / Leiden. Added 2026-09-22
+# because the corpus held almost no junior dev work, so matching a junior
+# full-stack CV against it could only ever answer "nothing here fits" -- a true
+# answer that measures nothing. The searches above stay: the labelled queries and
+# CV labels from 3.1-3.5 refer to what they brought in.
+# Broad terms on purpose: "junior software developer" returned zero listings
+# where "software developer" returns plenty. Indeed matches a long phrase
+# literally, and seniority is better filtered by reading the vacancy than by
+# hoping the board agrees with the word.
+[[indeed.searches]]
+term = "software developer"
+city = "Rotterdam"
+[[indeed.searches]]
+term = "frontend developer"
+city = "Den Haag"
+[[indeed.searches]]
+term = "webdeveloper"
+city = "Den Haag"
+[[indeed.searches]]
+term = "full stack developer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "python developer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "javascript developer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "react developer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "software engineer"
+city = "Utrecht"
 
 # Off by default, on purpose. LinkedIn's guest endpoints are the throttle-prone
 # half of scraping and its terms do not invite it, so switching this on is a
