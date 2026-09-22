@@ -60,6 +60,44 @@ class FakeClient:
         )
 
 
+# A CV damaged the way a real one was in 3.6.1: the PDF's own font maps some
+# characters into the private use area, so the file does not contain what it
+# displays. The glyphs here are the ones that CV really produced --
+# \ue071-\ue077 were the digits 0-6, \ue081 and \ue082 brackets, \ue089 a
+# dash, \ue09d the "+" of a phone number -- on invented content. The real CV is
+# not in this repository and never will be, and it does not need to be: the
+# damage is what has to be reproduced, not the person.
+DAMAGED_CV = (
+    "Jan Bakker\n"
+    "Backend developer · AI & data\n"
+    "Utrecht, NL · \ue09d31 6 18295250 · jan.bakker@example.com\n"
+    "\n"
+    "PROFIEL\n"
+    "Backend developer \ue081MBO 4 Software Developer, 2026) met ervaring in "
+    "Python,\n"
+    "Node.js en PostgreSQL. Beschikbaar per direct, 32\ue08940 uur per week.\n"
+    "\n"
+    "WERKERVARING\n"
+    "Backend Developer Dec \ue073\ue071\ue073\ue075 \ue089 Sep "
+    "\ue073\ue071\ue073\ue077\n"
+    "Van Dijk Software · Utrecht\n"
+    "Bouwde REST APIs in Node.js en beheerde de database van het klantportaal.\n"
+    "\n"
+    "Stagiair Backend Feb \ue073\ue071\ue073\ue076 \ue089 Jun "
+    "\ue073\ue071\ue073\ue076\n"
+    "Blauwdruk · Amersfoort\n"
+    "Werkte aan een dashboard met Python en schreef tests voor de API.\n"
+    "\n"
+    "OPLEIDING\n"
+    "MBO Niveau 4 Software Developer, diploma behaald in 2026\n"
+    "ROC Midden Nederland, Utrecht\n"
+    "\n"
+    "VAARDIGHEDEN\n"
+    "Databases Supabase \ue081PostgreSQL\ue082, MongoDB, SQLite\n"
+    "Talen Nederlands, Engels\n"
+)
+
+
 def scanned_pdf() -> bytes:
     """A PDF with a page and no text layer: what a scan looks like to a reader."""
     return build_pdf([[""]])
