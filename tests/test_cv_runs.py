@@ -13,16 +13,9 @@ from joblens.cv.documents import QueryPart
 from joblens.cv.judge import Judged, MatchJudgement
 from joblens.cv.match import CVMatch
 from joblens.cv.outcome import assess
-from joblens.cv.runs import (
-    RunStamp,
-    build_record,
-    compare,
-    corpus_digest,
-    list_runs,
-    load_run,
-    save_run,
-)
+from joblens.cv.runs import RunStamp, build_record, compare, corpus_digest
 from joblens.sources.base import Vacancy
+from joblens.storage import FileStore
 
 
 def vacancy(number: int, title: str = "Data Engineer") -> Vacancy:
@@ -129,10 +122,13 @@ def test_the_same_size_with_different_contents_is_still_noticed():
 
 
 def test_a_run_survives_a_round_trip_to_disk(tmp_path):
+    store = FileStore(tmp_path)
     original = record([judged(1, "strong", 80), judged(2, "weak", 20)])
-    path = save_run(original, tmp_path)
-    assert list_runs(tmp_path) == [path]
-    assert load_run(path) == original
+
+    run_id = store.save_run(original)
+
+    assert [one.id for one in store.runs()] == [run_id]
+    assert store.load_run(run_id) == original
 
 
 def match(number: int, score: float) -> CVMatch:
@@ -210,12 +206,14 @@ def test_a_run_stored_before_4_1_still_loads(tmp_path):
     They are the only "before" this milestone has, so they have to keep opening:
     a stored artifact that a later version cannot read is not an artifact.
     """
+    store = FileStore(tmp_path)
     old = record([judged(1, "strong", 80)]).model_dump(mode="json")
     del old["ranking"], old["funnel"]
-    path = tmp_path / "2026-09-22_1443_mahdi.json"
+    path = store.runs_dir / "2026-09-22_1443_mahdi.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(old), encoding="utf-8")
 
-    loaded = load_run(path)
+    loaded = store.load_run("2026-09-22_1443_mahdi")
 
     assert loaded.ranking == []
     assert loaded.funnel.loaded == 0

@@ -31,20 +31,14 @@ from joblens.corpus import Corpus, load_corpus
 from joblens.cv.match import PreparedCV, prepare_cv, queries_for
 from joblens.cv.store import CVCache
 from joblens.embeddings.documents import build_document
-from joblens.evals.matching import (
-    CVLabels,
-    MatchConfig,
-    load_labels,
-    rank_vacancies,
-    save_labels,
-)
+from joblens.evals.matching import CVLabels, MatchConfig, rank_vacancies
 from joblens.evals.retrieval import EmbedderPool
 from joblens.llm.client import LLMClient
 from joblens.sources.base import Vacancy
+from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
 SAMPLE_CVS = ROOT / "data" / "samples" / "cvs"
-LABELS_DIR = ROOT / "evals" / "cv-matches"
 CACHE_DIR = ROOT / "data" / "cache"
 CONFIG = ROOT / "evals" / "cv-matching.toml"
 
@@ -81,7 +75,8 @@ def main() -> int:
     corpus = load_corpus(args.corpus).extracted()
     configs = [MatchConfig.model_validate(c) for c in _runs(args.config)]
     settings = load_llm_settings(prefix="CV")
-    existing = {labels.cv: labels for labels in load_labels(LABELS_DIR)}
+    store = FileStore(ROOT)
+    existing = {labels.cv: labels for labels in store.labels()}
     cache = CVCache(CACHE_DIR / "cv-profiles.json")
     print(f"corpus {corpus.name}: {len(corpus)} vacancies, {len(configs)} variants")
 
@@ -114,10 +109,10 @@ def main() -> int:
                 )
                 labels.judged_by = args.judged_by
                 if judge(prepared, corpus, candidates, labels) == "quit":
-                    save_labels(LABELS_DIR, labels)
+                    store.save_labels(labels)
                     print("saved; stopping.")
                     return 0
-                print(f"saved: {save_labels(LABELS_DIR, labels).relative_to(ROOT)}")
+                print(f"saved: {store.save_labels(labels)}")
     except (httpx.ConnectError, openai.APIConnectionError) as err:
         print(f"Cannot reach a server: {err}")
         return 1

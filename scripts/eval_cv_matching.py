@@ -37,16 +37,15 @@ from joblens.evals.matching import (
     CVResult,
     MatchConfig,
     MatchRun,
-    load_labels,
     overlap,
     rank_vacancies,
 )
 from joblens.evals.retrieval import EmbedderPool
 from joblens.llm.client import LLMClient
+from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
 SAMPLE_CVS = ROOT / "data" / "samples" / "cvs"
-LABELS_DIR = ROOT / "evals" / "cv-matches"
 CACHE_DIR = ROOT / "data" / "cache"
 RESULTS_DIR = ROOT / "evals" / "results"
 
@@ -69,10 +68,10 @@ def main() -> int:
     args = parser.parse_args()
 
     load_dotenv()
-    labels = load_labels(LABELS_DIR)
+    labels = FileStore(ROOT).labels()
     if not labels:
         print(
-            f"No judged CVs in {LABELS_DIR.relative_to(ROOT)} yet.\n"
+            "No judged CVs in evals/cv-matches or data/raw/cv-labels yet.\n"
             "Judge some first: uv run python scripts/label_cv_matches.py"
         )
         return 1

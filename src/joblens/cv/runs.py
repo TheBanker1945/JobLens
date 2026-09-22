@@ -24,14 +24,14 @@ vacancies entered and left the shortlist, and the verdicts compared over the one
 present in both. The honest thing is to compare and say what moved underneath, not
 to stay silent.
 
-The file itself holds a CV and real vacancy text, so it is written under
-`data/raw/`, which git ignores.
+Reading and writing one of these is not here: since 4.2 every store of a run, a
+label or a preference goes through `joblens.storage`, so that a run is addressed
+by an id rather than by a path and a hosted version has one thing to replace.
+This module is the shape of a run and the rule about comparing two.
 """
 
 import hashlib
-import json
 from datetime import datetime
-from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -259,26 +259,6 @@ def build_record(
         cost_usd=cost_usd,
         seconds=sum(one.latency_s for one in judged),
     )
-
-
-def save_run(record: RunRecord, directory: Path) -> Path:
-    """Written under data/raw/: it holds a CV and real vacancy text."""
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{record.stamp.at:%Y-%m-%d_%H%M}_{record.stamp.cv_name}.json"
-    path.write_text(
-        json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    return path
-
-
-def load_run(path: Path) -> RunRecord:
-    return RunRecord.model_validate_json(path.read_text(encoding="utf-8"))
-
-
-def list_runs(directory: Path) -> list[Path]:
-    """Newest last, by the timestamp in the name."""
-    return sorted(directory.glob("*.json"))
 
 
 class VerdictChange(BaseModel):

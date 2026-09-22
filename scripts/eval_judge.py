@@ -56,14 +56,14 @@ from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
 from joblens.embeddings.store import CachedEmbedder
-from joblens.evals.matching import CVLabels, load_labels
+from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd, format_cost
 from joblens.llm.structured import default_mode
+from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
 SAMPLE_CVS = ROOT / "data" / "samples" / "cvs"
-LABELS_DIR = ROOT / "evals" / "cv-matches"
 CACHE_DIR = ROOT / "data" / "cache"
 
 LABEL_NAMES = {2: "would apply", 1: "might", 0: "would not"}
@@ -88,10 +88,10 @@ def main() -> int:
 
     load_dotenv()
     labels = [
-        one for one in load_labels(LABELS_DIR) if not args.cv or args.cv in one.cv
+        one for one in FileStore(ROOT).labels() if not args.cv or args.cv in one.cv
     ]
     if not labels:
-        print(f"No judged CVs in {LABELS_DIR.relative_to(ROOT)}.")
+        print("No judged CVs in evals/cv-matches or data/raw/cv-labels.")
         return 1
 
     corpus = load_corpus(args.corpus).extracted()

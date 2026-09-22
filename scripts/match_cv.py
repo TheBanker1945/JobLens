@@ -16,7 +16,7 @@ Then two things about the run as a whole, both free: whether anything here fits
 you at all (cv/outcome.py, counted off the verdicts because 3.5 measured that the
 cosine cannot tell), and what keeps coming up that you do not have (cv/gaps.py,
 counted off the gap lists and the extracted skills, with no extra model call).
-The run is stored under data/raw/cv-runs/ so scripts/compare_runs.py can put two
+The run is stored through joblens.storage so scripts/compare_runs.py can put two
 of them side by side, or refuse to.
 
 Costs about 0.35 cent and a couple of seconds per vacancy judged. --no-explain
@@ -40,13 +40,7 @@ from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
 from joblens.cv.match import prepare_cv, queries_for, rank_with_cv
 from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
-from joblens.cv.runs import (
-    RunStamp,
-    build_record,
-    corpus_digest,
-    digest,
-    save_run,
-)
+from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
@@ -54,12 +48,10 @@ from joblens.embeddings.store import CachedEmbedder
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd, format_cost
 from joblens.llm.structured import StructuredError, default_mode
+from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
 CACHE_DIR = ROOT / "data" / "cache"
-# A run holds the CV and the text of real vacancies, so it is written where git
-# is told never to look.
-RUNS_DIR = ROOT / "data" / "raw" / "cv-runs"
 
 BADGE = {
     Verdict.STRONG: "STRONG  ",
@@ -378,10 +370,17 @@ def footer(
         failures=failures,
         cost_usd=cost,
     )
-    path = save_run(record, RUNS_DIR)
+    # Every write of a run goes through the store (4.2), which also decides
+    # that two runs in the same minute are two runs and not one overwritten.
+    store = FileStore(ROOT)
+    run_id = store.save_run(record)
     show_boundary(record)
     print(f"run: {stamp.line()}")
-    print(f"saved: {path.relative_to(ROOT)}  (compare_runs.py reads these)")
+    print(
+        f"saved as {run_id}\n"
+        f"  {store.path_of(run_id).relative_to(ROOT)}  "
+        f"(compare_runs.py and serve.py read these)"
+    )
     print(
         "Scores compare vacancies inside this run only. Another CV, another "
         "embedder or another prompt version is a different scale, and "

@@ -1484,3 +1484,53 @@ to a public repository. `.gitignore` now allowlists the four invented CVs' label
 files and ignores the rest, so the next real CV is ignored by default. Being
 wrong in that direction costs a `git add -f`; being wrong in the other direction
 cannot be undone.
+
+## 4.2 — One way in and out, before there is anything to put in a database
+
+Phase 3's second step, and the least visible: nothing new happens, but every read
+and write of a run, a label or a preference now goes through `joblens.storage`
+instead of through a `Path` that each script built for itself. Five scripts had
+their own copy of `ROOT / "evals" / "cv-matches"`.
+
+**A run is an id, not a path.** `compare_runs.py 2026-09-22_1442_mahdi
+2026-09-22_1555_mahdi` rather than two filenames. That is the single change that
+makes the swap cheap later: an id is what a document store takes, and nothing
+above the seam knows whether it names a file, a row or a Firestore document.
+`FileStore._run_path` refuses anything with a slash or a leading dot in it,
+because the web server in 4.3 will eventually be handed `../../.env` by
+somebody.
+
+**No database, and the reason is not "too early".** The queries this app actually
+asks are "show me that run" and "show me every label" — no joins, no aggregate,
+no concurrent writers. A file per run is diffable and greppable, and a run is a
+document rather than a row. What a database would buy is listing without opening
+every file, and that is why `runs()` returns a `RunSummary` and not a
+`RunRecord`: the interface is already shaped for the version that answers it from
+an index. A store earns its place at a second user or a server that cannot share
+a filesystem, and by then 4.5 will have written a preferences schema from real
+reasons instead of a guess.
+
+**No `owner` parameter either.** With one person it would be the same string at
+every call site, and an unused field is a lie about what the code does. A second
+person is a directory level inside `FileStore`, or a collection in a Firestore
+store: the implementation changes and no caller does, which is what a seam is
+for.
+
+**Labels are two things and now live in two places.** The four invented CVs'
+labels are the repo's public evidence — clone it, run the eval, get the same
+numbers. A real person's labels say which real jobs that person would apply to,
+which is personal data. Reading merges both directories; writing follows the file
+that already exists, so **a CV nobody has labelled is private by default**.
+`mohammed.json` moved to `data/raw/cv-labels/` in this milestone, which is where
+the 4.1 `.gitignore` guard was only a second line of defence.
+
+**One bug fixed on the way.** The old `save_run` named a file after the minute it
+ran, so two runs in the same minute silently became one — and there are already
+two files a minute apart in `data/raw/cv-runs/`. A viewer that can start a run
+makes the collision likely rather than theoretical, so the store appends `-2`
+instead. Losing the earlier run means losing the "before" of whatever the second
+one was testing.
+
+Eleven new tests, and the four that matter are: an id is not a path, a missing
+run raises rather than returning an empty record, a new CV's labels are private,
+and a committed CV's labels stay committed.
