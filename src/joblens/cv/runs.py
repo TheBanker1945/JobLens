@@ -1,0 +1,283 @@
+"""A run, stored, so that two of them can be compared -- or honestly refused.
+
+3.6 ended every report with a line of provenance:
+
+    run: cv 9f1c2b84 · raw corpus of 279 · gemini-embedding-2 · gemini-3.8-flash
+         · prompt 3.6 · 2026-09-22 14:30
+
+It said what would have to be equal for two runs to mean the same thing, and then
+threw it away with the terminal scrollback. Here it becomes a file, next to what
+the run actually concluded, and the comparability rule becomes code.
+
+**What the rule divides on.** Five things set the scale a verdict is measured in:
+which CV was read, which model judged it, which prompt version it judged under,
+which embedder chose the shortlist, and which corpus (samples or raw) it was
+chosen from. If any of those differ, two numbers are not two measurements of the
+same thing and `compare` refuses, naming which one moved.
+
+**The contents of the corpus are deliberately not on that list.** They change
+most days `daily_update.sh` runs -- 202 vacancies in 3.1, 279 today -- and making
+that a blocker would refuse nearly every real pair of runs, including the one
+question worth asking: is anything new better than last week's best? So a changed
+corpus is reported rather than refused: how the size and the digest moved, which
+vacancies entered and left the shortlist, and the verdicts compared over the ones
+present in both. The honest thing is to compare and say what moved underneath, not
+to stay silent.
+
+The file itself holds a CV and real vacancy text, so it is written under
+`data/raw/`, which git ignores.
+"""
+
+import hashlib
+import json
+from datetime import datetime
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+from joblens.cv.gaps import GapSummary
+from joblens.cv.judge import Judged, Verdict
+from joblens.cv.outcome import Fit, Outcome
+from joblens.sources.base import Vacancy
+
+# Everything that has to be equal before two runs are two measurements of one
+# thing. Named here rather than spelled out in `compare`, so the rule is a list
+# you can read and not an `if` you have to reconstruct.
+SCALE_FIELDS: dict[str, str] = {
+    "cv_digest": "a different CV was read",
+    "corpus": "a different corpus",
+    "embed_model": "a different embedding model chose the shortlist",
+    "judge_model": "a different model judged it",
+    "prompt_version": "a different judge prompt",
+    "cv_style": "the CV asked the index a different way",
+}
+
+
+class RunStamp(BaseModel):
+    """Provenance. Two runs are comparable only if all of `SCALE_FIELDS` match."""
+
+    cv_name: str
+    cv_digest: str  # of the redacted text: the only version that left the machine
+    corpus: str
+    corpus_size: int
+    corpus_digest: str  # of the sorted vacancy keys: "the corpus changed", checkable
+    embed_model: str
+    judge_model: str
+    cv_style: str
+    prompt_version: str
+    top: int
+    at: datetime = Field(default_factory=datetime.now)
+
+    def line(self) -> str:
+        """The one-line form 3.6 printed, unchanged, so the report still reads."""
+        return (
+            f"cv {self.cv_digest} · {self.corpus} corpus of {self.corpus_size} "
+            f"({self.corpus_digest}) · {self.embed_model} · {self.judge_model} · "
+            f"prompt {self.prompt_version} · {self.at:%Y-%m-%d %H:%M}"
+        )
+
+
+class GapRow(BaseModel):
+    requirement: str
+    quote: str
+    required: bool
+
+
+class JudgedRow(BaseModel):
+    key: str
+    title: str
+    company: str | None = None
+    city: str | None = None
+    url: str = ""
+    score: float  # the retrieval cosine: what put it on the shortlist
+    verdict: Verdict
+    fit: int
+    summary: str
+    gaps: list[GapRow] = []
+    evidence: int = 0  # how many claims survived the quote check
+    dropped: int = 0
+
+
+class GroupRow(BaseModel):
+    term: str
+    count: int
+    required_count: int
+    weight: float
+
+
+class RunRecord(BaseModel):
+    """One `match_cv.py` run: what it was, what it found, what it cost."""
+
+    stamp: RunStamp
+    outcome: Fit
+    rows: list[JudgedRow]
+    groups: list[GroupRow] = []
+    ungrouped: int = 0
+    already_on_cv: int = 0
+    failures: list[str] = []
+    prompt_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float | None = None
+    seconds: float = 0.0
+
+    def by_key(self) -> dict[str, JudgedRow]:
+        return {row.key: row for row in self.rows}
+
+
+def digest(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:8]
+
+
+def corpus_digest(vacancies: list[Vacancy]) -> str:
+    """A fingerprint of which vacancies were in the pool, not how many.
+
+    Two fetches can both land on 279 and not be the same 279, and "the corpus
+    changed" is exactly the sort of thing a size alone lets you miss.
+    """
+    return digest("\n".join(sorted(vacancy.key for vacancy in vacancies)))
+
+
+def build_record(
+    stamp: RunStamp,
+    judged: list[Judged],
+    outcome: Outcome,
+    summary: GapSummary | None = None,
+    *,
+    failures: list[str] | None = None,
+    cost_usd: float | None = None,
+) -> RunRecord:
+    rows = [
+        JudgedRow(
+            key=one.match.vacancy.key,
+            title=one.match.vacancy.title,
+            company=one.match.vacancy.company,
+            city=one.match.vacancy.city,
+            url=one.match.vacancy.url,
+            score=one.match.score,
+            verdict=one.judgement.verdict,
+            fit=one.judgement.fit,
+            summary=one.judgement.summary,
+            gaps=[
+                GapRow(
+                    requirement=gap.requirement,
+                    quote=gap.vacancy_quote,
+                    required=gap.required,
+                )
+                for gap in one.judgement.gaps
+            ],
+            evidence=len(one.judgement.evidence),
+            dropped=len(one.dropped),
+        )
+        for one in judged
+    ]
+    return RunRecord(
+        stamp=stamp,
+        outcome=outcome.fit,
+        rows=rows,
+        groups=[
+            GroupRow(
+                term=group.term,
+                count=group.count,
+                required_count=group.required_count,
+                weight=round(group.weight, 2),
+            )
+            for group in (summary.groups if summary else [])
+        ],
+        ungrouped=len(summary.ungrouped) if summary else 0,
+        already_on_cv=len(summary.already_on_cv) if summary else 0,
+        failures=failures or [],
+        prompt_tokens=sum(one.prompt_tokens for one in judged),
+        output_tokens=sum(one.output_tokens for one in judged),
+        cost_usd=cost_usd,
+        seconds=sum(one.latency_s for one in judged),
+    )
+
+
+def save_run(record: RunRecord, directory: Path) -> Path:
+    """Written under data/raw/: it holds a CV and real vacancy text."""
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{record.stamp.at:%Y-%m-%d_%H%M}_{record.stamp.cv_name}.json"
+    path.write_text(
+        json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_run(path: Path) -> RunRecord:
+    return RunRecord.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def list_runs(directory: Path) -> list[Path]:
+    """Newest last, by the timestamp in the name."""
+    return sorted(directory.glob("*.json"))
+
+
+class VerdictChange(BaseModel):
+    key: str
+    title: str
+    before: Verdict
+    after: Verdict
+    fit_before: int
+    fit_after: int
+
+
+class Comparison(BaseModel):
+    """Whether two runs can be compared, and what moved if they can."""
+
+    blockers: list[str] = []  # why these two are not measurements of one thing
+    notes: list[str] = []  # what changed underneath but does not block
+    entered: list[JudgedRow] = []  # on the newer shortlist and not the older
+    left: list[JudgedRow] = []  # the other way round
+    changed: list[VerdictChange] = []
+    unchanged: int = 0
+
+    @property
+    def comparable(self) -> bool:
+        return not self.blockers
+
+
+def compare(before: RunRecord, after: RunRecord) -> Comparison:
+    """Two runs, oldest first. Refuses on scale, reports on content."""
+    blockers = [
+        f"{reason}: {getattr(before.stamp, name)} -> {getattr(after.stamp, name)}"
+        for name, reason in SCALE_FIELDS.items()
+        if getattr(before.stamp, name) != getattr(after.stamp, name)
+    ]
+    notes = []
+    if before.stamp.corpus_digest != after.stamp.corpus_digest:
+        notes.append(
+            f"the corpus is not the same set of vacancies: "
+            f"{before.stamp.corpus_size} ({before.stamp.corpus_digest}) -> "
+            f"{after.stamp.corpus_size} ({after.stamp.corpus_digest})"
+        )
+    if before.stamp.top != after.stamp.top:
+        notes.append(
+            f"a different shortlist size: --top {before.stamp.top} -> "
+            f"{after.stamp.top}, so a vacancy can leave the list without "
+            f"anything about it changing"
+        )
+    if blockers:
+        return Comparison(blockers=blockers, notes=notes)
+
+    old, new = before.by_key(), after.by_key()
+    changed = [
+        VerdictChange(
+            key=key,
+            title=new[key].title,
+            before=old[key].verdict,
+            after=new[key].verdict,
+            fit_before=old[key].fit,
+            fit_after=new[key].fit,
+        )
+        for key in old.keys() & new.keys()
+        if old[key].verdict != new[key].verdict or old[key].fit != new[key].fit
+    ]
+    return Comparison(
+        blockers=[],
+        notes=notes,
+        entered=[new[key] for key in new.keys() - old.keys()],
+        left=[old[key] for key in old.keys() - new.keys()],
+        changed=sorted(changed, key=lambda c: -abs(c.fit_after - c.fit_before)),
+        unchanged=len(old.keys() & new.keys()) - len(changed),
+    )
