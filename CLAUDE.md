@@ -46,6 +46,13 @@ conceptually, not just have working code.
   model qwen3:8b. Keep it working and in the eval.
 - Reasoning/"thinking" must be switchable per model, via verified profiles in
   src/joblens/llm/providers.py. Use exact model IDs, never "-latest" aliases.
+- Runs, labels and preferences are read and written only through
+  src/joblens/storage/ (file-backed today). A run is addressed by an id, never by
+  a path. Labels for a real CV live in data/raw/cv-labels/ and are private by
+  default; only the four invented CVs' labels are committed, as evidence.
+- A mark in the viewer requires a reason and is stored verbatim with what the
+  judge said at the time. Never infer a rule from a pattern of answers and write
+  it down as if the user had stated it.
 - Personal data (CVs) may go to cloud models when that makes the app measurably
   better (Mahdi's decision, 2026-09-21). Local-only is no longer the rule; being
   over-cautious at the cost of quality is not wanted. Conditions: the choice stays

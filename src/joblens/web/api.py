@@ -22,6 +22,7 @@ from joblens.corpus import Corpus
 from joblens.cv.judge import Verdict
 from joblens.cv.outcome import Fit, Outcome
 from joblens.cv.runs import JudgedRow, RankedRow, RunRecord
+from joblens.evals.matching import Call, CVLabels, Decision
 from joblens.extraction.schema import VacancyDetails
 from joblens.sources.base import Vacancy
 from joblens.storage import Store
@@ -79,6 +80,87 @@ def run_view(store: Store, corpus: Corpus, run_id: str) -> dict:
             "groups": [group.model_dump(mode="json") for group in record.groups],
             "ungrouped": record.ungrouped,
             "already_on_cv": record.already_on_cv,
+        },
+    }
+
+
+def labels_view(store: Store, run_id: str) -> dict:
+    """What this person has already said about the vacancies in this run."""
+    record = store.load_run(run_id)
+    labels = store.load_labels(record.stamp.cv_name)
+    return _labels_payload(record.stamp.cv_name, labels)
+
+
+def record_decision(store: Store, corpus: Corpus, run_id: str, body: dict) -> dict:
+    """Mark a vacancy, with a reason, against the run that is on screen.
+
+    The reason is required and stored verbatim. Everything else -- which CV this
+    is, what the judge had said, where retrieval had put it -- is read off the
+    run rather than posted, so a decision cannot claim to be about a state that
+    was never on screen.
+    """
+    record = store.load_run(run_id)
+    cv = record.stamp.cv_name
+    key = str(body.get("key") or "").strip()
+    reason = str(body.get("reason") or "").strip()
+    if not key:
+        raise ValueError("which vacancy? pass a key")
+    if key not in corpus.by_key():
+        raise ValueError(f"no vacancy {key!r} in the {corpus.name} corpus")
+    if not reason:
+        raise ValueError(
+            "a reason is required. 'weak but I would apply' is not a label until "
+            "it says why -- that is what 4.4 exists to fix"
+        )
+    try:
+        call = Call(str(body.get("call")))
+    except ValueError as err:
+        raise ValueError(
+            f"call must be one of {', '.join(one.value for one in Call)}"
+        ) from err
+
+    labels = store.load_labels(cv)
+    if labels is None:
+        judged_by = str(body.get("judged_by") or "").strip()
+        if not judged_by:
+            raise ValueError(
+                f"nobody has labelled {cv} yet, so these labels need a name on "
+                "them: start the viewer with --judged-by 'your name'"
+            )
+        labels = CVLabels(cv=cv, corpus=record.stamp.corpus, judged_by=judged_by)
+
+    judged_row = record.by_key().get(key)
+    ranked_row = record.ranked_by_key().get(key)
+    labels.record(
+        Decision(
+            key=key,
+            call=call,
+            reason=reason,
+            run=run_id,
+            verdict=judged_row.verdict.value if judged_row else "",
+            fit=judged_row.fit if judged_row else None,
+            rank=ranked_row.rank if ranked_row else None,
+        )
+    )
+    store.save_labels(labels)
+    return _labels_payload(cv, labels)
+
+
+def _labels_payload(cv: str, labels: CVLabels | None) -> dict:
+    if labels is None:
+        return {"cv": cv, "judged_by": "", "decisions": {}, "counts": {}}
+    decisions = {
+        key: one.model_dump(mode="json") for key, one in labels.reasons().items()
+    }
+    return {
+        "cv": cv,
+        "judged_by": labels.judged_by,
+        "decisions": decisions,
+        "counts": {
+            "apply": len(labels.relevant),
+            "maybe": len(labels.maybe),
+            "judged": len(labels.judged),
+            "with_a_reason": len(decisions),
         },
     }
 

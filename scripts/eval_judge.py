@@ -251,6 +251,51 @@ def print_agreement(rows) -> None:
         f"  weak on a 'would apply':       {cheap}   "
         f"(costs a line in a list -- the cheap one)"
     )
+    print_disagreements(rows)
+
+
+def print_disagreements(rows) -> None:
+    """Every disagreement, with the sentence the person wrote next to it.
+
+    The whole of phase 3 started here: five disagreements on one CV, and no way
+    to tell whether the judge or the person was wrong, because the label was a
+    key in a list. A reason is not evidence that the judge is wrong -- it is the
+    thing that makes the question answerable at all. Reasons are printed exactly
+    as they were typed; nothing here groups them or infers a rule from them.
+    """
+    printed = False
+    for labels, judged in rows:
+        for one in judged:
+            key = one.match.vacancy.key
+            if key not in labels.judged:
+                continue
+            grade, verdict = labels.grade(key), one.judgement.verdict
+            disagrees = (verdict is Verdict.STRONG and grade == 0) or (
+                verdict is Verdict.WEAK and grade == 2
+            )
+            if not disagrees:
+                continue
+            if not printed:
+                print("\n===== where the judge and the person disagree =====")
+                printed = True
+            decision = labels.decision_for(key)
+            said = {2: "would apply", 1: "might", 0: "would not apply"}[grade]
+            print(
+                f"\n  {labels.cv}: judge {verdict} {one.judgement.fit}, "
+                f"you {said}\n    {one.match.vacancy.title}"
+            )
+            print(
+                f'    your reason: "{decision.reason}"'
+                if decision and decision.reason
+                else "    your reason: none recorded (labelled before 4.4)"
+            )
+    if printed:
+        print(
+            "\n  A reason is the person's own sentence, printed as typed. Whether "
+            "the\n  judge or the label is wrong is a question for whoever reads "
+            "these two\n  lines -- this eval only makes sure they are on the "
+            "same screen."
+        )
 
 
 def print_control(rows) -> None:

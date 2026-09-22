@@ -88,7 +88,9 @@ class FileStore:
         path = self.labels_path(labels.cv)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            json.dumps(labels.model_dump(), indent=2, ensure_ascii=False),
+            # mode="json" because a decision carries a timestamp, and a store
+            # that can only write the models it was written for is not a seam.
+            json.dumps(labels.model_dump(mode="json"), indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
         return str(path)

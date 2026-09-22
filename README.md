@@ -222,6 +222,32 @@ to compare two runs whose stamps disagree, naming what moved. A corpus that has
 merely gained vacancies is the one difference it will compare across, because it
 changes by itself — it reports what entered and left the shortlist instead.
 
+## The viewer: reviewing a run, and marking what it got wrong
+
+```bash
+uv run python scripts/serve.py --judged-by "Your Name"   # http://127.0.0.1:8000
+```
+
+A local page over the runs that have been stored. It splits a run into three:
+what it **recommended**, what a model **read and turned down**, and what
+retrieval **never showed anybody** — which on a real run is 267 of 279 vacancies,
+and is the rejection that had no score, no position and no record at all until
+the whole ranking started being stored. The vacancy text and the extracted fields
+are one click away, because a rejection is checked against the advert rather than
+against a summary of it.
+
+Marking a vacancy ("would apply" / "might" / "no") **requires a one-line
+reason**, stored exactly as typed next to what the judge had said about it at
+that moment. That is the whole point: a label without a reason cannot tell you
+whether the system or you was wrong, and `eval_judge.py` now prints every
+disagreement with your own sentence beside it. Nothing infers a rule from a
+pattern of answers.
+
+Built out of the standard library — routing, JSON and static files are about a
+hundred lines of `http.server`, the page is plain DOM with no build step, and no
+dependency was added for it. It binds to 127.0.0.1 only, has no login, and starts
+nothing: no model is ever called from a page.
+
 ## Data & privacy
 
 `data/raw/` is in `.gitignore` and is **never committed**. It holds scraped

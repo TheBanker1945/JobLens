@@ -1594,3 +1594,74 @@ being refreshed is not a read-only viewer.
 **Every piece of data goes onto the page with `textContent`.** A vacancy is text
 somebody else wrote, and a page that pastes it in as HTML is one advert away from
 being a different page than the one you read.
+
+## 4.4 — A label that says why
+
+The reason phase 3 exists. Mahdi labelled his own CV in 3.7.2 and the judge
+disagreed with him five times out of ten — three "weak" verdicts on jobs he would
+apply to, rejected on years of experience or hbo/wo education, and one "strong"
+at 84 that he would not apply to. Nobody could tell whether the judge or the
+label was wrong, **because a label was a key in one of three lists.**
+
+**The y/m/n prompt is gone.** It is the thing that produced those labels, and it
+had two faults that are not fixable by asking the same question more politely:
+it asked about a vacancy with 1,500 characters of it on screen, and it recorded
+an answer with no sentence attached. Marking now happens in the viewer, where the
+advert, the extracted fields, the judge's verdict and the retrieval rank are all
+on the same screen as the buttons. `label_cv_matches.py` keeps the one thing the
+viewer cannot do — pooling candidates across every variant in the eval config —
+and points at the viewer for the rest.
+
+**A reason is required, in the model and not only in the page.**
+`CVLabels.record` raises without one, `POST /api/runs/{id}/labels` is a 400, and
+the button says so. A call with no reason is what we already have 24 of.
+
+**What is stored with it.** The vacancy key, the call, the reason exactly as
+typed, when, which run was on screen, and — the part that makes the eval possible
+— **what the judge had said about it at that moment**: verdict, fit, and the rank
+retrieval gave it. A reason read a month later against a verdict that has since
+moved is a different sentence.
+
+| stored | why |
+|---|---|
+| `reason` | verbatim; nothing summarises, groups or generalises it |
+| `verdict`, `fit` | so a disagreement can be printed as two lines side by side |
+| `rank` | a vacancy nobody read has a rank and no verdict at all |
+| `run` | the numbers can be found again |
+
+**Nothing infers a rule.** The brief was explicit and it is worth writing down
+why it is right: "three weak verdicts I disagreed with were all about years of
+experience" is a pattern in three answers, and turning it into "Mahdi applies
+regardless of stated years" is a rule he never stated, which would then quietly
+decide future rankings. 4.5 will ask him to state it. This milestone only makes
+sure the sentences exist to ask about.
+
+**The three lists still work.** `relevant`, `maybe` and `judged` are kept in step
+by `record()`, so every eval, every metric and the four committed label files
+carry on unchanged — and a file written before 4.4 loads with an empty
+`decisions` list rather than failing.
+
+**Changing your mind is kept.** Decisions are append-only and the latest one
+counts. A person labelling the same vacancy twice is data about the labels, not a
+mistake to be overwritten.
+
+**`eval_judge.py` prints the disagreements with the reasons.** That is the
+"before" and "after" of this milestone in one screen: today it prints Mahdi's
+five disagreements and "your reason: none recorded (labelled before 4.4)" under
+each of them. Every mark made in the viewer from now on removes one of those
+lines.
+
+**Where the numbers stand right now** (`/api/runs/.../labels` on the real run):
+`apply 9, maybe 1, judged 24, with_a_reason 0`. Twenty-four calls, no sentences.
+That is the number 4.5 is waiting on, and it is the honest state of the evidence.
+
+**Two bugs the tests found**, both of the kind that only appear when a seam is
+actually used by something new:
+
+- `FileStore.save_labels` serialised with `model_dump()` rather than
+  `model_dump(mode="json")`, which worked perfectly until a label carried a
+  timestamp. A store that can only write the models it was written for is not a
+  seam.
+- The router returned 405 for `POST /api/runs/{id}/labels`, because it stopped at
+  the first route whose *pattern* matched and that route was the GET. One path
+  answering two methods is the first thing a write endpoint needs.

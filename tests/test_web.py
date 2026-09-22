@@ -10,7 +10,7 @@ import json
 import threading
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import pytest
 from conftest import details as make_details
@@ -185,7 +185,7 @@ def live(tmp_path):
     """The real server on a real port, so routing is what is being tested."""
     store, corpus = FileStore(tmp_path), corpus_of()
     run_id = stored_run(store, corpus)
-    server = serve(Viewer(store, corpus, ROOT_WEB), port=0)
+    server = serve(Viewer(store, corpus, ROOT_WEB, judged_by="Mahdi"), port=0)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     host, port = server.server_address
@@ -196,6 +196,17 @@ def live(tmp_path):
 
 def get(url: str) -> dict:
     with urlopen(url) as answer:  # noqa: S310 - our own localhost server
+        return json.loads(answer.read())
+
+
+def post(url: str, body: dict) -> dict:
+    request = Request(  # noqa: S310
+        url,
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request) as answer:  # noqa: S310
         return json.loads(answer.read())
 
 
@@ -226,3 +237,98 @@ def test_the_server_refuses_what_it_should(live):
         with pytest.raises(HTTPError) as raised:
             urlopen(f"{base}{path}")  # noqa: S310
         assert raised.value.code == status, path
+
+
+def test_marking_a_vacancy_needs_a_reason_and_is_stored_with_the_run(tmp_path):
+    store, corpus = FileStore(tmp_path), corpus_of()
+    run_id = stored_run(store, corpus)
+
+    with pytest.raises(ValueError, match="reason is required"):
+        api.record_decision(
+            store,
+            corpus,
+            run_id,
+            {"key": "indeed:3", "call": "apply", "reason": " ", "judged_by": "Mahdi"},
+        )
+
+    view = api.record_decision(
+        store,
+        corpus,
+        run_id,
+        {
+            "key": "indeed:3",
+            "call": "apply",
+            "reason": "they ask 4 years, I would apply anyway",
+            "judged_by": "Mahdi",
+        },
+    )
+
+    assert view["counts"] == {"apply": 1, "maybe": 0, "judged": 1, "with_a_reason": 1}
+    stored = store.load_labels("mahdi")
+    decision = stored.decision_for("indeed:3")
+    # What the judge had said at that moment, kept next to what the person said.
+    assert (decision.verdict, decision.fit, decision.rank) == ("weak", 20, 3)
+    assert decision.run == run_id
+    assert stored.relevant == ["indeed:3"]  # the eval reads this, unchanged
+
+
+def test_a_vacancy_nobody_read_can_be_marked_too(tmp_path):
+    """The rejection the whole phase is about: #4, never shortlisted."""
+    store, corpus = FileStore(tmp_path), corpus_of()
+    run_id = stored_run(store, corpus)
+
+    api.record_decision(
+        store,
+        corpus,
+        run_id,
+        {
+            "key": "indeed:5",
+            "call": "apply",
+            "reason": "this is exactly my work and it was never read",
+            "judged_by": "Mahdi",
+        },
+    )
+
+    decision = store.load_labels("mahdi").decision_for("indeed:5")
+    assert decision.rank == 5
+    assert decision.verdict == ""  # no model ever had an opinion about it
+    assert decision.fit is None
+
+
+def test_labels_cannot_be_written_without_a_name_on_them(tmp_path):
+    store, corpus = FileStore(tmp_path), corpus_of()
+    run_id = stored_run(store, corpus)
+
+    with pytest.raises(ValueError, match="judged-by"):
+        api.record_decision(
+            store, corpus, run_id, {"key": "indeed:1", "call": "no", "reason": "nope"}
+        )
+
+
+def test_marking_refuses_a_vacancy_that_is_not_in_the_corpus(tmp_path):
+    store, corpus = FileStore(tmp_path), corpus_of()
+    run_id = stored_run(store, corpus)
+
+    for body in [
+        {"key": "indeed:999", "call": "apply", "reason": "x", "judged_by": "M"},
+        {"key": "indeed:1", "call": "shrug", "reason": "x", "judged_by": "M"},
+        {"key": "", "call": "apply", "reason": "x", "judged_by": "M"},
+    ]:
+        with pytest.raises(ValueError):
+            api.record_decision(store, corpus, run_id, body)
+
+
+def test_the_server_writes_a_decision_and_reads_it_back(live):
+    base, run_id = live
+    url = f"{base}/api/runs/{run_id}/labels"
+
+    assert get(url)["decisions"] == {}
+
+    answer = post(url, {"key": "indeed:2", "call": "maybe", "reason": "salary unclear"})
+
+    assert answer["counts"]["with_a_reason"] == 1
+    assert get(url)["decisions"]["indeed:2"]["reason"] == "salary unclear"
+
+    with pytest.raises(HTTPError) as raised:
+        post(url, {"key": "indeed:2", "call": "maybe", "reason": ""})
+    assert raised.value.code == 400

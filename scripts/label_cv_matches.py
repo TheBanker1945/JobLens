@@ -1,21 +1,26 @@
-"""Judge which vacancies a CV should actually match. A human sits here.
+"""Pool the candidates a CV should be judged on, for judging somewhere else.
 
 The eval can only measure what someone has judged. Candidates are **pooled**: any
 vacancy that any variant in evals/cv-matching.toml puts in its top N, so a variant
 that surfaces a good vacancy nobody was asked about is not scored wrong for
 finding it.
 
-Three answers, not two. "Would apply" and "would not" are the ends; "might" sits
-between them and is what nDCG uses, because a job list is not a set of right
-answers -- it is an ordering, and second-best has to be worth something.
+**The y/m/n prompt that used to live here is gone (4.4).** It produced exactly
+the labels that started phase 3: a key in one of three lists, with no sentence
+saying why, so a disagreement between the judge and the person could not be
+read by either of them afterwards. Marking now happens in the viewer, where a
+call needs a one-line reason and the vacancy text is on the same screen:
+
+    uv run python scripts/serve.py --judged-by "your name"
+
+What this script still does is pool, which the viewer cannot: the viewer shows
+one run in one configuration, and pooling asks every variant in the eval config
+what it would have surfaced.
 
 Usage:
-    uv run python scripts/label_cv_matches.py                    # the sample CVs
-    uv run python scripts/label_cv_matches.py --cv data/raw/cv/mahdi.pdf
     uv run python scripts/label_cv_matches.py --dump notes.md    # judge offline
+    uv run python scripts/label_cv_matches.py --cv data/raw/cv/mahdi.pdf --dump n.md
     uv run python scripts/label_cv_matches.py --pool-depth 5     # fewer candidates
-
-Stop whenever you like with q: every answer so far is already saved.
 """
 
 import argparse
@@ -31,18 +36,20 @@ from joblens.corpus import Corpus, load_corpus
 from joblens.cv.match import PreparedCV, prepare_cv, queries_for
 from joblens.cv.store import CVCache
 from joblens.embeddings.documents import build_document
-from joblens.evals.matching import CVLabels, MatchConfig, rank_vacancies
+from joblens.evals.matching import MatchConfig, rank_vacancies
 from joblens.evals.retrieval import EmbedderPool
 from joblens.llm.client import LLMClient
 from joblens.sources.base import Vacancy
-from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
 SAMPLE_CVS = ROOT / "data" / "samples" / "cvs"
 CACHE_DIR = ROOT / "data" / "cache"
 CONFIG = ROOT / "evals" / "cv-matching.toml"
 
-MENU = "  would you apply? [y]es  [m]aybe  [n]o  [v]iew text  [s]kip CV  [q]uit"
+VIEWER = (
+    "Marking happens in the viewer now, with a reason attached to every call:\n"
+    "    uv run python scripts/serve.py --judged-by 'your name'"
+)
 
 
 def main() -> int:
@@ -55,9 +62,6 @@ def main() -> int:
     parser.add_argument(
         "--dump", type=Path, help="write the candidates to a file and judge offline"
     )
-    parser.add_argument(
-        "--judged-by", default="", help="whose opinion these labels are"
-    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -68,15 +72,13 @@ def main() -> int:
     if not cvs:
         print("No CVs to label.")
         return 1
-    if not args.dump and not args.judged_by:
-        print("Say who is judging: --judged-by 'your name'")
+    if not args.dump:
+        print(f"Nothing to do without --dump.\n\n{VIEWER}")
         return 1
 
     corpus = load_corpus(args.corpus).extracted()
     configs = [MatchConfig.model_validate(c) for c in _runs(args.config)]
     settings = load_llm_settings(prefix="CV")
-    store = FileStore(ROOT)
-    existing = {labels.cv: labels for labels in store.labels()}
     cache = CVCache(CACHE_DIR / "cv-profiles.json")
     print(f"corpus {corpus.name}: {len(corpus)} vacancies, {len(configs)} variants")
 
@@ -101,25 +103,13 @@ def main() -> int:
                     args.pool_depth,
                     pool,
                 )
-                if args.dump:
-                    notes.append(dump_one(prepared, corpus, candidates))
-                    continue
-                labels = existing.get(prepared.name) or CVLabels(
-                    cv=prepared.name, corpus=corpus.name, judged_by=args.judged_by
-                )
-                labels.judged_by = args.judged_by
-                if judge(prepared, corpus, candidates, labels) == "quit":
-                    store.save_labels(labels)
-                    print("saved; stopping.")
-                    return 0
-                print(f"saved: {store.save_labels(labels)}")
+                notes.append(dump_one(prepared, corpus, candidates))
     except (httpx.ConnectError, openai.APIConnectionError) as err:
         print(f"Cannot reach a server: {err}")
         return 1
 
-    if args.dump:
-        args.dump.write_text("\n".join(notes), encoding="utf-8")
-        print(f"wrote {args.dump} ({len(notes)} CVs)")
+    args.dump.write_text("\n".join(notes), encoding="utf-8")
+    print(f"wrote {args.dump} ({len(notes)} CVs)\n\n{VIEWER}")
     return 0
 
 
@@ -161,38 +151,6 @@ def pooled_candidates(
     return dict(sorted(found.items(), key=lambda kv: -len(kv[1])))
 
 
-def judge(
-    prepared: PreparedCV,
-    corpus: Corpus,
-    candidates: dict[str, list[str]],
-    labels: CVLabels,
-) -> str:
-    by_key = corpus.by_key()
-    todo = [key for key in candidates if key not in labels.judged]
-    print(f"\n=== {prepared.name}: {prepared.profile.headline}")
-    print(f"    {len(candidates)} candidates, {len(todo)} not yet judged")
-    for position, key in enumerate(todo, 1):
-        vacancy = by_key[key]
-        print(f"\n[{position}/{len(todo)}] {vacancy.title}")
-        print(f"    {vacancy.company or '?'} · {vacancy.city or '?'} · {key}")
-        print(f"    found by: {', '.join(candidates[key][:4])}")
-        while True:
-            answer = input(MENU + "\n  > ").strip().lower()
-            if answer == "v":
-                print(vacancy.text[:1500])
-                continue
-            if answer in {"y", "m", "n"}:
-                labels.judged.append(key)
-                if answer == "y":
-                    labels.relevant.append(key)
-                elif answer == "m":
-                    labels.maybe.append(key)
-                break
-            if answer in {"s", "q"}:
-                return "quit" if answer == "q" else "skip"
-    return "done"
-
-
 def dump_one(
     prepared: PreparedCV, corpus: Corpus, candidates: dict[str, list[str]]
 ) -> str:
@@ -201,8 +159,8 @@ def dump_one(
     lines = [
         f"# {prepared.name} — {prepared.profile.headline}",
         "",
-        f"{len(candidates)} pooled candidates. Mark each one y (would apply), "
-        "m (might), or n.",
+        f"{len(candidates)} pooled candidates. Every call needs a reason; the "
+        "viewer asks for one and stores it with the run you were looking at.",
         "",
     ]
     for key in candidates:
