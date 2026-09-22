@@ -17,6 +17,8 @@ is the safe direction to be wrong in.
 """
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from joblens.cv.runs import RunRecord
@@ -61,10 +63,7 @@ class FileStore:
         run_id, attempt = stem, 2
         while self._run_path(run_id).exists():
             run_id, attempt = f"{stem}-{attempt}", attempt + 1
-        self._run_path(run_id).write_text(
-            json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        _write_json(self._run_path(run_id), record.model_dump(mode="json"))
         return run_id
 
     def path_of(self, run_id: str) -> Path:
@@ -87,12 +86,9 @@ class FileStore:
     def save_labels(self, labels: CVLabels) -> str:
         path = self.labels_path(labels.cv)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            # mode="json" because a decision carries a timestamp, and a store
-            # that can only write the models it was written for is not a seam.
-            json.dumps(labels.model_dump(mode="json"), indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        # mode="json" because a decision carries a timestamp, and a store that
+        # can only write the models it was written for is not a seam.
+        _write_json(path, labels.model_dump(mode="json"))
         return str(path)
 
     def labels_path(self, cv: str) -> Path:
@@ -117,9 +113,7 @@ class FileStore:
     def save_preferences(self, cv: str, values: dict) -> str:
         self.preferences_dir.mkdir(parents=True, exist_ok=True)
         path = self.preferences_dir / f"{cv}.json"
-        path.write_text(
-            json.dumps(values, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        _write_json(path, values)
         return str(path)
 
     # -----------------------------------------------------------------------
@@ -145,3 +139,24 @@ class FileStore:
             outcome=record.outcome,
             cost_usd=record.cost_usd,
         )
+
+
+def _write_json(path: Path, payload) -> None:
+    """The whole file or none of it: write a temporary file, then swap it in.
+
+    `Path.write_text` empties the file first and fills it second, so a crash
+    or a full disk in between leaves a truncated file -- and the labels file is
+    where every reason typed into the viewer lives, with no other copy.
+    `os.replace` swaps the finished file in as one step, on Linux and Windows.
+    """
+    text = json.dumps(payload, indent=2, ensure_ascii=False)
+    handle = tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=path.parent, suffix=".tmp", delete=False
+    )
+    try:
+        with handle:
+            handle.write(text)
+        os.replace(handle.name, path)
+    except BaseException:
+        Path(handle.name).unlink(missing_ok=True)
+        raise

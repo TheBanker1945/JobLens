@@ -332,3 +332,50 @@ def test_the_server_writes_a_decision_and_reads_it_back(live):
     with pytest.raises(HTTPError) as raised:
         post(url, {"key": "indeed:2", "call": "maybe", "reason": ""})
     assert raised.value.code == 400
+
+
+def test_a_post_that_is_not_json_is_refused_and_writes_nothing(live):
+    """A form on another site can send text/plain without asking first."""
+    base, run_id = live
+    url = f"{base}/api/runs/{run_id}/labels"
+    request = Request(  # noqa: S310
+        url,
+        data=json.dumps({"key": "indeed:2", "call": "no", "reason": "x"}).encode(),
+        headers={"Content-Type": "text/plain"},
+        method="POST",
+    )
+    with pytest.raises(HTTPError) as raised:
+        urlopen(request)  # noqa: S310
+    assert raised.value.code == 400
+    assert get(url)["decisions"] == {}
+
+
+def test_a_request_for_another_host_is_refused(live):
+    """DNS rebinding: a domain that resolves to 127.0.0.1 is not this server."""
+    base, _ = live
+    request = Request(f"{base}/api/runs", headers={"Host": "evil.example"})  # noqa: S310
+    with pytest.raises(HTTPError) as raised:
+        urlopen(request)  # noqa: S310
+    assert raised.value.code == 403
+
+
+def test_marks_made_at_the_same_moment_are_all_kept(live, tmp_path):
+    """Each request has its own thread; without a lock, one save erased another."""
+    base, run_id = live
+    url = f"{base}/api/runs/{run_id}/labels"
+    threads = [
+        threading.Thread(
+            target=post,
+            args=(url, {"key": f"indeed:{1 + n % 6}", "call": "no", "reason": f"r{n}"}),
+        )
+        for n in range(24)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    store = FileStore(tmp_path)
+    cv = store.load_run(run_id).stamp.cv_name
+    assert len(store.load_labels(cv).decisions) == 24
+    assert not list(tmp_path.rglob("*.tmp"))  # no half-written file left behind

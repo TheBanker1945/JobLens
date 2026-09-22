@@ -12,6 +12,13 @@ served from the same origin as the API. No HTTPS. The server binds to 127.0.0.1
 and refuses to be told otherwise by accident -- this reads a real CV and real
 vacancies, and it is not something to put on a network.
 
+**What localhost does not protect against** (2026-09-22 audit). Any web page
+open in the same browser can send a request to 127.0.0.1. Two rules close that:
+a POST body must be `application/json`, which a page on another site cannot send
+without a CORS preflight this server never answers, so the browser stops it; and
+the Host header must name this server, so a domain that resolves to 127.0.0.1
+("DNS rebinding") cannot read the API as if it were its own.
+
 **What is here because hosting is coming.** Every route is a function of a
 request and returns data (`web/api.py` does the actual work), the routing table
 is a list rather than a chain of ifs, and nothing in here knows what a file is
@@ -22,6 +29,7 @@ keeping everything else.
 import json
 import mimetypes
 import re
+import threading
 import traceback
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -39,10 +47,17 @@ SERVABLE = {".html", ".css", ".js", ".svg", ".ico", ".woff2"}
 class Request:
     """A parsed request, so a route never touches the raw HTTP machinery."""
 
-    def __init__(self, path: str, query: dict[str, list[str]], body: bytes = b""):
+    def __init__(
+        self,
+        path: str,
+        query: dict[str, list[str]],
+        body: bytes = b"",
+        content_type: str = "",
+    ):
         self.path = path
         self.query = query
         self.body = body
+        self.content_type = content_type
 
     def get(self, name: str, default: str = "") -> str:
         return self.query.get(name, [default])[0]
@@ -54,6 +69,10 @@ class Request:
             raise ValueError(f"{name} must be a number") from err
 
     def json(self) -> dict:
+        if self.content_type.split(";")[0].strip().lower() != "application/json":
+            # The one thing a form or a no-cors fetch on another site cannot
+            # send without asking first; see the module docstring.
+            raise ValueError("send the body as Content-Type: application/json")
         if not self.body:
             raise ValueError("this request needs a JSON body")
         try:
@@ -86,6 +105,11 @@ class Viewer:
         # cannot say whose judgement it holds is worth nothing as evidence, so
         # the name comes from the command line and never from the browser.
         self.judged_by = judged_by
+        # One writer at a time. The server answers each request on its own
+        # thread, and marking a vacancy is load, change, save of one labels
+        # file: two marks at once would each save their own copy, and the
+        # second would erase the first's reason.
+        self._writes = threading.Lock()
         labels = re.compile(r"^/api/runs/(?P<run_id>[^/]+)/labels$")
         self.routes: list[Route] = [
             ("GET", re.compile(r"^/api/runs$"), self.runs),
@@ -109,7 +133,8 @@ class Viewer:
 
     def label(self, request: Request, run_id: str) -> dict:
         body = request.json() | {"judged_by": self.judged_by}
-        return api.record_decision(self.store, self.corpus, unquote(run_id), body)
+        with self._writes:
+            return api.record_decision(self.store, self.corpus, unquote(run_id), body)
 
     def vacancy(self, request: Request) -> dict:
         key = request.get("key")
@@ -126,7 +151,9 @@ class Viewer:
 
     # -- the two things a route can be -------------------------------------
 
-    def handle(self, method: str, path: str, query: dict, body: bytes) -> dict:
+    def handle(
+        self, method: str, path: str, query: dict, body: bytes, content_type: str = ""
+    ) -> dict:
         """Find the route or raise. KeyError is a 404, ValueError a 400.
 
         Every route whose pattern matches is considered before giving up on the
@@ -140,7 +167,8 @@ class Viewer:
                 continue
             matched = True
             if route_method == method:
-                return handler(Request(path, query, body), **found.groupdict())
+                request = Request(path, query, body, content_type)
+                return handler(request, **found.groupdict())
         if matched:
             raise PermissionError(f"{path} does not answer {method}")
         raise KeyError(f"no route for {path}")
@@ -170,12 +198,24 @@ def build_handler(viewer: Viewer) -> type[BaseHTTPRequestHandler]:
             self._serve("POST", self.rfile.read(length) if length else b"")
 
         def _serve(self, method: str, body: bytes = b"") -> None:
+            port = self.server.server_address[1]
+            if self.headers.get("Host") not in (
+                f"127.0.0.1:{port}",
+                f"localhost:{port}",
+            ):
+                return self._json({"error": "this server only answers itself"}, 403)
             parsed = urlparse(self.path)
             path = unquote(parsed.path)
             if not path.startswith("/api/"):
                 return self._static(path)
             try:
-                payload = viewer.handle(method, path, parse_qs(parsed.query), body)
+                payload = viewer.handle(
+                    method,
+                    path,
+                    parse_qs(parsed.query),
+                    body,
+                    self.headers.get("Content-Type") or "",
+                )
             except KeyError as err:
                 return self._json({"error": str(err)}, 404)
             except PermissionError as err:

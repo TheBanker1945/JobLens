@@ -145,3 +145,27 @@ def test_preferences_are_stored_without_a_schema(tmp_path):
 
     assert store.load_preferences("mahdi") == {"regio": ["Utrecht"], "minimum": 3500}
     assert store.load_preferences("nobody") is None
+
+
+def test_a_failed_save_leaves_the_labels_that_were_there(tmp_path, monkeypatch):
+    """Writing in place empties the file first; a crash then loses every reason."""
+    import os
+
+    import joblens.storage.files as files
+    from joblens.evals.matching import CVLabels
+
+    store = FileStore(tmp_path)
+    store.save_labels(CVLabels(cv="mahdi", corpus="raw", judged_by="Mahdi", note="v1"))
+
+    def broken(*args):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(files.os, "replace", broken)
+    with pytest.raises(OSError):
+        store.save_labels(
+            CVLabels(cv="mahdi", corpus="raw", judged_by="Mahdi", note="v2")
+        )
+    monkeypatch.setattr(files.os, "replace", os.replace)
+
+    assert store.load_labels("mahdi").note == "v1"
+    assert not list(tmp_path.rglob("*.tmp"))
