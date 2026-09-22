@@ -38,7 +38,7 @@ from joblens.evals.matching import (
     MatchConfig,
     MatchRun,
     overlap,
-    rank_vacancies,
+    rank_for_cv,
 )
 from joblens.evals.retrieval import EmbedderPool
 from joblens.llm.client import LLMClient
@@ -68,7 +68,8 @@ def main() -> int:
     args = parser.parse_args()
 
     load_dotenv()
-    labels = FileStore(ROOT).labels()
+    store = FileStore(ROOT)
+    labels = store.labels()
     if not labels:
         print(
             "No judged CVs in evals/cv-matches or data/raw/cv-labels yet.\n"
@@ -130,7 +131,13 @@ def main() -> int:
     if args.mistakes:
         print_mistakes(results[0], labels, corpus)
     if not args.no_save:
-        print(f"\nsaved: {save(results).relative_to(ROOT)}")
+        public = {one.cv for one in labels if store.is_shared_labels(one.cv)}
+        print(f"\nsaved: {save(results, public).relative_to(ROOT)}")
+        if hidden := sorted({one.cv for one in labels} - public):
+            print(
+                f"  not in that file: {', '.join(hidden)} -- private labels, and "
+                "evals/results/ is committed"
+            )
     return 0
 
 
@@ -168,29 +175,42 @@ def run_variant(
     ]
     results, seconds, calls = [], 0.0, 0
     for one in labels:
-        parts = queries_for(
-            prepared[one.cv], config.cv_style, client=client, model=model, cache=cache
+        ranked = rank_for_cv(
+            config,
+            documents,
+            asker(prepared[one.cv], client, model, cache),
+            CACHE_DIR,
+            pool,
         )
-        ranking, embedded = rank_vacancies(config, documents, parts, CACHE_DIR, pool)
-        seconds += embedded.seconds
-        calls += embedded.api_calls
+        seconds += ranked.seconds
+        calls += ranked.api_calls
         results.append(
             CVResult(
                 cv=one.cv,
-                ranked=[corpus.vacancies[i].key for i in ranking.order],
+                ranked=[corpus.vacancies[i].key for i in ranked.ranking.order],
                 relevant=one.relevant,
                 maybe=one.maybe,
-                top_score=ranking.scores[0],
+                top_score=ranked.top_cosine,
             )
         )
     return MatchRun(
         variant=config.name,
         cv_style=config.cv_style,
+        fuse_with=config.fuse_with,
         model=config.model,
         results=results,
         seconds=seconds,
         api_calls=calls,
     )
+
+
+def asker(prepared: PreparedCV, client, model: str, cache: CVCache):
+    """The CV as the query parts of any style; a wishlist is written once."""
+
+    def parts_for(style):
+        return queries_for(prepared, style, client=client, model=model, cache=cache)
+
+    return parts_for
 
 
 def print_per_cv(results: list[MatchRun], labels: list[CVLabels]) -> None:
@@ -303,7 +323,13 @@ def print_mistakes(run: MatchRun, labels: list[CVLabels], corpus: Corpus) -> Non
             print(f"  {position}. [{mark:<5}] {title}")
 
 
-def save(results: list[MatchRun]) -> Path:
+def save(results: list[MatchRun], public: set[str]) -> Path:
+    """Only CVs whose labels are committed anyway: a result carries its labels,
+    and a real person's say which real jobs they would apply to."""
+    results = [
+        run.model_copy(update={"results": [r for r in run.results if r.cv in public]})
+        for run in results
+    ]
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
     path = RESULTS_DIR / f"{stamp}_cv_matching.json"

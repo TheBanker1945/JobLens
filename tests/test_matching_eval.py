@@ -2,7 +2,14 @@
 
 import pytest
 
-from joblens.evals.matching import CVLabels, CVResult, overlap, pooled_ranking
+from joblens.evals.matching import (
+    CVLabels,
+    CVResult,
+    Ranking,
+    fuse,
+    overlap,
+    pooled_ranking,
+)
 
 APPLY = ["a", "b"]
 MAYBE = ["c"]
@@ -88,3 +95,36 @@ def test_pooling_takes_the_best_part_not_the_average():
     ranking = pooled_ranking(parts, [[1.0, 0.0]])
 
     assert ranking.scores[0] == pytest.approx(1.0)
+
+
+def _ranking(*order: int) -> Ranking:
+    return Ranking(
+        order=list(order), winners=[0] * len(order), scores=[0.5] * len(order)
+    )
+
+
+def test_fusion_prefers_what_both_lists_rank_well():
+    """Second in both beats first in one and last in the other."""
+    fused = fuse([_ranking(0, 1, 2, 3), _ranking(3, 1, 2, 0)])
+
+    assert fused.order[0] == 1
+    assert set(fused.order) == {0, 1, 2, 3}
+
+
+def test_fusion_never_compares_the_scores_of_two_lists():
+    """A list with much higher cosines gets no more say than one with low ones."""
+    loud = Ranking(order=[0, 1], winners=[0, 0], scores=[0.99, 0.98])
+    quiet = Ranking(order=[1, 0], winners=[0, 0], scores=[0.21, 0.20])
+
+    fused = fuse([loud, quiet])
+
+    assert fused.scores[0] == fused.scores[1]  # a dead heat, as it should be
+    assert fused.order == [0, 1]  # and a tie keeps the first list's order
+
+
+def test_fusion_says_which_list_placed_a_document_best():
+    fused = fuse([_ranking(0, 1, 2), _ranking(2, 0, 1)])
+    placed = dict(zip(fused.order, fused.winners, strict=True))
+
+    assert placed[2] == 1  # first in the second list, last in the first
+    assert placed[0] == 0

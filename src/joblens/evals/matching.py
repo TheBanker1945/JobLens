@@ -16,6 +16,7 @@ Metrics per CV:
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -26,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from joblens.cv.documents import CVStyle, QueryPart
 from joblens.embeddings.client import Vector
+from joblens.embeddings.similarity import fuse_orders
 from joblens.evals.retrieval import (
     Embedded,
     EmbedderPool,
@@ -46,6 +48,12 @@ class MatchConfig(RetrievalConfig):
     """
 
     cv_style: CVStyle = "profile"
+    # More ways of asking, fused with the first (see `fuse`). Empty is one list.
+    fuse_with: list[CVStyle] = []
+
+    @property
+    def styles(self) -> list[CVStyle]:
+        return [self.cv_style, *self.fuse_with]
 
 
 class Call(StrEnum):
@@ -205,6 +213,7 @@ class MatchRun(BaseModel):
     variant: str
     cv_style: CVStyle
     model: str
+    fuse_with: list[CVStyle] = []
     results: list[CVResult]
     seconds: float = 0.0
     api_calls: int = 0
@@ -277,3 +286,62 @@ def _unit(matrix: np.ndarray) -> np.ndarray:
     if np.any(lengths == 0):
         raise ValueError("cosine similarity is undefined for a zero vector")
     return matrix / lengths
+
+
+def fuse(rankings: list[Ranking]) -> Ranking:
+    """Reciprocal rank fusion of several rankings (see `similarity.fuse_orders`).
+
+    Why it can beat either list alone: 3.5 found no CV style that wins on every
+    CV -- each loses on a different person -- and a vacancy that two different
+    questions both put near the top is less likely to be one list's quirk.
+
+    `winners` says which list placed the vacancy best; `scores` are the fused
+    points, not a cosine.
+    """
+    fused = fuse_orders([ranking.order for ranking in rankings])
+    return Ranking(
+        order=[one.item for one in fused],
+        winners=[one.best_list for one in fused],
+        scores=[one.points for one in fused],
+    )
+
+
+@dataclass(frozen=True)
+class CVRanking:
+    """A variant's ranking for one CV, and the lists it was fused from."""
+
+    ranking: Ranking
+    lists: list[Ranking]  # one per style; the ranking itself when not fused
+    seconds: float
+    api_calls: int
+
+    @property
+    def top_cosine(self) -> float:
+        """The best cosine any of the lists gave: fused points are not a cosine."""
+        return max(one.scores[0] for one in self.lists)
+
+
+def rank_for_cv(
+    config: MatchConfig,
+    documents: list[str],
+    parts_for: Callable[[CVStyle], list[QueryPart]],
+    cache_dir: Path,
+    pool: EmbedderPool | None = None,
+) -> CVRanking:
+    """One variant's ranking of the vacancies for one CV, fused if it says so.
+
+    Shared by the eval and the labelling script for the reason `rank_vacancies`
+    is: the candidates a human judges have to come out of the same ranking the
+    numbers are reported for. `parts_for(style)` turns the CV into that style's
+    query parts; the caller owns the CV and the model that may write a wishlist.
+    """
+    lists, seconds, calls = [], 0.0, 0
+    for style in config.styles:
+        ranking, embedded = rank_vacancies(
+            config, documents, parts_for(style), cache_dir, pool
+        )
+        lists.append(ranking)
+        seconds += embedded.seconds
+        calls += embedded.api_calls
+    fused = lists[0] if len(lists) == 1 else fuse(lists)
+    return CVRanking(fused, lists, seconds, calls)

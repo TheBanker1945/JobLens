@@ -62,6 +62,56 @@ base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
 model = "gemini-embedding-2"
 api_key_env = "GEMINI_API_KEY"
 
+# Fusion (added 2026-09-22): the same vector space, asked two or three ways,
+# combined by reciprocal rank fusion (joblens.evals.matching.fuse). Every list
+# still asks with a whole CV -- the whole text, the profile, or the advert a
+# model writes from it -- so this does not reopen 3.5's "do not split the CV".
+#
+# The rule, written down before the first run, in the spirit of 3.5's: a fused
+# variant replaces `raw` only if its worst nDCG@10 over the scored CVs beats
+# raw's, AND it does no worse than raw on the one CV labelled by the person it
+# belongs to. The invented CVs are labelled by Claude; that one is not.
+
+[[run]]
+name = "gemini-2 raw + wishlist"
+cv_style = "raw"
+fuse_with = ["wishlist"]
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 raw + profile"
+cv_style = "raw"
+fuse_with = ["profile"]
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 raw + roles"
+cv_style = "raw"
+fuse_with = ["roles"]
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
+[[run]]
+name = "gemini-2 raw + profile + wishlist"
+cv_style = "raw"
+fuse_with = ["profile", "wishlist"]
+style = "structured"
+provider = "gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-embedding-2"
+api_key_env = "GEMINI_API_KEY"
+
 [[run]]
 name = "local raw CV"
 cv_style = "raw"
