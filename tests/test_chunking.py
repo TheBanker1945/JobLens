@@ -52,3 +52,33 @@ def test_an_impossible_configuration_is_refused():
         chunk_text("tekst", size=100, overlap=100)
     with pytest.raises(ValueError):
         chunk_text("tekst", size=0)
+
+
+def _finishes(text: str, seconds: float = 2.0) -> list[str] | None:
+    """chunk_text in a thread, so a regression fails instead of hanging the run."""
+    import threading
+
+    found: list[list[str]] = []
+    worker = threading.Thread(
+        target=lambda: found.append(chunk_text(text)), daemon=True
+    )
+    worker.start()
+    worker.join(seconds)
+    return found[0] if found else None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "x" * 2000,  # no space at all: rfind said -1, which Python reads as true
+        "Portfolio: " + "a" * 1500,  # the only space is inside the overlap
+    ],
+    ids=["no-space", "space-inside-overlap"],
+)
+def test_a_paragraph_without_a_usable_space_is_cut_hard_and_finishes(text):
+    chunks = _finishes(text)
+
+    assert chunks is not None, "chunk_text never returned"
+    # size + overlap, plus the blank line that joins the carried tail on.
+    assert all(len(chunk) <= 900 + 150 + 2 for chunk in chunks)
+    assert chunks[-1].endswith(text[-10:])  # nothing fell off the end
