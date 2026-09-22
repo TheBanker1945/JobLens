@@ -121,3 +121,29 @@ def test_the_styles_built_from_fields_need_the_fields(style):
 def test_an_unknown_style_is_refused():
     with pytest.raises(ValueError, match="unknown CV style"):
         build_queries("vibes", text=CV_TEXT)
+
+
+def test_no_advert_is_written_for_an_empty_profile():
+    """Handed nothing, a model writes "there is no CV" -- and that got embedded."""
+    from conftest import FakeClient
+
+    from joblens.cv.schema import CVProfile
+    from joblens.cv.wishlist import write_ideal_vacancy
+
+    empty = CVProfile(
+        headline="",
+        summary=None,
+        city=None,
+        experience=[],
+        education=[],
+        skills=[],
+        certificates=[],
+        languages=[],
+        desired_work_mode=None,
+        availability=None,
+    )
+    client = FakeClient("Er is geen cv of profieltekst meegegeven")
+
+    with pytest.raises(ValueError, match="empty"):
+        write_ideal_vacancy(empty, client)
+    assert client.calls == []

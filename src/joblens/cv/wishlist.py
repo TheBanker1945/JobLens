@@ -41,11 +41,23 @@ Rules:
 
 
 def write_ideal_vacancy(profile: CVProfile, client: ChatClient) -> str:
-    """The advert to search with. One call, about 0.1 cent."""
+    """The advert to search with. One call, about 0.1 cent.
+
+    Refuses an empty profile rather than asking. Handed nothing, the model
+    answered "Er is geen cv of profieltekst meegegeven" -- and that sentence
+    was then cached and embedded as a query like any advert (found in the
+    cache in the 2026-09-22 audit).
+    """
+    summary = profile_summary(profile)
+    if not summary.strip():
+        raise ValueError(
+            "the profile is empty, so there is nothing to write an advert from; "
+            "read the CV again or pick another CV style"
+        )
     result = client.chat(
         [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": profile_summary(profile)},
+            {"role": "user", "content": summary},
         ],
         temperature=0.0,
         max_tokens=MAX_OUTPUT_TOKENS,

@@ -103,7 +103,8 @@ def chunk_text(
     boundary still appears complete somewhere.
 
     `size` bounds the *new* text in a chunk; the carried-over tail sits on top of
-    it, so a chunk holds at most `size + overlap` characters.
+    it, joined by a blank line, so a chunk holds at most `size + overlap + 2`
+    characters.
     """
     if size <= 0:
         raise ValueError("chunk size must be positive")
@@ -115,11 +116,18 @@ def chunk_text(
         paragraph = paragraph.strip()
         if not paragraph:
             continue
-        # A paragraph longer than a whole chunk has to be cut somewhere.
+        # A paragraph longer than a whole chunk has to be cut somewhere: at the
+        # last space that leaves the next piece further along, or hard at
+        # `size` when there is none. `rfind` answers -1 for "no space", which
+        # Python reads as true, and a space inside the first `overlap`
+        # characters moved the start back to where it was -- either way the
+        # loop never ended (a 2,000-character URL hung it; 2026-09-22 audit).
         while len(paragraph) > size:
-            cut = paragraph.rfind(" ", 0, size) or size
+            cut = paragraph.rfind(" ", 0, size)
+            if cut <= overlap:
+                cut = size
             pieces.append(paragraph[:cut].strip())
-            paragraph = paragraph[max(cut - overlap, 0) :].strip()
+            paragraph = paragraph[cut - overlap :].strip()
         if paragraph:
             pieces.append(paragraph)
 
