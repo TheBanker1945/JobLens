@@ -130,6 +130,7 @@ conceptually, not just have working code.
 - uv run python scripts/match_cv.py <cv> --top 10           # rank vacancies for a CV
 - uv run python scripts/eval_cv_matching.py                 # which CV style wins
 - uv run python scripts/eval_judge.py                       # is the judge honest?
+- uv run python scripts/compare_runs.py                     # this run vs the last
 
 ## Rules
 

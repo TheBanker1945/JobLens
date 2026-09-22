@@ -1111,3 +1111,250 @@ copied.
 Unchanged on purpose: the judge prompt, so `PROMPT_VERSION` stays 3.6 and the
 eval still reads every judgement bought in 3.6. It reports the same numbers it
 did then — 244 quotes, 100% found, 0 `strong` on a "would not apply" — for $0.
+
+## 3.7 — What keeps coming up, what to say when nothing fits, and a run you can keep
+
+The last two things the phase-2 brief asks for, and both of them are about the
+run as a whole rather than one vacancy. Neither costs a model call: every number
+below comes from a judgement already paid for in 3.6.
+
+### What keeps coming up that you do not have
+
+The brief calls this "the single most useful sentence this app can say to me".
+3.6 left exactly the right raw material — each gap already carries a requirement,
+a `required`/nice-to-have flag, and a quote from the vacancy **that was checked
+against the vacancy text** before anyone saw it. 3.7 is the arithmetic over a
+run of them (`src/joblens/cv/gaps.py`).
+
+**The counting unit is a skill name the corpus already uses.** Grouping "Azure"
+and "Microsoft Azure" is the one part of this that looks like it wants a model,
+and phase 1 turns out to have bought the answer already: `VacancyDetails.skills`
+is a canonical list of short skill names for all 279 vacancies. So the vocabulary
+is the union of the shortlisted vacancies' skill lists, a gap joins a term's
+bucket when it names that term as **whole tokens**, and then one merge pass folds
+a bucket whose tokens are a superset of another *existing* bucket's into it. That
+is the whole grouping: "Microsoft Azure" joins "Azure", "Azure DevOps" does not
+join anything unless some gap raised "Azure" on its own, and "SQL" is never found
+inside "MySQL".
+
+The comparison is `cv/verify.py:searchable` — the same normalisation the quote
+check uses, and for the same reason. 3.6's rule holds here too: **normalising
+formatting is safe, accepting a paraphrase is not.**
+
+**Weight is `fit / 100`, summed.** The brief asks for the requirements of "the
+vacancies I came closest to", so a gap in a vacancy judged 80 has to count for
+more than the same gap in one judged 20. There is no tuned constant and no band:
+the number the weight is made of is printed on the same line.
+
+**A vacancy votes once.** An advert that names Python under "wat je meebrengt"
+and again under "wat je gaat doen" produces two gaps, and counting both would
+print "in 2 of 10" about one advert. So each vacancy contributes its strongest
+wording and nothing more. On Lisa's run this changed no number — all seven of her
+"in 2 of 10" really were two adverts — which is what a guard looks like when the
+data has not yet hit it.
+
+**No model call, and here is the price of that decision.** One extra call per run
+that groups the gap strings would cost **0.26 cent** (≈1,500 tokens in, 400 out
+at gemini-3.8-flash), which is less than one judge call. It was not bought, and
+the reason is not the money: a grouping is the one thing on this screen that
+would have no source text behind it. Every other line can be traced to a quote;
+a cluster label is a model's opinion about two of its own earlier opinions. What
+is printed instead is the number that would justify buying it later —
+
+| CV | gaps | grouped | field checks that fired |
+|---|---|---|---|
+| lisa_de_vries | 41 | **73%** | years (1 of 10 asks more than her dates cover) |
+| ingrid_solheim | 47 | **55%** | language (3 of 10 require Dutch) |
+
+— so a quarter to a half of the gaps name nothing the corpus calls a skill. They
+are counted and listed as "could not be grouped" rather than dropped. Ingrid's
+share is lower for a legible reason: a marine biologist's gaps are sentences
+about a whole career being wrong, not missing tools.
+
+**A second block needs no judge at all.** Education level, required languages and
+`experience_years_min` were extracted into fields in phase 1, so they can be
+compared with the CV in code: `meets_level`, the language list, and the years the
+dates cover. A field comparison cannot hallucinate, and it is the only part of
+this report that would survive the judge being switched off.
+
+**And one honesty check falls out for free.** A gap naming a skill the CV *does*
+list is left out of the headline — "what you do not have" cannot include
+something you have, whatever the judge said — and reported separately, where it
+is either the judge wanting more than a mention or the judge being wrong.
+
+### The refusal: nothing here fits you
+
+3.5 measured that this cannot be a cosine: 0.646 for the control against 0.766
+for a CV that fits, twelve hundredths, on one control CV. 3.6 measured that the
+judge can do it. 3.7 is the rule, and the rule needed **two bands, not one**,
+which the data decided (`scripts/eval_judge.py`, all four CVs, 279 vacancies):
+
+| cv | strong | possible | weak | outcome |
+|---|---|---|---|---|
+| ingrid_solheim | 0 | 0 | 10 | **nothing fits** |
+| lisa_de_vries | 0 | 2 | 8 | nothing is a *clear* fit |
+| sanne_vermeulen | 7 | 1 | 2 | ordinary answer |
+| youssef_bakker | 3 | 3 | 4 | ordinary answer |
+
+The obvious rule — "no strong means refuse" — would have refused Lisa, whose
+labels name four vacancies she would apply to. So a refusal needs no strong
+**and** no possible, and the middle band exists to say the weaker thing plainly
+instead of overstating it. One rule over four CVs is a check that it is not
+obviously broken, not a measurement, and `print_refusal` in the judge eval says
+so on the same screen.
+
+**What the refusal is not allowed to be.** Not silence, and not a shorter list.
+The banner goes *above* the list — a refusal printed under ten formatted
+vacancies has already been contradicted by the time you reach it — and the list,
+the reason each one fails, and the gap summary all still print. The sentence also
+claims only what was checked: *"the 10 closest of 279 raw vacancies were all
+judged weak"*, not "nothing in the corpus fits you", which is a statement about
+279 vacancies of which it read ten.
+
+The real output, unedited:
+
+```
+==============================================================================
+Nothing here fits you. The 10 closest of 279 raw vacancies were all judged weak
+-- the best of them scored 15 out of 100.
+They are still listed below, with the reason each one fails and the requirements
+that keep coming up.
+==============================================================================
+```
+
+### The run stamp becomes a file
+
+3.6 printed a line of provenance and threw it away with the scrollback.
+`src/joblens/cv/runs.py` stores it next to what the run concluded, under
+`data/raw/cv-runs/`, and `scripts/compare_runs.py` reads two of them.
+
+**Five things set the scale**, and if any differs the comparison is refused by
+name: which CV was read, which embedder chose the shortlist, which model judged
+it, under which prompt version, and which corpus (samples or raw). Subtracting
+two numbers from different scales produces a number, and a number is what people
+believe.
+
+**The contents of the corpus are deliberately not on that list.** They change
+every time `daily_update.sh` runs — 198 in 3.5, 279 today — so making that a
+blocker would refuse nearly every real pair of runs, including the one question
+worth asking a week later: is anything new better than last week's best? A
+changed corpus is reported instead: the size, a digest of the sorted keys (279
+and 279 can be two different 279s), what entered the shortlist, what left it, and
+how the vacancies in both were judged this time.
+
+### The corpus grew from 198 to 279, and it moved every eval number but one
+
+This was meant to be a footnote and is the most interesting result in the
+milestone. The labels in `evals/cv-matches/` were pooled when the corpus was 198.
+Re-running 3.5's eval on 279, with a new `labelled` column saying how much of
+each top 10 was ever looked at:
+
+| variant | lisa 3.5 → now | sanne 3.5 → now | youssef 3.5 → now |
+|---|---|---|---|
+| gemini-2 raw CV | 0.79 → **0.57** | 0.76 → **0.70** | 0.88 → **0.88** |
+| gemini-2 profile | 0.67 → 0.54 | 0.83 → 0.46 | 0.91 → 0.91 |
+| gemini-2 roles | 0.80 → 0.58 | 0.79 → 0.55 | 0.67 → 0.67 |
+| gemini-2 chunks | 0.80 → 0.57 | 0.71 → 0.42 | 0.72 → 0.72 |
+| gemini-2 wishlist | 0.65 → 0.53 | 0.79 → 0.70 | 0.94 → 0.94 |
+| **labelled share** | 60-80% | 40-70% | **100%** |
+
+**Youssef's five numbers are identical to five decimal places of the old ones,
+and his coverage is the only one at 100%.** That is as clean a demonstration as
+this project is going to get that the drop is the *labels* and not the retrieval:
+an unlabelled vacancy scores gain 0 exactly like one judged "would not apply", so
+a variant is punished for finding something nobody read.
+
+So: **yes, a re-pool is needed, for Lisa and Sanne.** Not done in 3.7, because
+re-labelling is an opinion and the file has to say whose. What 3.7 does is make
+the shortfall impossible to miss — the column prints on every run, with a line
+under the table saying the scores are a floor.
+
+The 3.5 conclusion survives anyway, on the rule that was written down before the
+table was read. Best worst case across CVs: `raw` 0.57, `roles` 0.55, `wishlist`
+0.53, `chunks` 0.42, `profile` 0.46. **`raw` still wins**, by less, on scores
+that are all floors. The control gap is unchanged at 0.11 (0.672 against 0.784),
+so the refusal still cannot be a threshold.
+
+**Also fixed here**: `index_vacancies.py` defaulted to `--style structured_raw`
+while 3.1 settled on `structured`. Harmless but it warmed a cache nothing reads.
+
+### The four questions at the end of the brief, with today's numbers
+
+**1. Is a made-up CV good enough, or does the gap distort what we measure?**
+Good enough to keep the repo runnable, and not good enough to measure on. 3.4
+said invented CVs would flatter retrieval because whoever writes one has read the
+vacancies; 3.6.1 found the real failure was duller and worse — an invented CV is
+*typed*, so it is clean Unicode, and the three bugs a real PDF found all live in
+the gap between "text" and "what a PDF exporter produced". 3.7 adds a third
+shape: the four invented CVs are also invented *against a snapshot*, and two of
+the four now have a top 10 that is 40-80% unlabelled. An invented CV ages. The
+answer the repo ships with is the split it already has: sample CVs so the thing
+runs end to end for anyone, numbers reported per CV and never pooled, and the
+labels file saying in its own text that this measures Claude against Claude.
+
+**2. Explain every vacancy or only the best few, and what does each cost?**
+Only the shortlist, and the cost is now measured rather than estimated.
+Half a cent and ~3s to read a CV (3.4, once, then cached). **0.36 cent per
+vacancy judged** (3.6, 40 judgements) — measured again in 3.7's own runs at
+$0.033 for 10 and $0.040 for 10. So **about 4 cents and 25-30 seconds per run at
+`--top 10`**, against **about $1.00** to judge all 279 — which is 13 minutes of
+model time, or roughly four minutes of waiting at six calls at a time. The
+aggregate gap and the refusal add **zero** on top: both are arithmetic over
+judgements already bought. What the cheap choice loses is real and 3.5 named it —
+retrieval decides who gets a call, and its hit@1 is not 100%, so a vacancy
+ranked 11th is never read. That is the trade being made: a 25x cost for the
+vacancies ranked 11-279, most of which the judge would call weak.
+
+**3. How do I compare two scores from different CVs, or a changed corpus?**
+You cannot, and the app now stops pretending in code rather than in a footnote.
+A cosine is not comparable between CVs (3.5 said so; the control scores 0.646 and
+a good match 0.766 — the *same* number can be either). A `fit` is not comparable
+across judge models or prompt versions. `compare_runs.py` refuses on all five of
+those and names which one moved. The corpus is the one thing it will compare
+across, because it changes by itself and refusing would make the tool useless;
+what it does instead is report what entered and left.
+
+**4. What should it do when the CV fits nothing?** Say so, in the first line,
+and then show the closest few with why each fails and what keeps coming up. Built
+on the verdicts, because 3.5 measured that the score cannot tell (0.12) and 3.6
+measured that the judge can (0 strong, 0 possible, 10 weak, top fit 5 — top fit
+15 on today's corpus). Never silence, never a padded list.
+
+### "How I will know it worked" — the brief's own list, honestly
+
+**Done.**
+
+- *"Point it at my own CV and get back ranked vacancies, each with the evidence
+  behind it and an honest list of gaps."* Yes, and the evidence is checked rather
+  than promised: 245 quotes over four CVs in 3.7's run, **100% found in the
+  source**, with the 3.6.1 machinery that keeps a damaged PDF from being guessed
+  at.
+- *"I can see roughly what a run costs, in money and in time."* Printed in the
+  footer of every run and stored in the artifact. See question 2 above.
+- *"What keeps coming up that I do not have."* This milestone.
+
+**Partly done.**
+
+- *"The made-up CV produces visibly different results — different jobs, different
+  gaps."* The jobs: measured, top-10 overlap is **0% between every pair of the
+  three CVs that fit something**. The one bad number is still the control against
+  Lisa at 40% (two English-language technical CVs land in the same region), which
+  is a mark against `raw` and was one of the reasons the refusal is an
+  explanation and not a score. The gaps: visibly different in 3.7's two real runs
+  (Lisa gets dbt/Snowflake/ML, Ingrid gets Dutch and Python), but that is two
+  runs read by eye, not a number.
+- *"Some measurement of quality beyond my opinion."* It exists — four labelled
+  CVs, nDCG/hit@1/MRR per CV, faithfulness, verdict-against-label with the
+  expensive and cheap mistakes counted apart — and the labels file says in its own
+  text who judged it. What is now true and was not in 3.5: **the labels no longer
+  cover the corpus.** 40-80% of two CVs' top tens are unlabelled and the scores
+  are floors. Measurable, measured, and printed; not yet repaired.
+
+**Not done.**
+
+- *"I can point it at my own CV"* — done as software, but the deeper item behind
+  it is not: **Mahdi's CV has never been labelled**, so every quality number in
+  phase 2 is still Claude ranking Claude's judgement of Claude-written CVs.
+  `evals/cv-matches/README.md` has said this since 3.5 and it is still the single
+  largest hole in the evidence. The real test is one real CV, labelled by the
+  person it belongs to, and it is one file in a gitignored directory away.
