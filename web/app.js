@@ -165,6 +165,14 @@ function renderDetail(row) {
         `retrieval #${row.rank} at ${row.score.toFixed(3)}, matched by "${row.part}" · ` +
         `${row.evidence} claim(s) verified` + (row.dropped ? `, ${row.dropped} dropped: the quote was not in the text` : "")),
     );
+    if (row.claims && row.claims.length) {
+      detail.append(el("h4", {}, "why it fits: lines of your CV, each found in it"));
+      for (const claim of row.claims) {
+        detail.append(el("div", { class: "claim" },
+          el("div", {}, claim.requirement),
+          el("q", {}, claim.quote)));
+      }
+    }
     if (row.gaps.length) {
       detail.append(el("h4", {}, "what the vacancy asks for that your CV does not show"));
       for (const gap of row.gaps) {

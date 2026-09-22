@@ -278,6 +278,7 @@ def _judged_row(row: JudgedRow, ranked: RankedRow | None) -> dict:
         "part": ranked.part if ranked else "",
         "evidence": row.evidence,
         "dropped": row.dropped,
+        "claims": [claim.model_dump(mode="json") for claim in row.claims],
         "gaps": [gap.model_dump(mode="json") for gap in row.gaps],
         "judged": True,
     }
