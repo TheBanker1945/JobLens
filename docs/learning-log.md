@@ -1646,14 +1646,45 @@ counts. A person labelling the same vacancy twice is data about the labels, not 
 mistake to be overwritten.
 
 **`eval_judge.py` prints the disagreements with the reasons.** That is the
-"before" and "after" of this milestone in one screen: today it prints Mahdi's
-five disagreements and "your reason: none recorded (labelled before 4.4)" under
-each of them. Every mark made in the viewer from now on removes one of those
-lines.
+"before" and "after" of this milestone in one screen. Run today, `--cv mohammed
+--top 12`, on the stored judgements:
+
+```
+===== where the judge and the person disagree =====
+
+  mohammed: judge strong 88, you would not apply
+    All-round Frontend Developer
+    your reason: none recorded (labelled before 4.4)
+
+  mohammed: judge weak 32, you would apply
+    Full Stack Developer / Engineer bij Bos Logistics
+    your reason: none recorded (labelled before 4.4)
+
+  mohammed: judge weak 28, you would apply
+    Full-stack Developer
+    your reason: none recorded (labelled before 4.4)
+
+  mohammed: judge weak 20, you would apply
+    Python Software Engineer -  AI team
+    your reason: none recorded (labelled before 4.4)
+```
+
+**Four, where 3.7.2 counted five**, and the difference is worth naming rather
+than rounding away: one of the five was judged `weak 24` then and `possible` now.
+3.7 measured this exact effect — two runs of one CV six minutes apart moved two
+of ten judgements by a few points — and here it moved one of them across a band.
+So "five disagreements" was never a constant; it is a number with a run attached,
+which is the argument for reading the band rather than the fit, made again.
+
+Every mark made in the viewer from now on removes one of those "none recorded"
+lines. That is the only progress measure this milestone has, and it is honest:
+the reasons do not exist yet.
 
 **Where the numbers stand right now** (`/api/runs/.../labels` on the real run):
 `apply 9, maybe 1, judged 24, with_a_reason 0`. Twenty-four calls, no sentences.
-That is the number 4.5 is waiting on, and it is the honest state of the evidence.
+That is the number 4.5 is waiting on — the brief asks for twenty real reasons
+before a preferences schema is written, and guessing at the form instead is the
+one thing it said not to do.
 
 **Two bugs the tests found**, both of the kind that only appear when a seam is
 actually used by something new:
