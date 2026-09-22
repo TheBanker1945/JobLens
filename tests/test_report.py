@@ -118,3 +118,36 @@ def test_the_latest_report_is_the_newest_one(tmp_path):
 
 def test_no_report_yet_is_not_an_error(tmp_path):
     assert RunReport.latest(tmp_path) is None
+
+
+def test_a_run_of_one_source_does_not_refresh_the_others(tmp_path):
+    """2026-09-22: two Indeed-only runs made two-day-old Greenhouse data read as
+    'up to date', because only the newest report was consulted."""
+    from datetime import UTC, datetime
+
+    full = RunReport(started_at=datetime(2026, 9, 20, 16, 10, tzinfo=UTC))
+    full.add(run(source="greenhouse", search="adyen", listed=212))
+    full.add(run(source="indeed", listed=40))
+    full.write(tmp_path)
+    indeed_only = RunReport(started_at=datetime(2026, 9, 22, 12, 7, tzinfo=UTC))
+    indeed_only.add(run(source="indeed", listed=30))
+    indeed_only.write(tmp_path)
+
+    last = RunReport.last_fetched(tmp_path)
+
+    assert last["greenhouse"].date().isoformat() == "2026-09-20"
+    assert last["indeed"] > last["greenhouse"]
+
+
+def test_a_search_that_broke_is_not_a_fetch_but_an_empty_one_is(tmp_path):
+    from datetime import UTC, datetime
+
+    report = RunReport(started_at=datetime(2026, 9, 22, 7, 15, tzinfo=UTC))
+    report.add(run(source="jobdataapi", status="rate_limited"))
+    report.add(run(source="recruitee", search="nmbrs", status="empty"))
+    report.write(tmp_path)
+
+    last = RunReport.last_fetched(tmp_path)
+
+    assert "jobdataapi" not in last
+    assert "recruitee" in last

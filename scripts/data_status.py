@@ -5,9 +5,10 @@ good as the last update. This answers, in one screen: how much is stored, how
 much of it is searchable, how old the vacancies are, and whether the last run
 was healthy.
 
-Exits non-zero when the data is stale or the last run had a problem, so it works
-as a check before a demo -- or in cron, if you want a nudge when the nightly run
-has quietly stopped happening.
+Exits non-zero when any enabled source is stale or the last run had a problem,
+so it works as a check before a demo -- or in cron, if you want a nudge when the
+nightly run has quietly stopped happening. Freshness is per source: a manual
+`fetch_vacancies.py --source indeed` refreshes Indeed and nothing else.
 
 Usage:
     uv run python scripts/data_status.py
@@ -16,7 +17,8 @@ Usage:
 
 import argparse
 import sys
-from datetime import UTC, datetime
+import tomllib
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from joblens.config import load_llm_settings
@@ -38,7 +40,10 @@ CACHE_DIR = ROOT / "data" / "cache"
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--max-age-hours", type=float, default=36.0)
-    parser.add_argument("--style", default="structured_raw")
+    parser.add_argument("--config", type=Path, default=ROOT / "sources.toml")
+    # `structured`, the style the index reads since 3.1. The old default counted
+    # vectors for `structured_raw`, which nothing searches any more.
+    parser.add_argument("--style", default="structured")
     args = parser.parse_args()
 
     store = VacancyStore(RAW_DIR)
@@ -50,11 +55,27 @@ def main() -> int:
     vacancies = {source: store.load(source) for source in sources}
     total = sum(len(group) for group in vacancies.values())
     details = DetailsStore(EXTRACTED_DIR).load_all(sources)
+    enabled = enabled_sources(tomllib.loads(args.config.read_text(encoding="utf-8")))
+    fetched = RunReport.last_fetched(RUNS_DIR)
+    now = datetime.now(UTC)
 
-    print(f"{'source':<12} {'stored':>7} {'extracted':>10} {'newest':>8}")
+    print(
+        f"{'source':<12} {'stored':>7} {'extracted':>10} {'newest':>8} {'fetched':>9}"
+    )
     for source, group in vacancies.items():
         extracted = sum(1 for v in group if v.key in details)
-        print(f"{source:<12} {len(group):>7} {extracted:>10} {newest(group):>8}")
+        when = (
+            ago(now - fetched[source])
+            if source in fetched
+            else "never"
+            if source in enabled
+            else "-"
+        )
+        note = "" if source in enabled else "  (disabled in sources.toml)"
+        print(
+            f"{source:<12} {len(group):>7} {extracted:>10} {newest(group):>8} "
+            f"{when:>9}{note}"
+        )
     print(f"{'total':<12} {total:>7} {len(details):>10}")
 
     print(f"\nembedded: {embedded(vacancies, details, args.style)}")
@@ -65,16 +86,23 @@ def main() -> int:
         problems.append("no fetch run has ever been recorded")
     else:
         finished = datetime.fromisoformat(report["finished_at"])
-        hours = (datetime.now(UTC) - finished).total_seconds() / 3600
         print(
-            f"last run: {finished:%Y-%m-%d %H:%M} ({hours:.0f}h ago), "
+            f"last run: {finished:%Y-%m-%d %H:%M} ({ago(now - finished)} ago), "
             f"{'healthy' if report['healthy'] else 'WITH PROBLEMS'}, "
-            f"{report['totals']['stored']} new vacancies"
+            f"{report['totals']['stored']} new vacancies, "
+            f"sources: {', '.join(sorted({s['source'] for s in report['searches']}))}"
         )
         problems += [f"last run: {problem}" for problem in report["problems"]]
-        if hours > args.max_age_hours:
+
+    # Per source, not per run: a run of one source says nothing about the rest.
+    for source in sorted(enabled & set(sources)):
+        if source not in fetched:
+            problems.append(f"{source}: no finished fetch in the stored reports")
+            continue
+        age = now - fetched[source]
+        if age.total_seconds() / 3600 > args.max_age_hours:
             problems.append(
-                f"the last update was {hours:.0f}h ago, more than the "
+                f"{source}: last fetched {ago(age)} ago, more than the "
                 f"{args.max_age_hours:.0f}h this check allows"
             )
 
@@ -85,6 +113,25 @@ def main() -> int:
     for problem in problems:
         print(f"  - {problem}")
     return 1
+
+
+def enabled_sources(config: dict) -> set[str]:
+    """The sources a scheduled fetch asks, read the way fetch_vacancies.py reads
+    them: a company board when it lists a company, the rest when enabled."""
+    boards = {name for name in ("recruitee", "greenhouse") if config.get(name)}
+    switched = {
+        name
+        for name in ("jobdataapi", "indeed", "linkedin")
+        if config.get(name, {}).get("enabled")
+    }
+    return boards | switched
+
+
+def ago(delta: timedelta) -> str:
+    hours = delta.total_seconds() / 3600
+    if hours < 1:
+        return "<1h"
+    return f"{hours:.0f}h" if hours < 48 else f"{hours / 24:.0f}d"
 
 
 def embedded(vacancies: dict[str, list[Vacancy]], details: dict, style: str) -> str:

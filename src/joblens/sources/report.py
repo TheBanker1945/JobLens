@@ -120,6 +120,29 @@ class RunReport:
             return None
         return json.loads(reports[-1].read_text(encoding="utf-8"))
 
+    @staticmethod
+    def last_fetched(directory: Path) -> dict[str, datetime]:
+        """When each source last finished a search, over every stored report.
+
+        The newest report alone cannot answer this. `fetch_vacancies.py
+        --source indeed` writes a report that is perfectly healthy and says
+        nothing about the other sources -- which is how two days without a
+        Greenhouse fetch read as "up to date" on 2026-09-22.
+
+        A search that broke does not count: nothing was fetched. One that came
+        back empty does, because the board was asked and answered.
+        """
+        last: dict[str, datetime] = {}
+        for path in sorted(directory.glob("*_fetch.json")):  # oldest first
+            report = json.loads(path.read_text(encoding="utf-8"))
+            # The start, not the finish: a run takes minutes, and the earlier
+            # of the two can only make a source look older, never fresher.
+            started = datetime.fromisoformat(report["started_at"])
+            for search in report["searches"]:
+                if search["status"] not in BROKEN:
+                    last[search["source"]] = started
+        return last
+
     def write(self, directory: Path) -> Path:
         """One file per run, so a bad week is visible next to a good one."""
         directory.mkdir(parents=True, exist_ok=True)
