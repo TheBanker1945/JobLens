@@ -43,18 +43,36 @@ NOT_A_POSTCODE = (
     "en in op te de ze we je ik of af na om zo al aan as at to is an by on or it "
     "be do no so up my me"
 ).split()
+# A fourth: a *year* followed by one of the two-letter acronyms a CV puts after
+# a year -- "2019 - 2021 IT Consultant", "Sinds 2023 AI engineer". Read as a
+# postcode, the year and the skill both went (found in the 2026-09-22 audit).
+# Only for year-shaped numbers, because 1900-2099 are real postcodes around
+# Haarlem and IJmuiden: "2021 AI" there is missed, which costs the four digits
+# of an area whose city the CV keeps on purpose anyway. The street is still
+# caught by STREET.
+ACRONYMS_AFTER_A_YEAR = (
+    "IT AI ML QA UX UI BI HR PM PO VP BA MA BS MS NL EU UK US BV"
+).split()
 POSTCODE = re.compile(
-    r"\b[1-9]\d{3} ?(?!(?:" + "|".join(NOT_A_POSTCODE) + r")\b)[A-Za-z]{2}\b(?!-)"
+    r"\b(?!(?:19|20)\d{2} ?(?:" + "|".join(ACRONYMS_AFTER_A_YEAR) + r")\b)"
+    r"[1-9]\d{3} ?(?!(?:" + "|".join(NOT_A_POSTCODE) + r")\b)[A-Za-z]{2}\b(?!-)"
 )
 
 # A street line: a word ending in a Dutch street suffix, then a house number.
 # Matching the suffix rather than a capital letter keeps "Java 8, Spring Boot 3"
 # out of it.
+#
+# Two limits, both from the 2026-09-22 audit, and both the postcode's lessons
+# again. The number has to be on the same line: "Loopbaan" as a heading with
+# "2019 - 2023" under it was an address. And the number may not be a year:
+# "baan" is also the Dutch word for a job, so "Bijbaan 2018 - 2020" and
+# "Gerechtshof 2018" were addresses too. A real house number between 1900 and
+# 2099 is missed by this; the postcode on the same line is not.
 STREET = re.compile(
     r"\b[A-Za-zÀ-ſ'.-]*"
     r"(?:straat|laan|weg|plein|kade|dijk|singel|gracht|hof|pad|dreef|steeg|baan|"
     r"boulevard|park)"
-    r"\s+\d+\s*[a-zA-Z]?\b",
+    r"[ \t]+(?!(?:19|20)\d{2}\b)\d+[ \t]*[a-zA-Z]?\b",
     re.I,
 )
 
@@ -169,16 +187,36 @@ def _remove(
     return pattern.sub(replace, text)
 
 
+# The small words inside a Dutch surname. "de" was already safe for being two
+# letters; "van" and "der" are three, so until the 2026-09-22 audit a name like
+# "Jan van der Berg" removed every "van" and "der" in the CV -- "ontwikkeling
+# van dashboards" included.
+NAME_PARTICLES = frozenset(
+    "van der den het ter ten von vom zum zur del dos das".split()
+)
+
+# A name part followed by a year is a date, not a name: the first name "Jan"
+# must not take "Jan 2021" with it.
+BEFORE_A_YEAR = r"(?!\.?[ \t]*(?:(?:19|20)\d{2}|'\d{2})\b)"
+
+
 def _name_patterns(name: str) -> list[re.Pattern[str]]:
     """The whole name first, then each part, so "Jan de Vries" does not survive
-    as "Vries" further down the page. Parts of one or two letters (initials, and
-    "de", "van") are left alone: they match too much."""
-    parts = [part for part in name.split() if len(part) > 2]
-    whole = " ".join(name.split())
-    return [
-        re.compile(rf"\b{re.escape(piece)}\b", re.I)
-        for piece in dict.fromkeys([whole, *parts])
+    as "Vries" further down the page. Initials, two-letter words and the
+    particles above are left alone: they match too much of an ordinary CV."""
+    parts = [
+        part
+        for part in name.split()
+        if len(part) > 2 and part.casefold() not in NAME_PARTICLES
     ]
+    whole = " ".join(name.split())
+    patterns = [re.compile(rf"\b{re.escape(whole)}\b", re.I)]
+    patterns += [
+        re.compile(rf"\b{re.escape(part)}\b{BEFORE_A_YEAR}", re.I)
+        for part in dict.fromkeys(parts)
+        if part.casefold() != whole.casefold()
+    ]
+    return patterns
 
 
 def _tidy(text: str) -> str:

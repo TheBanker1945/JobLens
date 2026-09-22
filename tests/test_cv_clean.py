@@ -91,16 +91,65 @@ def test_short_name_parts_are_left_alone():
     assert "de hele dag" in redacted.text
 
 
+def test_name_particles_are_left_alone_however_long():
+    """ "van" and "der" are three letters, and used to go everywhere."""
+    text = "Jan van der Berg\nOntwikkeling van dashboards voor der Kinderen"
+
+    redacted = redact_cv(text, name="Jan van der Berg")
+
+    assert "Ontwikkeling van dashboards voor der Kinderen" in redacted.text
+    assert "Berg" not in redacted.text
+
+
+@pytest.mark.parametrize("line", ["Jan 2021 - heden", "Jan. 2021", "jan '21"])
+def test_a_first_name_that_is_also_a_month_keeps_the_date(line):
+    assert line in redact_cv(f"Jan Jansen\n{line}", name="Jan Jansen").text
+
+
+def test_a_first_name_still_goes_when_it_is_not_a_date():
+    redacted = redact_cv("Jan Jansen\nReferentie: vraag naar Jan.", name="Jan Jansen")
+
+    assert "Jan" not in redacted.text
+
+
 @pytest.mark.parametrize(
     "line",
     [
         "Orderpicker van 2016 tot 2019 en 2021 bij Action",  # 2019 en -> not a postcode
         "Ad-hoc analyses sinds 2023 Ad-hoc voor Logistiek",
         "Werkte in 2018 in Utrecht",
+        # A year and the acronym after it: both used to go as a postcode.
+        "2019 - 2021 IT Consultant bij Capgemini",
+        "Sinds 2023 AI engineer",
+        "2020 QA tester, 2022 BI developer",
     ],
 )
 def test_prose_is_not_mistaken_for_a_postcode(line):
     assert redact_cv(line).text == line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Loopbaan\n2019 - 2023 Data-analist bij Coolblue",  # a heading, then a year
+        "Bijbaan 2018 - 2020 kassamedewerker",  # baan is also a job
+        "Juridisch medewerker, Gerechtshof\n2018 - 2021",
+        "Vaste baan 2019, daarna zzp",
+    ],
+)
+def test_a_job_heading_with_a_year_is_not_an_address(line):
+    assert redact_cv(line).text == line
+
+
+@pytest.mark.parametrize(
+    "address", ["Maliebaan 12", "Hoofdweg 1080a", "Burgemeester de Withstraat 7"]
+)
+def test_street_lines_still_go(address):
+    assert address not in redact_cv(f"{address}, 3581 CD Utrecht").text
+
+
+def test_a_postcode_after_a_street_still_goes_even_in_the_haarlem_range():
+    assert "2011 AB" not in redact_cv("Kruisstraat 5, 2011 AB Haarlem").text
 
 
 @pytest.mark.parametrize(
