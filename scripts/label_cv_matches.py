@@ -36,7 +36,7 @@ from joblens.corpus import Corpus, load_corpus
 from joblens.cv.match import PreparedCV, prepare_cv, queries_for
 from joblens.cv.store import CVCache
 from joblens.embeddings.documents import build_document
-from joblens.evals.matching import MatchConfig, rank_vacancies
+from joblens.evals.matching import MatchConfig, rank_for_cv
 from joblens.evals.retrieval import EmbedderPool
 from joblens.llm.client import LLMClient
 from joblens.sources.base import Vacancy
@@ -141,10 +141,15 @@ def pooled_candidates(
             build_document(v.text, corpus.details.get(v.key), config.style)
             for v in corpus.vacancies
         ]
-        parts = queries_for(
-            prepared, config.cv_style, client=client, model=model, cache=cache
-        )
-        ranking, _ = rank_vacancies(config, documents, parts, CACHE_DIR, pool)
+        ranking = rank_for_cv(
+            config,
+            documents,
+            lambda style: queries_for(
+                prepared, style, client=client, model=model, cache=cache
+            ),
+            CACHE_DIR,
+            pool,
+        ).ranking
         for rank, index in enumerate(ranking.order[:depth], 1):
             key = corpus.vacancies[index].key
             found.setdefault(key, []).append(f"{config.name} #{rank}")

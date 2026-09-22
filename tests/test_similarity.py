@@ -64,3 +64,14 @@ def test_rank_pooled_can_be_cut_short_like_rank():
 def test_rank_pooled_needs_something_to_ask():
     with pytest.raises(ValueError, match="no queries"):
         rank_pooled([], [[1.0, 0.0]])
+
+
+def test_fusion_works_on_any_kind_of_item():
+    """The eval fuses document positions, the app vacancy keys: one function."""
+    from joblens.embeddings.similarity import fuse_orders
+
+    fused = fuse_orders([["a", "b", "c"], ["b", "c", "a"]])
+
+    assert [one.item for one in fused][0] == "b"
+    assert fused[0].points == 1 / 62 + 1 / 61
+    assert {one.item: one.best_list for one in fused}["a"] == 0

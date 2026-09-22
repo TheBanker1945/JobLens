@@ -91,6 +91,10 @@ class FileStore:
         _write_json(path, labels.model_dump(mode="json"))
         return str(path)
 
+    def is_shared_labels(self, cv: str) -> bool:
+        """Whether this CV's labels are the committed, invented kind."""
+        return self.labels_path(cv).parent == self.shared_labels_dir
+
     def labels_path(self, cv: str) -> Path:
         """Where this CV's labels are written: beside the ones that exist.
 

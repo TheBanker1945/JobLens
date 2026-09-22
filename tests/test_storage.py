@@ -169,3 +169,17 @@ def test_a_failed_save_leaves_the_labels_that_were_there(tmp_path, monkeypatch):
 
     assert store.load_labels("mahdi").note == "v1"
     assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_only_committed_labels_count_as_shared(tmp_path):
+    from joblens.evals.matching import CVLabels
+
+    store = FileStore(tmp_path)
+    store.shared_labels_dir.mkdir(parents=True)
+    (store.shared_labels_dir / "lisa.json").write_text(
+        CVLabels(cv="lisa", corpus="raw", judged_by="Claude").model_dump_json()
+    )
+    store.save_labels(CVLabels(cv="mahdi", corpus="raw", judged_by="Mahdi"))
+
+    assert store.is_shared_labels("lisa")
+    assert not store.is_shared_labels("mahdi")
