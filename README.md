@@ -172,9 +172,25 @@ profile, one query per job, chunking, and having a model write the advert the
 person would be hired for next. The table is in the 3.5 entry of
 `docs/learning-log.md`.
 
+Each shortlisted vacancy is then read by a model next to the CV, which returns a
+verdict (strong / possible / weak), the lines of the CV that answer the vacancy,
+and what the vacancy asks for that the CV does not show.
+
+**Every quote is checked against the source before you see it.** A quote that is
+not in the CV, or not in the vacancy, is deleted together with the claim it
+supported — so a claim you read is a claim backed by text that exists. Measured
+over four CVs and forty vacancies: 244 quotes, 100% found, and a CV that fits
+nothing in the corpus gets ten "weak" verdicts rather than a polite list.
+
+```bash
+uv run python scripts/match_cv.py your_cv.pdf --top 20   # ~0.36 cent per vacancy
+uv run python scripts/match_cv.py your_cv.pdf --no-explain   # retrieval only
+uv run python scripts/eval_judge.py                      # is it honest? does it agree?
+```
+
 Scores are comparable **inside one list and nowhere else** — not between two CVs,
-not between two runs over a corpus that has changed. Why a vacancy matched, and
-what is missing from the CV for it, is the next milestone.
+not between two runs over a corpus that has changed, not across prompt versions.
+Every run prints a stamp saying which of those it was.
 
 ## Data & privacy
 

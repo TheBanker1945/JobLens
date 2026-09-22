@@ -929,3 +929,87 @@ over fifteen minutes and the fix was not the embeddings. Every variant built its
 own `CachedEmbedder`, and building one reads the whole cache file — 171 MB of
 JSON for gemini-embedding-2, twenty-four times. `EmbedderPool` keeps one per
 model for the length of a run: 43 seconds. Nothing about the measurement changed.
+
+## 3.6 — The judge: every quote checked before anyone reads it
+
+A shortlisted vacancy now comes back with a verdict, the lines of the CV that
+answer it, and what it asks for that the CV does not show. The part that makes
+this different from asking a model to be careful is that **the prompt is not
+trusted**: every quote is looked for in the text it claims to come from, and a
+quote that is not there is deleted along with the claim it supported.
+
+```
+ 3. [STRONG    90] Verpleegkundige FHIC — Fivoor
+    Je werkt al op een gesloten opnameafdeling in Den Dolder en bent
+    BIG-geregistreerd; wat ontbreekt is ervaring met het FHIC-gedachtegoed.
+    why it fits:
+      + Crisisinterventie en de-escalatie op een intensieve afdeling
+        your CV: "Vast aanspreekpunt bij agressie-incidenten en getraind in de-escalatie."
+    what you are missing:
+      - Ervaring met specifiek FHIC- of HIC-gedachtegoed  (a plus)
+        the vacancy: "Er is ruimte voor mensen die een bijdrage kunnen leveren vanwege…"
+```
+
+**Measured over four CVs and forty vacancies** (`scripts/eval_judge.py`):
+
+| | |
+|---|---|
+| quotes checked | 244 |
+| found in the source | **100%** |
+| `strong` on a vacancy labelled "would not apply" | **0** |
+| `weak` on a vacancy labelled "would apply" | 2 |
+| cost | $0.145, or **0.36 cent per vacancy** |
+| time | 35s for 40 judgements, six at a time |
+
+The two mistakes are counted apart on purpose. A `strong` on something the label
+says not to apply to spends an application; a `weak` on something worth applying
+to costs a line in a list. Zero of the expensive kind and two of the cheap kind
+is the right shape for a tool that is meant to disappoint you.
+
+**The refusal question from 3.5 is answered, and not by the number I expected.**
+Ingrid Solheim, the Arctic marine biologist, gets **0 strong, 0 possible, 10
+weak, highest fit 5** against a corpus where cosine could only separate her by
+0.12 and still handed her a confident number one. The judge reads the vacancy and
+says no. That is the mechanism 3.7 should build the "nothing here fits you"
+answer on — not a similarity threshold, which 3.5 measured and found too thin.
+
+**The first faithfulness number was not 100%, and the bug was mine.** One or two
+claims per vacancy were being dropped, which looked like the judge inventing
+quotes. It was not: the sample CVs are markdown, the source line is
+`**MBO Verpleegkunde niveau 4 — ROC Midden Nederland, Utrecht**`, and the model
+quoted it without the asterisks — correctly. The check was comparing formatting
+as if it were content. `_searchable` now removes emphasis characters and
+normalises typographic quotes and dashes on both sides, and keeps every word.
+
+The distinction that matters: **normalising formatting is safe, accepting a
+paraphrase is not.** A character that carries no meaning cannot make two
+different claims look like the same one; a loosened word match can. This is also
+why a dropped quote is never repaired by asking again — a model that invented one
+line will invent the next, and a shorter list of true claims is the honest output.
+
+**A number and a band, forced to agree.** `fit` alone drifts (what is 72?), and
+three bands cannot order twenty vacancies. The schema requires the number to sit
+inside the band's range, so a "weak, 90" fails validation and the repair loop
+from 1.4 asks again. The rubric lives in the prompt, the check lives in the
+schema, and neither is a comment.
+
+**Retrieval chooses who gets a call; it does not choose the order.** The list is
+sorted by verdict, then fit, and only then by cosine. Lisa's top-8 by similarity
+comes back as 0 strong, 2 possible, 6 weak: the vacancies were close, and close
+is not the same as worth applying to.
+
+**Where the judge and the labels disagree.** Lisa is the case: her labels call
+four data-engineering roles "would apply" and the judge calls them `possible`,
+because she is a BI analyst and they ask for platform engineering. That is a real
+difference of opinion rather than an error, and it is the direction the brief
+asks for. Sanne, whose CV matches her sector squarely, gets 4 `strong` on 4
+"would apply".
+
+**What is stored is the model's raw answer, not the checked one.** Re-running
+`verify` over a saved answer costs nothing, so a change to the check can be
+measured against judgements already paid for; only a new prompt version buys new
+calls. That is how the markdown fix above was confirmed without spending
+anything.
+
+**Still open for 3.7**: the gap list across the whole run ("what keeps coming up
+that you do not have"), and the refusal itself.
