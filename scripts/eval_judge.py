@@ -51,6 +51,7 @@ from joblens.cv.judge import (
 )
 from joblens.cv.match import prepare_cv, queries_for, search_with_cv
 from joblens.cv.outcome import Fit, assess
+from joblens.cv.read import CV_DIRECTORIES, find_cv
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
@@ -74,7 +75,15 @@ def main() -> int:
     parser.add_argument("--top", type=int, default=10, help="shortlist size per CV")
     parser.add_argument("--cv", help="only this CV")
     parser.add_argument("--fresh", action="store_true", help="ignore stored answers")
-    parser.add_argument("--cv-dir", type=Path, default=SAMPLE_CVS)
+    parser.add_argument(
+        "--cv-dir", type=Path, help="look here first (default: samples, then raw)"
+    )
+    parser.add_argument(
+        "--strip-name",
+        metavar="NAME",
+        help="remove this name, as the labelling run did: the CV a variant reads "
+        "has to be the CV that was judged, character for character",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -123,13 +132,19 @@ def judge_one(
     labels: CVLabels, corpus, client, cv_settings, embed_settings, cache, args
 ) -> tuple[list[Judged], int]:
     """The shortlist for one CV, judged, with stored answers reused."""
-    path = next(
-        (p for p in sorted(args.cv_dir.glob(f"{labels.cv}.*")) if p.suffix != ".pdf"),
-        None,
-    )
+    path = find_cv(labels.cv, _directories(args))
     if path is None:
-        raise SystemExit(f"No CV file for {labels.cv!r} in {args.cv_dir}")
-    prepared = prepare_cv(path, client, model=cv_settings.model, cache=cache)
+        raise SystemExit(
+            f"No CV file for {labels.cv!r}. Looked in "
+            + ", ".join(str(d) for d in _directories(args))
+        )
+    prepared = prepare_cv(
+        path,
+        client,
+        name=args.strip_name,
+        model=cv_settings.model,
+        cache=cache,
+    )
     parts = queries_for(
         prepared, "raw", client=client, model=cv_settings.model, cache=cache
     )
@@ -294,6 +309,11 @@ def print_refusal(rows, corpus: int) -> None:
             + ", ".join(middle)
             + " -- a one-band rule would have refused them."
         )
+
+
+def _directories(args) -> tuple[Path, ...]:
+    """Where to look for a CV: an explicit --cv-dir first, then the usual two."""
+    return (args.cv_dir, *CV_DIRECTORIES) if args.cv_dir else CV_DIRECTORIES
 
 
 if __name__ == "__main__":

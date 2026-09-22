@@ -29,6 +29,7 @@ from dotenv import load_dotenv
 from joblens.config import load_llm_settings
 from joblens.corpus import Corpus, load_corpus
 from joblens.cv.match import PreparedCV, prepare_cv, queries_for
+from joblens.cv.read import CV_DIRECTORIES, find_cv
 from joblens.cv.store import CVCache
 from joblens.embeddings.documents import build_document
 from joblens.evals.matching import (
@@ -55,7 +56,12 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=ROOT / "evals/cv-matching.toml")
     parser.add_argument("--corpus", default="raw")
     parser.add_argument("--only", help="only variants whose name contains this text")
-    parser.add_argument("--cv-dir", type=Path, default=SAMPLE_CVS)
+    parser.add_argument(
+        "--cv-dir", type=Path, help="look here first (default: samples, then raw)"
+    )
+    parser.add_argument(
+        "--strip-name", metavar="NAME", help="remove this name, as the labelling did"
+    )
     parser.add_argument(
         "--mistakes", action="store_true", help="what the best variant put on top"
     )
@@ -127,14 +133,21 @@ def main() -> int:
 
 
 def find_and_prepare(
-    directory: Path, labels: CVLabels, client, model: str, cache: CVCache
+    directory: Path | None,
+    labels: CVLabels,
+    client,
+    model: str,
+    cache: CVCache,
+    strip_name: str | None = None,
 ) -> PreparedCV:
-    matches = [
-        p for p in sorted(directory.glob(f"{labels.cv}.*")) if p.suffix != ".pdf"
-    ]
-    if not matches:
-        raise SystemExit(f"No CV file for {labels.cv!r} in {directory}")
-    return prepare_cv(matches[0], client, model=model, cache=cache)
+    directories = (directory, *CV_DIRECTORIES) if directory else CV_DIRECTORIES
+    path = find_cv(labels.cv, directories)
+    if path is None:
+        raise SystemExit(
+            f"No CV file for {labels.cv!r}. Looked in "
+            + ", ".join(str(d) for d in directories)
+        )
+    return prepare_cv(path, client, name=strip_name, model=model, cache=cache)
 
 
 def run_variant(
