@@ -78,6 +78,19 @@ def test_a_source_that_only_broke_is_not_also_called_empty():
     assert len(report.problems()) == 1
 
 
+def test_a_capped_run_is_healthy_and_says_how_many_it_left_out(tmp_path):
+    """--limit is a choice, not a fault; it is counted so it cannot hide."""
+    report = report_of(
+        run(source="greenhouse", listed=212, kept=212, dutch=56, capped=6)
+    )
+
+    written = json.loads(report.write(tmp_path).read_text(encoding="utf-8"))
+
+    assert report.healthy()
+    assert written["totals"]["capped"] == 6
+    assert written["searches"][0]["capped"] == 6
+
+
 def test_the_report_is_written_as_json(tmp_path):
     report = report_of(run(listed=20, kept=20, stored=20))
 

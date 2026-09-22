@@ -33,6 +33,10 @@ class SearchRun:
     listed: int = 0  # jobs the board returned
     kept: int = 0  # of those, usable ones (a real description, an id and a url)
     dutch: int = 0  # of those, in the Netherlands
+    # Dutch jobs that --limit left out. A choice rather than a fault, so it is
+    # not a problem below -- but a cap that bites looks exactly like a quiet
+    # board unless it is counted (see sources/netherlands.py).
+    capped: int = 0
     stored: int = 0
     known: int = 0  # already stored under this source
     duplicate: int = 0  # the same job, already stored through another source
@@ -90,7 +94,7 @@ class RunReport:
         return not self.problems()
 
     def totals(self) -> dict[str, int]:
-        fields = ("listed", "kept", "dutch", "stored", "known", "duplicate")
+        fields = ("listed", "kept", "dutch", "capped", "stored", "known", "duplicate")
         return {
             name: sum(getattr(run, name) for run in self.searches) for name in fields
         }

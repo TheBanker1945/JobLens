@@ -29,10 +29,10 @@ from pathlib import Path
 
 import httpx
 
-from joblens.sources.base import Vacancy
 from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
+from joblens.sources.netherlands import select
 from joblens.sources.recruitee import RecruiteeSource
 from joblens.sources.report import RunReport, SearchRun
 from joblens.sources.scraped import (
@@ -48,13 +48,21 @@ RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
 SOURCES = ("recruitee", "greenhouse", "jobdataapi", "indeed", "linkedin")
 SCRAPED = ("indeed", "linkedin")
+# One request returns the whole board, so a limit cannot save a request here,
+# only lose jobs. These are fetched whole and capped after the Dutch filter.
+WHOLE_BOARD = ("recruitee", "greenhouse")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=ROOT / "sources.toml")
     parser.add_argument("--source", choices=SOURCES, help="only this source")
-    parser.add_argument("--limit", type=int, default=100, help="per company/source")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=100,
+        help="at most this many Dutch vacancies per company or search",
+    )
     parser.add_argument("--all-countries", action="store_true")
     args = parser.parse_args()
 
@@ -85,6 +93,8 @@ def main() -> int:
                     f"{run.source:<12} {run.search:<30} {run.listed:>6} {run.kept:>5} "
                     f"{run.dutch:>6} {run.stored:>5} {run.known:>6} {run.duplicate:>4}"
                 )
+                if run.capped:
+                    print(f"{'':<12} --limit left out {run.capped} Dutch vacancies")
                 time.sleep(delay)  # be polite
 
     total = sum(len(store.load(name)) for name in store.sources())
@@ -117,7 +127,9 @@ def fetch_into(
     """
     limit = source_limit(config, run.source, args.limit)
     try:
-        vacancies = source.fetch(limit=limit)
+        # Scraped sources and the aggregator make fewer requests for a lower
+        # limit, so they get it here. A board does not, so it gets it below.
+        vacancies = source.fetch(limit=None if run.source in WHOLE_BOARD else limit)
     except RateLimited as err:
         wait = f"{err.retry_after / 60:.0f} min" if err.retry_after else "unknown"
         run.status, run.detail = "rate_limited", f"retry in {wait}"
@@ -138,9 +150,13 @@ def fetch_into(
     run.dropped_invalid = stats.dropped_invalid if stats else 0
     run.kept = len(vacancies)
 
-    dutch = vacancies if args.all_countries else filter_dutch(vacancies, markers)
-    run.dutch = len(dutch)
-    result = store.add(dutch)
+    # Filter first, cap second: the other way round kept 29 of Adyen's 56
+    # Dutch vacancies (sources/netherlands.py).
+    selection = select(
+        vacancies, markers, limit=limit, all_countries=args.all_countries
+    )
+    run.dutch, run.capped = selection.dutch, selection.capped
+    result = store.add(selection.kept)
     run.stored, run.known, run.duplicate = result.stored, result.known, result.duplicate
     if not run.listed:
         run.status = "empty"
@@ -211,27 +227,6 @@ def build_sources(name: str, config: dict, client: httpx.Client, store: VacancyS
                     max_age_days=settings.get("max_age_days", 7),
                 ),
             )
-
-
-def filter_dutch(vacancies: list[Vacancy], markers: list[str]) -> list[Vacancy]:
-    """Keep vacancies in the Netherlands. Greenhouse boards are worldwide and give
-    no country, so we fall back to matching the location text."""
-    return [v for v in vacancies if is_dutch(v, markers)]
-
-
-def is_dutch(vacancy: Vacancy, markers: list[str]) -> bool:
-    if (vacancy.country or "").upper() in ("NL", "NLD", "NETHERLANDS"):
-        return True
-    place = f"{vacancy.city or ''} {location_text(vacancy)}".lower()
-    return any(marker.lower() in place for marker in markers)
-
-
-def location_text(vacancy: Vacancy) -> str:
-    """The location as the source wrote it: a string, or {"name": "Amsterdam"}."""
-    location = vacancy.raw.get("location")
-    if isinstance(location, dict):
-        return str(location.get("name", ""))
-    return str(location or "")
 
 
 if __name__ == "__main__":

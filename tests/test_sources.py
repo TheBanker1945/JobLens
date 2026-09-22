@@ -85,6 +85,19 @@ def test_limit_is_respected():
     assert len(RecruiteeSource("x", fake(RECRUITEE_PAYLOAD)).fetch(limit=1)) == 1
 
 
+def test_a_board_without_a_limit_returns_every_job():
+    """One response holds the whole board; cutting it here only loses jobs
+    the Dutch filter has not looked at yet (sources/netherlands.py)."""
+    template = GREENHOUSE_PAYLOAD["jobs"][0]
+    board = {"jobs": [template | {"id": n} for n in range(250)]}
+    offers = {
+        "offers": [RECRUITEE_PAYLOAD["offers"][1] | {"id": n} for n in range(150)]
+    }
+
+    assert len(GreenhouseSource("adyen", fake(board)).fetch()) == 250
+    assert len(RecruiteeSource("x", fake(offers)).fetch()) == 150
+
+
 def test_greenhouse_unescapes_double_escaped_html():
     vacancies = GreenhouseSource("adyen", fake(GREENHOUSE_PAYLOAD)).fetch()
 
