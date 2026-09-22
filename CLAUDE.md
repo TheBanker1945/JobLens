@@ -75,11 +75,17 @@ conceptually, not just have working code.
   "?" so a hole stays visible, refuses a file that is more than 10% of them, and
   src/joblens/cv/extract.py nulls any year in a profile that is not in the CV
   text. Never repair this by loosening the quote check in src/joblens/cv/verify.py.
-- A CV reaches the index as its whole redacted text, one query (3.5, measured on
-  four invented CVs: best worst-case nDCG@10 of five representations, and the
-  cheapest). Splitting it per job or per chunk lost. Do not reopen without a CV
-  long enough for dilution to be real. The local embedder is not a 13-point drop
-  for CV matching but a cliff: worst case 0.48 against 0.76.
+- A CV reaches the index as its whole redacted text (3.5, measured on four
+  invented CVs: best worst-case nDCG@10 of five representations, and the
+  cheapest), and since 2026-09-22 also as the advert a model writes from its
+  profile ("wishlist"); the two rankings are fused by position (reciprocal rank
+  fusion, DEFAULT_STYLE in src/joblens/cv/match.py). Measured on 400 vacancies
+  with a rule written before the run: worst case 0.51 against 0.29 for the
+  whole text alone, and 0.52 against 0.29 on the real CV labelled by its owner.
+  `--style raw` is the 3.5 behaviour. Splitting it per job or per chunk lost.
+  Do not reopen without a CV long enough for dilution to be real. The local
+  embedder is not a 13-point drop for CV matching but a cliff: worst case 0.48
+  against 0.76.
 - A CV, a vacancy and a query must share one embedding space, so opening CVs to the
   cloud also opens cloud embeddings for the whole corpus. Re-measured on the 202
   real vacancies in milestone 3.1: the embedder is now **gemini-embedding-2** with

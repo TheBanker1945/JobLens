@@ -34,6 +34,11 @@ const ask = async (path, body) => {
   return payload;
 };
 
+// A cosine reads to three decimals. A fused run ranks on rank points, which sit
+// between 0.018 and 0.033 for a whole corpus, so it needs five to tell two
+// positions apart (see match_cv.py).
+const fused = () => Boolean(state.run && state.run.stamp.cv_style.includes("+"));
+const fmtScore = (x) => x.toFixed(fused() ? 5 : 3);
 const money = (usd) => (usd === null || usd === undefined ? "unknown" : `$${usd.toFixed(3)}`);
 const where = (row) => [row.company, row.city].filter(Boolean).join(" · ");
 
@@ -79,8 +84,8 @@ function renderRun() {
       el("div", {}, `${money(run.cost_usd)} · ${Math.round(run.seconds)}s of model time · ` +
         `${run.prompt_tokens} tokens in, ${run.output_tokens} out`),
       boundary ? el("div", {},
-        `shortlist cut between #${boundary.last_read.rank} (${boundary.last_read.score.toFixed(3)}) ` +
-        `and #${boundary.first_unread.rank} (${boundary.first_unread.score.toFixed(3)}) — a gap of ${boundary.gap}`) : null
+        `shortlist cut between #${boundary.last_read.rank} (${fmtScore(boundary.last_read.score)}) ` +
+        `and #${boundary.first_unread.rank} (${fmtScore(boundary.first_unread.score)}) — a gap of ${fmtScore(boundary.gap)}`) : null
     )
   );
 
@@ -145,7 +150,7 @@ function renderRow(row) {
     el("div", { class: "line" },
       el("span", { class: "rank" }, row.rank ? `#${row.rank}` : ""),
       row.judged ? el("span", { class: `badge ${row.verdict}` }, `${row.verdict} ${row.fit}`)
-                 : el("span", { class: "badge weak" }, row.score.toFixed(3)),
+                 : el("span", { class: "badge weak" }, fmtScore(row.score)),
       el("span", { class: "title" }, row.title),
       el("span", { class: "where" }, where(row)),
       myCall(row.key) ? el("span", { class: `badge mine ${myCall(row.key).call}` },
@@ -162,7 +167,7 @@ function renderDetail(row) {
   if (row.judged) {
     detail.append(
       el("div", { class: "meta" },
-        `retrieval #${row.rank} at ${row.score.toFixed(3)}, matched by "${row.part}" · ` +
+        `retrieval #${row.rank} at ${fmtScore(row.score)}, matched by "${row.part}" · ` +
         `${row.evidence} claim(s) verified` + (row.dropped ? `, ${row.dropped} dropped: the quote was not in the text` : "")),
     );
     if (row.claims && row.claims.length) {
@@ -183,7 +188,7 @@ function renderDetail(row) {
     }
   } else {
     detail.append(el("div", { class: "meta" },
-      `ranked #${row.rank} of ${state.run.counts.ranked} at ${row.score.toFixed(3)}, ` +
+      `ranked #${row.rank} of ${state.run.counts.ranked} at ${fmtScore(row.score)}, ` +
       `matched by "${row.part}" — below the cut, so no model ever read it`));
   }
   if (row.url && row.url.startsWith("http")) {

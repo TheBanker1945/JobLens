@@ -167,10 +167,13 @@ uv run python scripts/eval_cv_matching.py        # which representation is best
 
 The CV and the vacancies are embedded into the same space and ranked by cosine
 similarity. How a CV should be turned into a query was decided by measurement,
-not by taste: sending the **whole redacted CV as one query** beat a structured
+not by taste. In 3.5 the **whole redacted CV as one query** beat a structured
 profile, one query per job, chunking, and having a model write the advert the
-person would be hired for next. The table is in the 3.5 entry of
-`docs/learning-log.md`.
+person would be hired for next (the table is in `docs/learning-log.md`). On
+the grown corpus of 400 vacancies the best answer is **both**: the whole CV and
+that advert each rank every vacancy, and the two lists are fused by position
+(reciprocal rank fusion), which lifted the worst CV's nDCG@10 from 0.29 to 0.51
+(`evals/cv-matching.toml`). `--style raw` is the one-query way.
 
 Each shortlisted vacancy is then read by a model next to the CV, which returns a
 verdict (strong / possible / weak), the lines of the CV that answer the vacancy,
