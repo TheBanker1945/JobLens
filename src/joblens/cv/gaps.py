@@ -43,7 +43,11 @@ from joblens.extraction.schema import VacancyDetails
 # from the vocabulary rather than special-cased: a term too short to be found
 # safely is a term this method cannot count, and the gap falls into `ungrouped`
 # where it is visible instead of into the wrong bucket.
+#
+# Except a short term that carries a symbol: "C#" and "F#" are no Dutch word,
+# and "C#" is the gap that kept recurring on the first real CV.
 MIN_TERM_CHARS = 3
+SYMBOL = re.compile(r"[#+]")
 
 
 @dataclass(frozen=True)
@@ -171,10 +175,17 @@ def summarise_gaps(
     judged: list[Judged],
     profile: CVProfile,
     details: dict[str, VacancyDetails],
+    cv_text: str = "",
 ) -> GapSummary:
-    """The gap lists of a whole run, counted and weighted. Reads no model."""
+    """The gap lists of a whole run, counted and weighted. Reads no model.
+
+    `cv_text` is the redacted CV the judge read. A term it names as whole words
+    counts as on the CV even when the extracted skill list missed it: the list
+    is a model's reading of the CV, and the text is the CV.
+    """
     vocabulary = _vocabulary(judged, details)
     on_cv = _cv_terms(profile)
+    cv = searchable(cv_text)
 
     groups: dict[str, Group] = {}
     ungrouped: list[Occurrence] = []
@@ -195,7 +206,7 @@ def summarise_gaps(
             term = _term_for(occurrence, vocabulary)
             if term is None:
                 ungrouped.append(occurrence)
-            elif term in on_cv:
+            elif term in on_cv or (cv and _names(cv, term)):
                 # The headline is "what keeps coming up that you do not have", so
                 # something the CV lists cannot be in it whatever the judge said.
                 # Kept and shown apart, because a judge asking for a skill the CV
@@ -237,7 +248,7 @@ def _vocabulary(
             continue
         for skill in found.skills:
             normalised = searchable(skill)
-            if len(normalised) >= MIN_TERM_CHARS:
+            if len(normalised) >= MIN_TERM_CHARS or SYMBOL.search(normalised):
                 vocabulary.setdefault(normalised, skill.strip())
     return vocabulary
 
@@ -254,14 +265,26 @@ def _cv_terms(profile: CVProfile) -> set[str]:
 def _term_for(occurrence: Occurrence, vocabulary: dict[str, str]) -> str | None:
     """The longest vocabulary term this gap names, or None if it names none.
 
+    The judge's requirement is asked first and the vacancy quote only when the
+    requirement names nothing. A quote is the vacancy's whole sentence, and it
+    often lists several skills: "C#, TypeScript en SQL Server". Searching both
+    at once and taking the longest filed a "C# .NET" gap under TypeScript --
+    which the first real CV lists, so the gap then moved to "already on your
+    CV" and out of the headline, in every one of its three runs (2026-09-22
+    audit: 53 of 279 stored gaps filed under a term their requirement did not
+    name).
+
     Longest first so that a gap saying "Microsoft Azure" is not filed under a
     shorter term it happens to contain; `_merge_compounds` then folds the long
     one into the short one when both exist, which is where "Microsoft Azure" and
     "Azure" actually become one line.
     """
-    haystack = f"{searchable(occurrence.requirement)} {searchable(occurrence.quote)}"
-    found = [term for term in vocabulary if _names(haystack, term)]
-    return max(found, key=len) if found else None
+    for text in (occurrence.requirement, occurrence.quote):
+        haystack = searchable(text)
+        found = [term for term in vocabulary if _names(haystack, term)]
+        if found:
+            return max(found, key=len)
+    return None
 
 
 def _names(haystack: str, term: str) -> bool:
@@ -271,7 +294,7 @@ def _names(haystack: str, term: str) -> bool:
     match inside "javascript" -- the two mistakes that would quietly merge
     unrelated requirements and make the count say something false.
     """
-    return re.search(rf"(?<!\w){re.escape(term)}(?!\w)", haystack) is not None
+    return re.search(rf"(?<![\w+#]){re.escape(term)}(?![\w+#])", haystack) is not None
 
 
 def _merge_compounds(groups: dict[str, Group]) -> None:

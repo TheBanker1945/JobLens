@@ -236,3 +236,51 @@ def test_one_vacancy_saying_a_thing_twice_counts_once():
     # But the grouping's own score still sees both gaps it was handed.
     assert summary.total_gaps == 2
     assert summary.grouped_share == 1.0
+
+
+def test_a_gap_is_filed_under_what_its_requirement_names():
+    """The quote lists three skills; the requirement names the one missing.
+
+    Longest-over-both filed this under "TypeScript", which the CV lists, and so
+    hid the C# gap as "already on your CV" (2026-09-22 audit).
+    """
+    runs = [
+        judged(1, 80, ("Kennis van C#", "je werkt met C#, TypeScript en SQL", True))
+    ]
+    summary = summarise_gaps(
+        runs,
+        profile(skills=["TypeScript"]),
+        {"indeed:1": details("C#", "TypeScript", "SQL")},
+    )
+    assert [group.term for group in summary.groups] == ["C#"]
+    assert not summary.already_on_cv
+
+
+def test_the_quote_is_asked_only_when_the_requirement_names_nothing():
+    runs = [judged(1, 80, ("Ervaring met de cloud", "je bouwt op Azure", True))]
+    summary = summarise_gaps(runs, profile(), {"indeed:1": details("Azure")})
+    assert [group.term for group in summary.groups] == ["Azure"]
+
+
+def test_a_short_term_with_a_symbol_is_countable():
+    """ "C#" is two characters and no Dutch word; "C" alone still is not a term."""
+    runs = [
+        judged(1, 80, ("C# ervaring", "C# is vereist", True)),
+        judged(2, 70, ("C#", "kennis van C#", True)),
+    ]
+    summary = summarise_gaps(
+        runs, profile(), {"indeed:1": details("C#", "C"), "indeed:2": details("C#")}
+    )
+    assert [(group.term, group.count) for group in summary.groups] == [("C#", 2)]
+
+
+def test_a_term_the_cv_text_names_is_on_the_cv_even_if_the_skill_list_missed_it():
+    runs = [judged(1, 80, ("Ervaring met Azure", "je werkt met Azure", True))]
+    summary = summarise_gaps(
+        runs,
+        profile(skills=["Python"]),
+        {"indeed:1": details("Azure")},
+        cv_text="Deployed a Flask API on Azure App Service.",
+    )
+    assert not summary.groups
+    assert len(summary.already_on_cv) == 1

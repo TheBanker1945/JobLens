@@ -156,7 +156,9 @@ def main() -> int:
         return 1
 
     outcome = assess(judged, corpus=len(corpus), corpus_name=args.corpus)
-    summary = summarise_gaps(judged, prepared.profile, corpus.details)
+    summary = summarise_gaps(
+        judged, prepared.profile, corpus.details, cv_text=prepared.text
+    )
 
     banner(outcome)
     for position, one in enumerate(judged, 1):

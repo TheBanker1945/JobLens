@@ -85,6 +85,13 @@ class GapRow(BaseModel):
     required: bool
 
 
+class ClaimRow(BaseModel):
+    """One line of the CV the judge used, after it was found in the CV."""
+
+    requirement: str
+    quote: str
+
+
 class JudgedRow(BaseModel):
     key: str
     title: str
@@ -98,6 +105,11 @@ class JudgedRow(BaseModel):
     gaps: list[GapRow] = []
     evidence: int = 0  # how many claims survived the quote check
     dropped: int = 0
+    # The claims themselves. Until the 2026-09-22 audit a run kept only the
+    # count above, so the viewer -- where a vacancy is now marked -- could say
+    # "3 claims verified" and not which lines of the CV they were. Empty on
+    # runs stored before then.
+    claims: list[ClaimRow] = []
 
 
 class RankedRow(BaseModel):
@@ -216,6 +228,10 @@ def build_record(
             ],
             evidence=len(one.judgement.evidence),
             dropped=len(one.dropped),
+            claims=[
+                ClaimRow(requirement=item.requirement, quote=item.cv_quote)
+                for item in one.judgement.evidence
+            ],
         )
         for one in judged
     ]

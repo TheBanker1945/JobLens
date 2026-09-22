@@ -10,10 +10,16 @@ import json
 
 from joblens.corpus import Funnel
 from joblens.cv.documents import QueryPart
-from joblens.cv.judge import Judged, MatchJudgement
+from joblens.cv.judge import Evidence, Judged, MatchJudgement
 from joblens.cv.match import CVMatch
 from joblens.cv.outcome import assess
-from joblens.cv.runs import RunStamp, build_record, compare, corpus_digest
+from joblens.cv.runs import (
+    RunRecord,
+    RunStamp,
+    build_record,
+    compare,
+    corpus_digest,
+)
 from joblens.sources.base import Vacancy
 from joblens.storage import FileStore
 
@@ -219,3 +225,30 @@ def test_a_run_stored_before_4_1_still_loads(tmp_path):
     assert loaded.funnel.loaded == 0
     assert loaded.boundary() is None
     assert loaded.rows[0].fit == 80
+
+
+def test_the_evidence_lines_are_stored_not_only_counted(tmp_path):
+    """The viewer can only show "why it fits" if the run kept the lines."""
+    one = judged(1, "strong", 85)
+    one = Judged(
+        match=one.match,
+        judgement=one.judgement.model_copy(
+            update={
+                "evidence": [
+                    Evidence(requirement="Python", cv_quote="Python 3.13, FastAPI")
+                ]
+            }
+        ),
+        dropped=[],
+        quotes=1,
+    )
+    stored = record([one])
+
+    row = stored.rows[0]
+    assert row.evidence == 1
+    assert [(c.requirement, c.quote) for c in row.claims] == [
+        ("Python", "Python 3.13, FastAPI")
+    ]
+    path = tmp_path / "run.json"
+    path.write_text(stored.model_dump_json(), encoding="utf-8")
+    assert RunRecord.model_validate_json(path.read_text()).rows[0].claims
