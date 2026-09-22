@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 
 from joblens.config import load_llm_settings
 from joblens.cv.clean import Redacted, redact_cv
-from joblens.cv.extract import extract_cv
+from joblens.cv.extract import CheckedProfile, extract_cv, verify_dates
 from joblens.cv.read import CVDocument, UnreadableCVError, read_cv
 from joblens.cv.schema import CVProfile
 from joblens.llm.client import LLMClient
@@ -66,6 +66,7 @@ def main() -> int:
 
     redacted = redact_cv(document.text, name=args.strip_name)
     report_reading(document, redacted)
+    report_damage(document)
     if args.show_sent:
         print("\n--- text that would be sent " + "-" * 51)
         print(redacted.text)
@@ -86,7 +87,9 @@ def main() -> int:
         print(f"Could not read this CV into a profile:\n{err}")
         return 1
 
-    report_profile(result.details)
+    checked = verify_dates(result.details, redacted.text)
+    report_profile(checked.profile)
+    report_dropped_dates(checked)
     cost = cost_usd(settings, result.prompt_tokens, result.output_tokens)
     print(
         f"\n{result.prompt_tokens} tokens in, {result.output_tokens} out  |  "
@@ -96,7 +99,7 @@ def main() -> int:
     if args.json:
         args.json.write_text(
             json.dumps(
-                result.details.model_dump(mode="json"), indent=2, ensure_ascii=False
+                checked.profile.model_dump(mode="json"), indent=2, ensure_ascii=False
             ),
             encoding="utf-8",
         )
@@ -121,6 +124,37 @@ def report_reading(document: CVDocument, redacted: Redacted) -> None:
             '      --strip-name "Your Name" to remove it. Nothing else here can\n'
             "      find a name without guessing, and a guess deletes a skill."
         )
+
+
+def report_damage(document: CVDocument) -> None:
+    """Characters the file displays but does not contain, and pypdf's opinion.
+
+    Printed before the text is sent, next to the removal list, because it is the
+    same question: what exactly is leaving this machine, and is it right?
+    """
+    damage = document.damage
+    if damage.reader_warnings:
+        print(
+            f"\nnote: pypdf reported {damage.reader_warnings} warnings about broken "
+            "font data\n      in this file (collapsed into this line)."
+        )
+    if damage:
+        print()
+        for line in damage.report():
+            print(line)
+
+
+def report_dropped_dates(checked: CheckedProfile) -> None:
+    """Dates the model produced that are not in the CV. Same rule as a quote."""
+    if not checked.dropped:
+        return
+    print(
+        f"\n{len(checked.dropped)} of {checked.dates} dates were not in the CV and "
+        "were dropped:"
+    )
+    for date in checked.dropped:
+        print(f"  {date.value:<10} {date.field:<9} {date.where}")
+    print("  (a year the CV does not contain is the model guessing, not reading)")
 
 
 def report_profile(profile: CVProfile) -> None:
