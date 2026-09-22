@@ -15,7 +15,6 @@ Metrics per CV:
             that uses the "maybe" judgements, and the one to read when hit@1 ties.
 """
 
-import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -163,22 +162,6 @@ def overlap(first: list[str], second: list[str]) -> float:
     if not first or not second:
         return 0.0
     return len(set(first) & set(second)) / min(len(first), len(second))
-
-
-def load_labels(directory: Path) -> list[CVLabels]:
-    return [
-        CVLabels.model_validate_json(path.read_text(encoding="utf-8"))
-        for path in sorted(directory.glob("*.json"))
-    ]
-
-
-def save_labels(directory: Path, labels: CVLabels) -> Path:
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{labels.cv}.json"
-    path.write_text(
-        json.dumps(labels.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    return path
 
 
 @dataclass(frozen=True)

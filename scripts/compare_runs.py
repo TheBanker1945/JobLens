@@ -3,7 +3,7 @@
     uv run python scripts/compare_runs.py                    # the two newest of one CV
     uv run python scripts/compare_runs.py --cv mahdi
     uv run python scripts/compare_runs.py --list
-    uv run python scripts/compare_runs.py old.json new.json
+    uv run python scripts/compare_runs.py 2026-09-22_1442_mahdi 2026-09-22_1555_mahdi
 
 The interesting question a week after a run is "did anything change, and was it
 the corpus or was it me". Answering it needs the runs to be measurements of the
@@ -22,36 +22,40 @@ import argparse
 import sys
 from pathlib import Path
 
-from joblens.cv.runs import Comparison, RunRecord, compare, list_runs, load_run
+from joblens.cv.runs import Comparison, RunRecord, compare
+from joblens.storage import FileStore, RunSummary
 
 ROOT = Path(__file__).parent.parent
-RUNS_DIR = ROOT / "data" / "raw" / "cv-runs"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "runs", nargs="*", type=Path, help="two run files, oldest first"
-    )
-    parser.add_argument("--dir", type=Path, default=RUNS_DIR)
+    parser.add_argument("runs", nargs="*", help="two run ids, oldest first")
     parser.add_argument("--cv", help="only runs of this CV (the file stem)")
     parser.add_argument("--list", action="store_true", help="what has been stored")
     args = parser.parse_args()
 
-    stored = list_runs(args.dir)
+    # A run is addressed by an id and not by a path: the store decides where it
+    # keeps them, and the day that is a database this script does not change.
+    store = FileStore(ROOT)
+    stored = store.runs()
     if args.list:
-        return show_list(stored, args.dir)
+        return show_list(stored)
     if len(args.runs) == 2:
-        before, after = (load_run(path) for path in args.runs)
+        try:
+            before, after = (store.load_run(run_id) for run_id in args.runs)
+        except KeyError as err:
+            print(f"{err}\nTry --list.")
+            return 1
     elif args.runs:
-        print("Give two run files, or none and the two newest are used.")
+        print("Give two run ids, or none and the two newest are used.")
         return 1
     else:
-        pair = newest_pair(stored, args.cv)
+        pair = newest_pair(store, stored, args.cv)
         if pair is None:
             print(
-                f"Need two runs of the same CV in {args.dir.relative_to(ROOT)}; "
-                f"found {len(stored)} run(s). Run match_cv.py twice, or --list."
+                f"Need two runs of the same CV; found {len(stored)} run(s). "
+                f"Run match_cv.py twice, or --list."
             )
             return 1
         before, after = pair
@@ -62,22 +66,21 @@ def main() -> int:
     return 0
 
 
-def show_list(stored: list[Path], directory: Path) -> int:
+def show_list(stored: list[RunSummary]) -> int:
     if not stored:
-        print(f"No runs in {directory}. match_cv.py writes one each time it judges.")
+        print("No runs stored yet. match_cv.py writes one each time it judges.")
         return 1
-    print(f"{len(stored)} run(s) in {directory.relative_to(ROOT)}:")
-    for path in stored:
-        record = load_run(path)
+    print(f"{len(stored)} run(s), newest first:")
+    for one in stored:
         print(
-            f"  {path.name:<34} {record.stamp.cv_name:<16} "
-            f"{len(record.rows):>2} judged, {record.outcome}"
+            f"  {one.id:<30} {one.cv:<16} {one.judged:>2} judged of "
+            f"{one.ranked:>3} ranked, {one.outcome}"
         )
     return 0
 
 
 def newest_pair(
-    stored: list[Path], cv: str | None
+    store: FileStore, stored: list[RunSummary], cv: str | None
 ) -> tuple[RunRecord, RunRecord] | None:
     """The two most recent runs of one CV.
 
@@ -86,9 +89,9 @@ def newest_pair(
     anyway. Picking a pair that can be compared is friendlier than picking one
     that cannot and then explaining why.
     """
-    records = [load_run(path) for path in stored]
     if cv:
-        records = [one for one in records if cv in one.stamp.cv_name]
+        stored = [one for one in stored if cv in one.cv]
+    records = [store.load_run(one.id) for one in stored]
     by_cv: dict[str, list[RunRecord]] = {}
     for record in records:
         by_cv.setdefault(record.stamp.cv_name, []).append(record)
