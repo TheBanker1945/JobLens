@@ -17,6 +17,8 @@ distance, no "close enough". Everything this module removes is listed below, and
 the list is the whole argument.
 """
 
+import re
+
 # Characters a model swaps without meaning to: a CV writes ' and the answer comes
 # back with the typographic version, or an em dash arrives as a hyphen.
 SUBSTITUTIONS = str.maketrans(
@@ -30,7 +32,16 @@ SUBSTITUTIONS = str.maketrans(
 #
 # and the model quoted it without the asterisks -- which is the right thing to
 # do, and failed a literal comparison.
-MARKUP = str.maketrans(dict.fromkeys("*_`#>|•·", None))
+MARKUP = str.maketrans(dict.fromkeys("*_`>|•·", None))
+
+# "#" is markup at the start of a word (a markdown heading, a hashtag) and part
+# of the word after a letter: "C#" and "F#" are languages, and removing the "#"
+# made a quote of "C#" match a CV that says "C++" (2026-09-22 audit).
+HEADING_HASH = re.compile(r"(?<!\w)#+")
+
+# Where a quote may start and end in the source: not inside a word. "+" and "#"
+# count as part of a word here, so "C" does not stand in for "C++" or "C#".
+INSIDE_A_WORD = r"\w+#"
 
 
 def searchable(text: str) -> str:
@@ -39,11 +50,22 @@ def searchable(text: str) -> str:
     Whitespace is collapsed so that a quote crossing a line break in the original
     still matches the one the model wrote on a single line.
     """
-    plain = text.translate(SUBSTITUTIONS).translate(MARKUP)
+    plain = HEADING_HASH.sub("", text.translate(SUBSTITUTIONS)).translate(MARKUP)
     return " ".join(plain.casefold().split())
 
 
 def quoted(quote: str, source: str) -> bool:
-    """Whether `quote` appears in `source`, which must already be `searchable`."""
+    """Whether `quote` appears in `source` as whole words.
+
+    `source` must already be `searchable`. Whole words, because a substring
+    test verified "Java" against a CV that only says "JavaScript", "Excel"
+    against "Excellent" and "Go" against "Google" -- a claim the CV does not
+    make, passed by the one check that exists to stop that. Requiring the
+    quote to start and end on a word boundary is a tightening: nothing that
+    failed before can pass now.
+    """
     cleaned = searchable(quote).strip("\"'. ")
-    return bool(cleaned) and cleaned in source
+    if not cleaned:
+        return False
+    pattern = rf"(?<![{INSIDE_A_WORD}]){re.escape(cleaned)}(?![{INSIDE_A_WORD}])"
+    return re.search(pattern, source) is not None

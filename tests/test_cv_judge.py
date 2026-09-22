@@ -18,6 +18,7 @@ from joblens.cv.judge import (
     verify,
 )
 from joblens.cv.match import CVMatch
+from joblens.cv.verify import quoted, searchable
 from joblens.sources.base import Vacancy
 
 CV = """**Verpleegkundige, gesloten opnameafdeling — Altrecht, Den Dolder**
@@ -202,3 +203,32 @@ def test_one_vacancy_failing_does_not_lose_the_others():
     assert len(judged) == 1
     assert len(failures) == 1
     assert "indeed:1" in failures[0]
+
+
+@pytest.mark.parametrize(
+    ("quote", "source"),
+    [
+        ("Java", "Frontend in JavaScript en TypeScript"),
+        ("Scala", "Scalable systems gebouwd"),
+        ("Excel", "Excellent communicator"),
+        ("Go", "Werkte bij Google"),
+        ("C#", "Vijf jaar C++"),
+        ("C", "Vijf jaar C++"),
+    ],
+)
+def test_a_quote_must_be_whole_words_in_the_source(quote, source):
+    """A substring test passed every one of these (2026-09-22 audit)."""
+    assert not quoted(quote, searchable(source))
+
+
+@pytest.mark.parametrize(
+    ("quote", "source"),
+    [
+        ("C#", "Backend in C# en .NET"),
+        ("C++", "Vijf jaar C++, daarna Rust."),
+        ("Werkervaring", "## Werkervaring\nData-analist"),
+        ("English (fluent)", "Talen: English (fluent), Dutch"),
+    ],
+)
+def test_whole_word_quotes_still_pass(quote, source):
+    assert quoted(quote, searchable(source))

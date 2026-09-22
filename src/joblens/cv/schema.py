@@ -171,7 +171,18 @@ class CVProfile(BaseModel):
         return list(seen.values())
 
     def highest_level(self) -> CVEducationLevel | None:
-        levels = [e.level for e in self.education if e.level]
+        """The highest level this CV shows a diploma for, or might.
+
+        A study the CV says was not finished ("niet afgerond") does not count:
+        an unfinished hbo meeting an hbo requirement is being wrong in the
+        person's favour, which the extraction prompt calls worse than leaving
+        a field empty. A study whose outcome the CV does not state
+        (`finished` is None, which includes one still in progress) counts,
+        because the CV does not say otherwise.
+        """
+        levels = [
+            e.level for e in self.education if e.level and e.finished is not False
+        ]
         return max(levels, key=lambda level: LEVEL_RANK[level]) if levels else None
 
     def years_of_experience(self, today: date | None = None) -> float | None:

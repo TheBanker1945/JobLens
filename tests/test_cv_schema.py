@@ -115,6 +115,22 @@ def test_the_highest_level_wins_whatever_order_the_cv_lists_them_in():
     assert one.highest_level() == "wo"
 
 
+def test_an_unfinished_study_does_not_meet_its_level():
+    """Wrong in the person's favour is the worse direction (extract.py)."""
+    one = profile(
+        studies=[study(level="hbo", finished=False), study(level="havo", finished=True)]
+    )
+
+    assert one.highest_level() == "havo"
+    assert meets_level(EducationLevel.HBO, one) is False
+
+
+def test_a_study_whose_outcome_is_not_stated_still_counts():
+    one = profile(studies=[study(level="hbo", finished=None)])
+
+    assert meets_level(EducationLevel.HBO, one) is True
+
+
 def test_skills_are_collected_from_the_whole_cv_keeping_its_spelling():
     one = profile(
         skills=["Power BI", "SQL"],
