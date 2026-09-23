@@ -105,9 +105,16 @@ conceptually, not just have working code.
 
 ## Vacancy sources
 
-- Five sources behind one `VacancySource` interface in src/joblens/sources/;
+- Six sources behind one `VacancySource` interface in src/joblens/sources/;
   adding one is an adapter file plus a few lines in sources.toml.
-- Recruitee, Greenhouse and jobdataapi are public APIs and need nothing.
+- Recruitee, Greenhouse, SmartRecruiters and jobdataapi are public APIs and
+  need nothing. The employer boards are listed in boards.toml (committed),
+  filled by scripts/discover_boards.py: it reads the links Indeed and
+  jobdataapi keep to where they copied a vacancy from, checks each board with
+  one request, and `--accept` adds those with work in scope. A person accepts;
+  the script never adds a board on its own. Recruitee also runs under employers'
+  own domains ("slug" with a dot is a host). SmartRecruiters costs one request
+  per vacancy text, so it applies the scope to its listing before asking.
 - Indeed and LinkedIn are scraped through JobSpy, an optional dependency:
   `uv sync --group scrape`. Pinned to a git commit on purpose — its last release
   requires numpy 1.26, and resolving it from PyPI silently installs a 2024
@@ -157,6 +164,7 @@ conceptually, not just have working code.
 - uv run pytest
 - uv run ruff check . && uv run ruff format .
 - uv run --group scrape python scripts/fetch_vacancies.py   # fetch new vacancies
+- uv run python scripts/discover_boards.py [--accept]       # find employer boards
 - uv run python scripts/index_vacancies.py                  # extract, then embed
 - uv run python scripts/search_vacancies.py "query" --corpus raw
 - uv run python scripts/data_status.py                      # freshness and health

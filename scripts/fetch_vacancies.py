@@ -3,8 +3,9 @@
 data/raw/ is never committed: vacancy texts are someone else's copyright, and we
 only need them locally to test extraction and search.
 
-Sources come in two kinds. The API sources (Recruitee, Greenhouse, jobdataapi)
-publish JSON meant to be read. The scraped ones (Indeed, LinkedIn) do not, need
+Sources come in two kinds. The API sources (Recruitee, Greenhouse,
+SmartRecruiters, jobdataapi) publish JSON meant to be read; the employer boards
+among them are listed in boards.toml. The scraped ones (Indeed, LinkedIn) do not, need
 the optional dependency group, and can fail in quieter ways -- see
 src/joblens/sources/scraped.py.
 
@@ -28,12 +29,12 @@ data/raw/fetch-state.json, so the next run leaves it alone for a while.
 
 import argparse
 import sys
-import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
 
+from joblens.sources.boards import load_config
 from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
@@ -48,13 +49,21 @@ from joblens.sources.scraped import (
     LinkedInSource,
     ScrapeTimeout,
 )
+from joblens.sources.smartrecruiters import SmartRecruitersSource
 from joblens.sources.store import VacancyStore
 
 ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
 STATE_PATH = ROOT / "data" / "raw" / "fetch-state.json"
-SOURCES = ("recruitee", "greenhouse", "jobdataapi", "indeed", "linkedin")
+SOURCES = (
+    "recruitee",
+    "greenhouse",
+    "smartrecruiters",
+    "jobdataapi",
+    "indeed",
+    "linkedin",
+)
 SCRAPED = ("indeed", "linkedin")
 # One request returns the whole board, so a limit cannot save a request here,
 # only lose jobs. These are fetched whole and capped after the Dutch filter.
@@ -64,6 +73,7 @@ WHOLE_BOARD = ("recruitee", "greenhouse")
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=ROOT / "sources.toml")
+    parser.add_argument("--boards", type=Path, default=ROOT / "boards.toml")
     parser.add_argument("--source", choices=SOURCES, help="only this source")
     parser.add_argument(
         "--limit",
@@ -79,7 +89,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    config = tomllib.loads(args.config.read_text(encoding="utf-8"))
+    config = load_config(args.config, args.boards)
     markers = config.get("netherlands", {}).get("markers", [])
     store = VacancyStore(RAW_DIR)
     wanted = [args.source] if args.source else SOURCES
@@ -96,7 +106,7 @@ def main() -> int:
     report = RunReport()
     with new_client(transport=PoliteTransport(gate)) as client:
         for source_name in wanted:
-            built = list(build_sources(source_name, config, client, store))
+            built = list(build_sources(source_name, config, client, store, scope))
             if not built and source_name in SCRAPED:
                 print(f"{source_name:<12} {'(disabled in sources.toml)':<30}")
             for label, source in built:
@@ -191,16 +201,23 @@ def fetch_into(
     run.dropped_no_text = stats.dropped_no_text if stats else 0
     run.dropped_invalid = stats.dropped_invalid if stats else 0
     run.kept = len(vacancies)
+    # Jobs a source never fetched the text of, because they were already stored
+    # or outside the scope (SmartRecruiters, LinkedIn): Dutch all the same.
+    skipped_known = getattr(stats, "skipped_known", 0)
+    skipped_scope = getattr(stats, "out_of_scope", 0)
 
     # Filter first, cap second: the other way round kept 29 of Adyen's 56
     # Dutch vacancies (sources/netherlands.py). The scope is a filter too.
     selection = select(
         vacancies, markers, limit=limit, all_countries=args.all_countries, scope=scope
     )
-    run.dutch, run.capped = selection.dutch, selection.capped
-    run.out_of_scope, run.left_out = selection.out_of_scope, selection.left_out[:25]
+    run.dutch = selection.dutch + skipped_known + skipped_scope
+    run.capped = selection.capped
+    run.out_of_scope = selection.out_of_scope + skipped_scope
+    run.left_out = [*getattr(stats, "left_out", []), *selection.left_out][:25]
     result = store.add(selection.kept)
-    run.stored, run.known, run.duplicate = result.stored, result.known, result.duplicate
+    run.stored, run.duplicate = result.stored, result.duplicate
+    run.known = result.known + skipped_known
     if not run.listed:
         run.status = "empty"
     return True
@@ -218,13 +235,26 @@ def source_limit(config: dict, name: str, fallback: int) -> int:
     return min(fallback, configured) if configured else fallback
 
 
-def build_sources(name: str, config: dict, client: httpx.Client, store: VacancyStore):
+def build_sources(
+    name: str,
+    config: dict,
+    client: httpx.Client,
+    store: VacancyStore,
+    scope: Scope | None = None,
+):
     if name == "recruitee":
         for entry in config.get("recruitee", []):
             yield entry["slug"], RecruiteeSource(entry["slug"], client)
     elif name == "greenhouse":
         for entry in config.get("greenhouse", []):
             yield entry["slug"], GreenhouseSource(entry["slug"], client)
+    elif name == "smartrecruiters":
+        known = store.existing_keys("smartrecruiters")  # these cost no request
+        for entry in config.get("smartrecruiters", []):
+            source = SmartRecruitersSource(
+                entry["company"], client, scope=scope, known_keys=known
+            )
+            yield entry["company"], source
     elif name == "indeed":
         settings = config.get("indeed", {})
         if not settings.get("enabled"):

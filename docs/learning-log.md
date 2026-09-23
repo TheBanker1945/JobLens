@@ -1901,3 +1901,80 @@ search: Zeeland is a thin market for this work, and the empty searches do not
 trip the "source came back empty" alarm because the source as a whole did not.
 And Indeed's "AI engineer" searches return 30–50 each but only about half fit.
 Indeed reads the phrase loosely, and the scope is doing the reading.
+
+## 5.3 — The aggregators as a map: finding the boards behind the copies
+
+Indeed and jobdataapi copy vacancies from employers' own boards, and both keep
+a link to where they copied from (`job_url_direct`, `url`). Reading the copy
+means a shortened text, no way of telling when the job closed, and a site that
+may start refusing us. Reading the original means the whole text, every job the
+employer lists, and a public API meant to be read. So this milestone uses the
+aggregators as a **map**, and reads the places the map points at.
+
+**What the links say.** On 551 stored vacancies, `sources/boards.py` recognises:
+
+- Recruitee as `slug.recruitee.com`, and on employers' own domains through its
+  `/o/{job}` path. But werkenbijheras.nl has `/o/` too and is *not* Recruitee, so
+  an `/o/` link is only a candidate until `/api/offers/` answers.
+- Greenhouse three ways (`boards.`, `job-boards.`, `job-boards.eu.`). The EU
+  spelling has no API host of its own (`boards-api.eu.greenhouse.io` does not
+  resolve); the normal API serves those boards (JetBrains: 65 jobs).
+- `grnh.se` short links. All 10 that were followed led to the employer's own
+  careers page, which names no board. The table says so; it does not guess.
+- SmartRecruiters company ids.
+- Platforms with no adapter yet, only counted: Workday 19 links, Jobylon 9,
+  Ashby 7, SuccessFactors 7, Teamtailor 5, Workable 3, BambooHR 3. That is the
+  argument for 5.7 starting with Workday.
+
+**`scripts/discover_boards.py` checks, a person accepts.** One request per
+candidate through the same gate as a fetch: 96 candidates, about 110 requests
+spread over 39 sites, 2 minutes. For each: jobs on the board, Dutch ones, and in
+the scope. `--accept` writes the boards with at least one job in scope to
+`boards.toml`, with the numbers as a comment. It is committed: company boards
+are public, and a fork should not have to rediscover them.
+
+| outcome of the 96 checks | boards |
+|---|---|
+| accepted: work in scope today | **45** |
+| a board, but no work in scope today | 30 |
+| `/o/` but not Recruitee (404, 301, 302) | 6 |
+| host unreachable (no longer resolves) | 6 |
+| short link to the employer's own site | 5 |
+| a board already read (a short link to Catawiki, three times) | 3 |
+| refused (amfbakery.com: Cloudflare challenge; now cooling down) | 1 |
+
+The refusal is worth a line: the gate from 5.1 recognised it in the middle of a
+discovery run, wrote it to `fetch-state.json`, and the next run did not ask.
+
+**SmartRecruiters costs a request per vacancy text**, so its adapter runs the
+scope on the listing (title and place) *before* asking for any text, and skips
+what is stored. The same lesson as the board cap and the scope, a third time:
+the filter goes before the expensive step. Deloitte lists 686 Dutch jobs; the
+adapter asked for the text of 21. The run report counts what was never asked
+for as Dutch and out of scope, so the "fits" column still adds up.
+
+**What the 45 boards brought** (fetched 2026-09-23, on the copy of the store
+from 5.2):
+
+| platform | requests | new in scope | |
+|---|---|---|---|
+| Recruitee (29 boards, 15 on employers' own domains) | 31 | 138 | Conclusion 37, Xebia 16, Wildflowers 11, Swisscom Rotterdam 9 |
+| Greenhouse (7 new boards) | 10 | 42 | JetBrains 20, Flow Traders 8 |
+| SmartRecruiters (10 companies) | 137 | 91 | Sopra Steria 32, Deloitte 15, Sia 12, Coolblue 11, KPN 6 |
+| **total** | 178 | **271** | 50 more were the same job already stored via another source |
+
+The corpus went from 551 to 822, and every new text is a real vacancy: median
+length 4,200–5,000 characters per platform, none under 500 but one. That one was
+Deloitte's "Engineering, AI & Data Kookworkshop", an event posted as a job,
+131 characters. SmartRecruiters now drops a text under 200 characters, the same
+floor as the scraped sources.
+
+Reading the 91 SmartRecruiters titles by hand, about 10 are engineers of other
+things (*Kabels & Leidingen*, *Geotechnical*, *Facility*, *SHEQ*). The four
+unambiguous trades went into `not_roles`, and Mahdi's labels still pass 10 of 10.
+
+**One number to watch.** The first SmartRecruiters run used 137 of the 200
+requests a site may take per run, because nothing was stored yet. From the
+second run on it is the listing pages (about 20) plus new jobs only. If a
+larger board list ever makes a first run hit the budget, the report says
+`over_budget` and the rest arrives the next night.
