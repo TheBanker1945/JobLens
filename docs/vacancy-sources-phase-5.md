@@ -78,8 +78,13 @@ Jobbird (sitemaps with `lastmod`, rich JSON-LD, many stale entries).
 | step | milestone | branch |
 |---|---|---|
 | 1 | one gate for every request: pacing, budgets, refusals remembered | `feat/5.1-polite-fetching` |
-| 2 | discovery from aggregator links, more employer boards, the scope filter | `feat/5.2-discovery` |
-| 3 | vacancies that closed: `last_seen`, closure from boards and sitemaps | `feat/5.3-closed-vacancies` |
-| 4 | werkenbijdeoverheid.nl through its sitemap; robots.txt for crawled sources | `feat/5.4-government` |
-| 5 | EURES, filtered on language and date | `feat/5.5-eures` |
-| 6 | Workday, and a generic JSON-LD reader for employer sites | `feat/5.6-workday-jsonld` |
+| 2 | the scope filter, and searches that follow it | `feat/5.2-scope` |
+| 3 | discovery from aggregator links, more employer boards (SmartRecruiters) | `feat/5.3-discovery` |
+| 4 | vacancies that closed: `last_seen`, closure from boards and sitemaps | `feat/5.4-closed-vacancies` |
+| 5 | werkenbijdeoverheid.nl through its sitemap; robots.txt for crawled sources | `feat/5.5-government` |
+| 6 | EURES, filtered on language and date | `feat/5.6-eures` |
+| 7 | Workday, and a generic JSON-LD reader for employer sites | `feat/5.7-workday-jsonld` |
+
+The plan had discovery and the scope as one step. They were split on
+2026-09-23: discovery needs the scope to judge which boards are worth adding,
+and each is a milestone's worth of measuring on its own.

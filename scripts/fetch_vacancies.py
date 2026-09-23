@@ -12,6 +12,7 @@ Usage:
     uv run python scripts/fetch_vacancies.py                    # all sources
     uv run python scripts/fetch_vacancies.py --source recruitee --limit 20
     uv run python scripts/fetch_vacancies.py --all-countries    # skip the NL filter
+    uv run python scripts/fetch_vacancies.py --no-scope         # store all Dutch jobs
 
     uv sync --group scrape                                      # once, for these:
     uv run python scripts/fetch_vacancies.py --source indeed
@@ -40,6 +41,7 @@ from joblens.sources.netherlands import select
 from joblens.sources.polite import FetchState, Gate, PoliteTransport, Refused, Rules
 from joblens.sources.recruitee import RecruiteeSource
 from joblens.sources.report import RunReport, SearchRun
+from joblens.sources.scope import Scope
 from joblens.sources.scraped import (
     IndeedSource,
     LikelyThrottled,
@@ -70,6 +72,11 @@ def main() -> int:
         help="at most this many Dutch vacancies per company or search",
     )
     parser.add_argument("--all-countries", action="store_true")
+    parser.add_argument(
+        "--no-scope",
+        action="store_true",
+        help="store every Dutch vacancy, not only the [scope] in sources.toml",
+    )
     args = parser.parse_args()
 
     config = tomllib.loads(args.config.read_text(encoding="utf-8"))
@@ -80,10 +87,11 @@ def main() -> int:
         FetchState.load(STATE_PATH), Rules.from_config(config.get("politeness", {}))
     )
     print_cooling_down(gate)
+    scope = None if args.no_scope else Scope.from_config(config["scope"])
 
     print(
         f"{'source':<12} {'what':<30} {'listed':>6} {'kept':>5} {'dutch':>6} "
-        f"{'new':>5} {'known':>6} {'dup':>4}"
+        f"{'fits':>5} {'new':>5} {'known':>6} {'dup':>4}"
     )
     report = RunReport()
     with new_client(transport=PoliteTransport(gate)) as client:
@@ -93,14 +101,18 @@ def main() -> int:
                 print(f"{source_name:<12} {'(disabled in sources.toml)':<30}")
             for label, source in built:
                 run = report.add(SearchRun(source_name, label[:30]))
-                if not fetch_into(run, source, gate, config, args, store, markers):
+                if not fetch_into(
+                    run, source, gate, config, args, store, markers, scope
+                ):
                     print(
                         f"{run.source:<12} {run.search:<30} {run.status}: {run.detail}"
                     )
                     continue
+                fits = run.dutch - run.out_of_scope
                 print(
                     f"{run.source:<12} {run.search:<30} {run.listed:>6} {run.kept:>5} "
-                    f"{run.dutch:>6} {run.stored:>5} {run.known:>6} {run.duplicate:>4}"
+                    f"{run.dutch:>6} {fits:>5} {run.stored:>5} {run.known:>6} "
+                    f"{run.duplicate:>4}"
                 )
                 if run.capped:
                     print(f"{'':<12} --limit left out {run.capped} Dutch vacancies")
@@ -131,6 +143,7 @@ def fetch_into(
     args: argparse.Namespace,
     store: VacancyStore,
     markers: list[str],
+    scope: Scope | None = None,
 ) -> bool:
     """Run one search and write the result into `run`. False if it broke.
 
@@ -180,11 +193,12 @@ def fetch_into(
     run.kept = len(vacancies)
 
     # Filter first, cap second: the other way round kept 29 of Adyen's 56
-    # Dutch vacancies (sources/netherlands.py).
+    # Dutch vacancies (sources/netherlands.py). The scope is a filter too.
     selection = select(
-        vacancies, markers, limit=limit, all_countries=args.all_countries
+        vacancies, markers, limit=limit, all_countries=args.all_countries, scope=scope
     )
     run.dutch, run.capped = selection.dutch, selection.capped
+    run.out_of_scope, run.left_out = selection.out_of_scope, selection.left_out[:25]
     result = store.add(selection.kept)
     run.stored, run.known, run.duplicate = result.stored, result.known, result.duplicate
     if not run.listed:
@@ -254,6 +268,7 @@ def build_sources(name: str, config: dict, client: httpx.Client, store: VacancyS
                     client,
                     country=settings.get("country", "NL"),
                     max_age_days=settings.get("max_age_days", 7),
+                    filters=tuple({"title": title} for title in settings["titles"]),
                 ),
             )
 

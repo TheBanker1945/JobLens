@@ -21,8 +21,9 @@ from joblens.sources.http import RateLimited, get_json
 BASE_URL = "https://jobdataapi.com/api/jobs/"
 PER_REQUEST = 20  # anonymous cap: more is ignored, paging is not allowed
 
-# Each filter is one request; varied on purpose, so the 20 results differ and the
-# sample is not all tech jobs (the ATS boards already skew that way).
+# Each filter is one request, varied so the 20 results differ. These are the
+# 2.3 defaults, kept for tests; the fetch script passes the `titles` from
+# sources.toml instead, which follow the scope since 5.2.
 DEFAULT_FILTERS: tuple[dict, ...] = (
     {"title": "verpleegkundige"},
     {"title": "monteur"},

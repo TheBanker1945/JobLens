@@ -32,6 +32,46 @@ markers = [
     "Zwolle", "Delft", "Leiden", "Amersfoort", "Apeldoorn", "Enschede",
 ]
 
+# Which *new* vacancies are stored (src/joblens/sources/scope.py). Decided by
+# Mahdi on 2026-09-22: four provinces, software and AI engineering and similar.
+# Stored vacancies are never removed by this; what it leaves out is counted and
+# named in the run report. Only a vacancy that is stored gets extracted and
+# embedded, at ~0.27 cent each, so this is also the cost gate.
+[scope]
+# Province names as CBS writes them (src/joblens/sources/places_nl.csv).
+provinces = ["Zuid-Holland", "Noord-Holland", "Utrecht", "Zeeland"]
+# A title is in scope when it holds one of these words and none of `not_roles`.
+# Three letters or fewer must stand alone ("ai"); longer ones may sit inside a
+# Dutch compound ("Softwareontwikkelaar"). That is also the trap: a longer word
+# matches inside any word, so "rust" (Rustoord), "scala" (Escalatie) and "react"
+# (Reactor) are left out on purpose -- "developer" or "engineer" catches those
+# jobs anyway. Measured on 404 stored titles and Mahdi's own labels, 2026-09-22.
+roles = [
+    "developer", "ontwikkelaar", "programmeur", "programmer", "software",
+    "engineer", "engineering", "devops", "full stack", "fullstack", "frontend",
+    "front end", "backend", "back end", "data scientist", "data science",
+    "machine learning", "ai", "ml", "llm", "nlp", "mlops", "sre", "qa",
+    "site reliability", "python", "java", "javascript", "typescript", "golang",
+    "kotlin", "haskell", "php", "ios", "android", "flutter", "angular",
+    "software architect", "solution architect", "solutions architect",
+    "cloud architect", "data architect", "ci/cd", "platform team",
+]
+# Engineers and developers of other things, and jobs *about* developers. Whole
+# phrases rather than loose words: "sales" alone would also throw out
+# "Salesforce Developer".
+not_roles = [
+    "business developer", "business development", "beleidsontwikkelaar",
+    "vastgoed", "projectontwikkelaar", "planontwikkel", "organisatieontwikkel",
+    "onderwijsontwikkel", "productontwikkelaar", "service engineer",
+    "field service", "servicemonteur", "monteur", "mechanical", "werktuigbouw",
+    "elektrotechn", "electrical", "process engineer", "procesengineer", "civil",
+    "civiel", "installatie", "hvac", "hydraul", "hardware", "cnc",
+    "sales engineer",
+    "sales manager", "sales executive", "presales", "pre sales",
+    "account manager", "account executive", "accountant", "product manager",
+    "product owner", "recruit", "docent", "teacher", "lecturer",
+]
+
 # Company career pages on Recruitee: {slug}.recruitee.com/api/offers/
 [[recruitee]]
 slug = "channable"
@@ -48,86 +88,121 @@ slug = "catawiki"
 [[greenhouse]]
 slug = "databricks"
 
-# Aggregator; anonymous tier, ~10 requests/hour per IP, 20 jobs each. Used next to
-# the boards above for sector variety (they skew towards tech), never depended on.
+# Aggregator; anonymous tier, ~10 requests/hour per IP, 20 jobs each, no paging.
+# One request per title below, so each brings different vacancies.
 [jobdataapi]
 enabled = true
 country = "NL"
 max_age_days = 7
+# Until 5.2 these were nursing, technicians, logistics, teaching, advice and one
+# "developer", for sector variety. The scope (above) would now throw most of that
+# away after paying a request for it, so the titles follow the scope instead.
+titles = [
+    "developer", "software engineer", "data engineer", "machine learning",
+    "ontwikkelaar", "devops",
+]
 
 # Scraped sources: Indeed and LinkedIn publish no feed, so these read the
 # endpoints their own app and logged-out pages use, through JobSpy. They need the
 # optional dependency group: uv sync --group scrape
 #
-# Volume stays small on purpose: a few searches, a radius in kilometres (JobSpy
-# counts miles and defaults to 50, which is most of the Netherlands), and only
-# vacancies from the last few days.
+# Volume stays small on purpose: a radius in kilometres (JobSpy counts miles and
+# defaults to 50, which is most of the Netherlands), and only recent vacancies.
 
 [indeed]
 enabled = true
 country = "netherlands"
 distance_km = 25
-# A week rather than three days: the searches below are narrow (junior developer
-# roles in one corner of the Randstad) and a 72-hour window returns single
-# figures for them. Widen it back if a run starts costing too much to index.
+# A week rather than three days: narrow searches in a 72-hour window return
+# single figures. Jobs already stored cost nothing to see again.
 hours_old = 168
 results_per_search = 50
 
-# One search is one request that brings back up to 100 jobs with their
-# descriptions. Deliberately not all tech: the ATS boards above already are.
+# One search is one request that brings back up to 100 jobs with descriptions.
+# Since 5.2 they follow the scope (four provinces, software and AI work). The
+# nursing, technician and policy searches of 2.4 are gone; the vacancies they
+# brought in stay stored, so the labels of 3.1-3.5 still find them.
+# Broad terms on purpose: Indeed matches a long phrase literally ("junior
+# software developer" returned nothing where "software developer" returned
+# plenty), and seniority is better read from the vacancy than from the search.
+# One hub per region: 25 km around Den Haag covers Leiden and Delft, around
+# Amsterdam Haarlem and Hoofddorp, around Utrecht Amersfoort and Hilversum.
+[[indeed.searches]]
+term = "developer"
+city = "Amsterdam"
+[[indeed.searches]]
+term = "software engineer"
+city = "Amsterdam"
 [[indeed.searches]]
 term = "data engineer"
 city = "Amsterdam"
 [[indeed.searches]]
-term = "verpleegkundige"
-city = "Utrecht"
+term = "machine learning"
+city = "Amsterdam"
 [[indeed.searches]]
-term = "monteur"
-city = "Eindhoven"
+term = "AI engineer"
+city = "Amsterdam"
 [[indeed.searches]]
-term = "beleidsmedewerker"
-city = "Den Haag"
-
-# Junior developer roles around Den Haag / Rotterdam / Leiden. Added 2026-09-22
-# because the corpus held almost no junior dev work, so matching a junior
-# full-stack CV against it could only ever answer "nothing here fits" -- a true
-# answer that measures nothing. The searches above stay: the labelled queries and
-# CV labels from 3.1-3.5 refer to what they brought in.
-# Broad terms on purpose: "junior software developer" returned zero listings
-# where "software developer" returns plenty. Indeed matches a long phrase
-# literally, and seniority is better filtered by reading the vacancy than by
-# hoping the board agrees with the word.
-[[indeed.searches]]
-term = "software developer"
+term = "developer"
 city = "Rotterdam"
 [[indeed.searches]]
-term = "frontend developer"
+term = "software engineer"
+city = "Rotterdam"
+[[indeed.searches]]
+term = "data engineer"
+city = "Rotterdam"
+[[indeed.searches]]
+term = "machine learning"
+city = "Rotterdam"
+[[indeed.searches]]
+term = "AI engineer"
+city = "Rotterdam"
+[[indeed.searches]]
+term = "developer"
 city = "Den Haag"
 [[indeed.searches]]
-term = "webdeveloper"
+term = "software engineer"
 city = "Den Haag"
 [[indeed.searches]]
-term = "full stack developer"
-city = "Amsterdam"
+term = "data engineer"
+city = "Den Haag"
 [[indeed.searches]]
-term = "python developer"
-city = "Amsterdam"
+term = "machine learning"
+city = "Den Haag"
 [[indeed.searches]]
-term = "javascript developer"
-city = "Amsterdam"
+term = "AI engineer"
+city = "Den Haag"
 [[indeed.searches]]
-term = "react developer"
-city = "Amsterdam"
+term = "developer"
+city = "Utrecht"
 [[indeed.searches]]
 term = "software engineer"
 city = "Utrecht"
+[[indeed.searches]]
+term = "data engineer"
+city = "Utrecht"
+[[indeed.searches]]
+term = "machine learning"
+city = "Utrecht"
+[[indeed.searches]]
+term = "AI engineer"
+city = "Utrecht"
+# Zeeland is a small market for this work: two broad searches around Middelburg
+# (25 km reaches Vlissingen and Goes).
+[[indeed.searches]]
+term = "developer"
+city = "Middelburg"
+[[indeed.searches]]
+term = "software engineer"
+city = "Middelburg"
 
 # Off by default, on purpose, and staying off (decided 2026-09-22). LinkedIn's
 # guest endpoints are the throttle-prone half of scraping, its terms do not
 # invite it, and its robots.txt disallows /jobs-guest/ for every crawler,
-# Googlebot included. Switching this on is a deliberate choice about your own IP. What it costs is capped: jobs already in
-# data/raw/ are never requested again, a run fetches at most
-# max_descriptions_per_run descriptions, and delay_seconds sits between them.
+# Googlebot included. Switching this on is a deliberate choice about your own
+# IP. What it costs is capped: jobs already in data/raw/ are never requested
+# again, a run fetches at most max_descriptions_per_run descriptions, and
+# delay_seconds sits between them.
 [linkedin]
 enabled = false
 distance_km = 25
@@ -140,5 +215,5 @@ delay_seconds = 2.5
 term = "data engineer"
 city = "Amsterdam"
 [[linkedin.searches]]
-term = "product manager"
+term = "software engineer"
 city = "Rotterdam"

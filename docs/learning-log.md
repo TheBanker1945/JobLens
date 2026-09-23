@@ -1748,7 +1748,7 @@ The plan had it here. Then the robots.txt files of the hosts we already use:
 robots.txt is written for crawlers and search indexes, and a documented API is
 neither: its documentation and rate limits are the permission. Enforcing
 robots.txt on every request would switch off two documented APIs, one of which we
-already use. So it arrives in 5.4 with the first source that actually crawls web
+already use. So it arrives in 5.5 with the first source that actually crawls web
 pages, where it is the permission. LinkedIn's line settles what 2.4 left as a
 choice: it stays off.
 
@@ -1803,3 +1803,101 @@ retries. JobSpy's README calls proxies "a must" for LinkedIn. That is exactly th
 advice this module exists not to follow. When a site says no, the source stops,
 the report says so, and a person decides. Deleting a site's entry in
 `fetch-state.json` is that decision.
+
+## 5.2 — The scope: four provinces, one kind of work, before anything is paid
+
+Mahdi's decision (2026-09-22): Zuid-Holland, Noord-Holland, Utrecht and Zeeland,
+software and AI engineering "and everything similar". Every stored vacancy is
+extracted and embedded at about 0.27 cent, so what the corpus holds is also
+what it costs. Before this milestone a nursing job in Eindhoven cost exactly as
+much as a Python job in Delft.
+
+**Where the filter sits.** On *new* vacancies, before they are stored:
+Dutch filter, then scope, then cap. That is the board-cap lesson from 5.1's
+branch again, in one more place: a cap that runs before the scope spends its
+places on jobs the scope will throw away, and there is a test that says so.
+It never removes a stored vacancy. The labels of 3.1–3.5 refer to nursing
+and technician vacancies, and they stay. What it leaves out is not lost either:
+the run report counts it and names up to 25 per search ("title -- why"), so a
+scope that is too narrow can be seen and widened, and the next fetch picks the
+jobs up again.
+
+**Where: the CBS list of every Dutch place.** A hand-written list of cities
+knows Rotterdam and misses Goes, Breukelen and Schiphol. CBS table 86312NED has
+all 2,502 places (woonplaatsen) of 1 January 2026, each with its municipality
+and province. `scripts/update_places.py` turns it into a committed CSV with one
+request. Three details came out of the data rather than the plan:
+
+- **"Nederland" is a hamlet in Overijssel.** Every stored location was looked up
+  before the filter was trusted. A vacancy located just "Nederland" would have
+  been placed in Overijssel and dropped. It is now a word that, in a job
+  location, always means the country.
+- **CBS disambiguates with suffixes** ("Rijswijk (NB)", "Rijswijk (GLD)"), boards
+  do not. So a bare name means the place CBS left without a suffix (Rijswijk in
+  Zuid-Holland), and only when *every* copy has one does it mean all of them
+  (Bergen: Noord-Holland and Limburg, kept, because one is chosen).
+- **Longest name first.** "Alphen" alone is in Brabant and Gelderland; "Alphen
+  aan den Rijn" is in Zuid-Holland. JobSpy's "Breukelen, UT, NL" needed province
+  codes, accepted only as a whole part of the location, never as a loose word.
+
+A location that names no Dutch place ("Remote - Netherlands", a list of
+countries, nothing) is **kept**. A board that does not say where a job is cannot
+be used to argue it is somewhere else, the same rule as `same_place` in 2.4.
+
+**What: two word lists, measured against the store and Mahdi's labels.** The
+title must hold a `roles` word and no `not_roles` word, both in sources.toml.
+Three letters or fewer must stand alone ("ai" is in "detail"); longer words may
+sit inside a Dutch compound ("Softwareontwikkelaar"). The rule that a word
+matches anywhere set the traps, and each was found by reading titles:
+
+| trap | what happened | now |
+|---|---|---|
+| "sales" | would also drop *Salesforce Developer* | exact phrases: "sales engineer", "presales", ... |
+| "account" | same kind of trap | "account manager", "account executive", "accountant" |
+| "rust", "scala", "react" | sit inside *Rustoord*, *Escalatie*, *Reactor* | not role words; "developer" and "engineer" catch those jobs anyway |
+| no "qa", no "haskell" | *QA Lead* and *Team Lead - Haskell Platform Team* dropped | added |
+| "product manager" titles mention "developer" | three kept as software work | excluded |
+
+On the 404 vacancies stored at the time:
+
+| | |
+|---|---|
+| kept by the scope | 98 |
+| left out for the place | 82 |
+| left out for the work | 224 |
+| Mahdi's "would apply" (9) and "maybe" (1) kept | **10 of 10** |
+| software work left out *only* for its province | 0 |
+
+**The searches follow the scope now.** Indeed's nursing, technician and policy
+searches from 2.4 would each have cost a request whose result the scope throws
+away. They are replaced by five terms (developer, software engineer, data
+engineer, machine learning, AI engineer) around four hubs, plus two around
+Middelburg for Zeeland: 22 searches. jobdataapi's six filters moved from code
+into sources.toml and follow the scope too.
+
+**The first real run** (2026-09-23, on a copy of the 404-vacancy store, so
+nothing of Mahdi's own store changed): 34 requests, no refusals, 1 min 19 s.
+
+| | |
+|---|---|
+| listed by the sources | 1,599 |
+| Dutch | 561 |
+| left out by the scope | 225 |
+| already stored (same source) | 161 |
+| the same job via another source | 20 |
+| **new, in scope, stored** | **147** |
+
+Reading all 147 by hand: about 130 are plainly software, data or AI engineering,
+about 7 are borderline (Customer Success Engineer, Field Engineer Azure), and 10
+are not the work (*Planontwikkelaar*, *thermal-hydraulics engineer*, two
+*Project Engineer*s). Reading what was left out found two real misses,
+*CI/CD Specialist* and *Team Lead - Platform Team*. The word lists were adjusted for
+all four, and each is now a test. The generous side of the rule is deliberate:
+a vacancy kept by mistake costs a third of a cent, a vacancy dropped by
+mistake costs the job. Indexing those 147 is about $0.40.
+
+Two numbers worth keeping an eye on. Middelburg returned nothing for either
+search: Zeeland is a thin market for this work, and the empty searches do not
+trip the "source came back empty" alarm because the source as a whole did not.
+And Indeed's "AI engineer" searches return 30–50 each but only about half fit.
+Indeed reads the phrase loosely, and the scope is doing the reading.
