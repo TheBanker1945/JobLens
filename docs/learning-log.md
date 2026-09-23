@@ -1696,3 +1696,110 @@ actually used by something new:
 - The router returned 405 for `POST /api/runs/{id}/labels`, because it stopped at
   the first route whose *pattern* matched and that route was the GET. One path
   answering two methods is the first thing a write endpoint needs.
+
+## 5.1 — One gate for every request, and a memory of who said no
+
+Phase 5 widens where vacancies come from (the plan and the measurements behind
+it are in `docs/vacancy-sources-phase-5.md`). Every later step adds requests to
+sites we have never asked before, so the first step is the thing they all go
+through.
+
+**Before this, politeness was a `time.sleep(1.5)` at the bottom of the fetch
+loop.** It paused after every search, whoever it had gone to: between Adyen's
+Greenhouse board and Channable's Recruitee board, which share nothing. And it
+forgot everything at exit, so a site that throttled us last night got the full
+run again tonight.
+
+**What `sources/polite.py` does instead, per site:**
+
+| rule | how |
+|---|---|
+| pace | `delay_seconds` + up to `jitter_seconds` between two requests to one site; different sites do not wait for each other |
+| budget | `max_requests_per_site` per run; a runaway loop stops at our number |
+| recognise a refusal | 429, 403, and the refusals that arrive as a normal page or a redirect |
+| remember it | written to `data/raw/fetch-state.json` at once; not asked again for 12 h, doubling per refusal in a row, up to a week |
+| forgive | a site that answers a whole run without refusing loses its entry |
+
+**A site is the platform, not the host name.** `channable.recruitee.com` and
+`nmbrs.recruitee.com` are two boards on one platform's servers. Fifty boards
+paced as fifty hosts would be fifty times what one platform sees from one
+address. `site_of` keeps the last two labels of the name, which is right for
+every .nl, .com and .io here.
+
+**The gate is an httpx transport.** A transport is what sits under the client and
+actually sends the request. Putting the gate there means Recruitee, Greenhouse,
+jobdataapi and LinkedIn's descriptions call `client.get` exactly as before, and
+a new adapter cannot forget to be polite: there is no other way out. The
+alternative, a wrapper client with its own `get()`, would have changed every
+adapter and left the door open for the next one. JobSpy is the one exception:
+it sends its own requests, so the fetch script asks the gate once per Indeed or
+LinkedIn *search*, the only part of that traffic we can see.
+
+**robots.txt is not in this milestone, and the reason is measured.**
+The plan had it here. Then the robots.txt files of the hosts we already use:
+
+| host | what it says to us |
+|---|---|
+| `jobdataapi.com` | `Disallow: /api/`, while documenting that API as a free product |
+| `api.smartrecruiters.com` | `Disallow: /`, while documenting its Posting API as public |
+| `boards-api.greenhouse.io`, `*.recruitee.com` | the API paths are allowed |
+| `www.linkedin.com` | `Disallow: /` for everyone; `/jobs-guest/` is disallowed even for Googlebot |
+
+robots.txt is written for crawlers and search indexes, and a documented API is
+neither: its documentation and rate limits are the permission. Enforcing
+robots.txt on every request would switch off two documented APIs, one of which we
+already use. So it arrives in 5.4 with the first source that actually crawls web
+pages, where it is the permission. LinkedIn's line settles what 2.4 left as a
+choice: it stays off.
+
+**Refusal pages were measured before they were written down.** Two markers, both
+taken from real responses on 2026-09-22, no guesses:
+
+- `_cf_chl_opt`: Cloudflare's challenge page (werkzoeken.nl, ictergezocht.nl).
+  Not `challenge-platform`: Cloudflare loads a script by that name on the
+  *normal* pages of sites it guards, and there is a test that says so.
+- the "DPG Media Privacy Gate" consent wall (nationalevacaturebank.nl).
+
+**The first real check found a hole the tests could not.** Pointed at a Nationale
+Vacaturebank vacancy, the gate reported an ordinary `302`. curl had shown the
+consent wall because `-L` follows redirects; httpx does not. The wall is a
+redirect to `myprivacy.dpgmedia.nl/consent`. Following it would have blamed
+`dpgmedia.nl` and recorded Nationale Vacaturebank as a site that answered
+normally. So a redirect to a known wall is now a refusal on the redirect itself,
+held against the site we asked. The same check again, same state file:
+
+```
+cooling_down  werkzoeken.nl: refused us (HTTP 403, a Cloudflare challenge page); not asking again until 2026-09-23 08:26 UTC
+blocked       nationalevacaturebank.nl: a consent wall (DPG Media Privacy Gate); not asking again until 2026-09-23 08:27 UTC
+cooling_down  werkzoeken.nl: refused us (HTTP 403, a Cloudflare challenge page); not asking again until 2026-09-23 08:26 UTC
+requests sent: {'nationalevacaturebank.nl': 1}
+```
+
+Three requests asked for, one sent: werkzoeken.nl was remembered from the run
+before, and not asked at all.
+
+**The real sources, through the gate** (fresh store, 2026-09-22):
+
+| source | boards | requests | stored |
+|---|---|---|---|
+| recruitee | 3 | `recruitee.com 3` | 30 |
+| greenhouse | 3 | `greenhouse.io 3` | 110 |
+
+The run report now carries `requests` per site, and `data_status.py` prints the
+sites currently refusing us, with the reason and until when.
+
+**Three smaller things the gate made visible:**
+
+- `get_json` read `Retry-After` with `float()`. The header may also be a date,
+  which would have crashed the run. Both forms are read now, in one place.
+- A refusal ends every later search of that source for the same reason, so the
+  report groups identical breakages: "indeed (12 searches): cooling_down" is one
+  line in the cron mail, not twelve.
+- A shorter `Retry-After` does not shorten our schedule. jobdataapi asked for
+  2710 s in 2.3; a nightly run simply waits for the next night.
+
+**What this is not.** No proxies, no rotating addresses, no browser disguise, no
+retries. JobSpy's README calls proxies "a must" for LinkedIn. That is exactly the
+advice this module exists not to follow. When a site says no, the source stops,
+the report says so, and a person decides. Deleting a site's entry in
+`fetch-state.json` is that decision.

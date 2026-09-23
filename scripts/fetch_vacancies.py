@@ -19,12 +19,16 @@ Usage:
 Every run writes a report to data/raw/runs/ and exits non-zero when something
 looks wrong (a source that found nothing at all, descriptions that never
 arrived, a board refusing us), so a scheduled run can tell us it went bad.
+
+Every request goes through one gate (src/joblens/sources/polite.py): paced per
+site, capped per run, and a site that refuses us is remembered in
+data/raw/fetch-state.json, so the next run leaves it alone for a while.
 """
 
 import argparse
 import sys
-import time
 import tomllib
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -33,6 +37,7 @@ from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
 from joblens.sources.netherlands import select
+from joblens.sources.polite import FetchState, Gate, PoliteTransport, Refused, Rules
 from joblens.sources.recruitee import RecruiteeSource
 from joblens.sources.report import RunReport, SearchRun
 from joblens.sources.scraped import (
@@ -46,6 +51,7 @@ from joblens.sources.store import VacancyStore
 ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
+STATE_PATH = ROOT / "data" / "raw" / "fetch-state.json"
 SOURCES = ("recruitee", "greenhouse", "jobdataapi", "indeed", "linkedin")
 SCRAPED = ("indeed", "linkedin")
 # One request returns the whole board, so a limit cannot save a request here,
@@ -68,23 +74,26 @@ def main() -> int:
 
     config = tomllib.loads(args.config.read_text(encoding="utf-8"))
     markers = config.get("netherlands", {}).get("markers", [])
-    delay = config.get("delay_seconds", 1.5)
     store = VacancyStore(RAW_DIR)
     wanted = [args.source] if args.source else SOURCES
+    gate = Gate(
+        FetchState.load(STATE_PATH), Rules.from_config(config.get("politeness", {}))
+    )
+    print_cooling_down(gate)
 
     print(
         f"{'source':<12} {'what':<30} {'listed':>6} {'kept':>5} {'dutch':>6} "
         f"{'new':>5} {'known':>6} {'dup':>4}"
     )
     report = RunReport()
-    with new_client() as client:
+    with new_client(transport=PoliteTransport(gate)) as client:
         for source_name in wanted:
             built = list(build_sources(source_name, config, client, store))
             if not built and source_name in SCRAPED:
                 print(f"{source_name:<12} {'(disabled in sources.toml)':<30}")
             for label, source in built:
                 run = report.add(SearchRun(source_name, label[:30]))
-                if not fetch_into(run, source, config, args, store, markers):
+                if not fetch_into(run, source, gate, config, args, store, markers):
                     print(
                         f"{run.source:<12} {run.search:<30} {run.status}: {run.detail}"
                     )
@@ -95,8 +104,11 @@ def main() -> int:
                 )
                 if run.capped:
                     print(f"{'':<12} --limit left out {run.capped} Dutch vacancies")
-                time.sleep(delay)  # be polite
 
+    gate.finish()  # a site that answered all night is forgiven its old refusals
+    report.requests = dict(gate.requests)
+    asked = ", ".join(f"{site} {n}" for site, n in sorted(gate.requests.items()))
+    print(f"\nrequests per site: {asked or 'none'}")
     total = sum(len(store.load(name)) for name in store.sources())
     path = report.write(RUNS_DIR)
     print(
@@ -114,6 +126,7 @@ def main() -> int:
 def fetch_into(
     run: SearchRun,
     source,
+    gate: Gate,
     config: dict,
     args: argparse.Namespace,
     store: VacancyStore,
@@ -124,25 +137,41 @@ def fetch_into(
     Every way a fetch can end up gets its own status, because "stored nothing"
     on its own says nothing: it is the normal answer for a quiet week and the
     only answer a broken source gives.
+
+    The API sources are gated inside the client. The scraped ones are gated
+    here, once per search: JobSpy sends its own requests, and the search is the
+    only part of that traffic we can see.
     """
     limit = source_limit(config, run.source, args.limit)
+    site = getattr(source, "site", None)  # set on the scraped sources only
     try:
+        if site:
+            gate.ask(site)
         # Scraped sources and the aggregator make fewer requests for a lower
         # limit, so they get it here. A board does not, so it gets it below.
         vacancies = source.fetch(limit=None if run.source in WHOLE_BOARD else limit)
+    except Refused as err:
+        run.status, run.detail = err.status, err.detail
+        return False
     except RateLimited as err:
         wait = f"{err.retry_after / 60:.0f} min" if err.retry_after else "unknown"
         run.status, run.detail = "rate_limited", f"retry in {wait}"
         return False
     except LikelyThrottled as err:
+        if site:
+            gate.refused(site, "descriptions stopped arriving")
         run.status, run.detail = "throttled", str(err)
         return False
     except ScrapeTimeout as err:
+        if site:
+            gate.failed(site)
         run.status, run.detail = "timeout", str(err)
         return False
     except httpx.HTTPError as err:
         run.status, run.detail = "failed", type(err).__name__
         return False
+    if site:
+        gate.answered(site)
 
     stats = getattr(source, "stats", None)  # the scraped sources count as they go
     run.listed = stats.listed if stats else len(vacancies)
@@ -226,6 +255,17 @@ def build_sources(name: str, config: dict, client: httpx.Client, store: VacancyS
                     country=settings.get("country", "NL"),
                     max_age_days=settings.get("max_age_days", 7),
                 ),
+            )
+
+
+def print_cooling_down(gate: Gate) -> None:
+    """Say up front which sites this run will leave alone, and why."""
+    now = datetime.now(UTC)
+    for site, entry in sorted(gate.state.sites.items()):
+        if entry.blocked_until > now:
+            print(
+                f"not asking {site} until {entry.blocked_until:%Y-%m-%d %H:%M} UTC: "
+                f"{entry.reason} ({entry.strikes}x in a row)"
             )
 
 

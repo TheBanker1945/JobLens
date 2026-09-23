@@ -19,7 +19,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 # Statuses that mean the search did not finish, as opposed to finding nothing.
-BROKEN = ("failed", "timeout", "throttled", "rate_limited")
+# The last three come from the gate in sources/polite.py: a site that refused us,
+# one we did not ask because it refused us recently, and a run that reached the
+# per-site request budget.
+BROKEN = (
+    "failed",
+    "timeout",
+    "throttled",
+    "rate_limited",
+    "blocked",
+    "cooling_down",
+    "over_budget",
+)
 MIN_SAMPLE = 10  # below this many jobs a share is noise, not a signal
 MAX_EMPTY_SHARE = 0.3  # more descriptions missing than this: something is wrong
 
@@ -50,19 +61,31 @@ class SearchRun:
 class RunReport:
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     searches: list[SearchRun] = field(default_factory=list)
+    # Requests per site, as the gate counted them. The scraped sources count one
+    # per search: JobSpy sends its own requests, and we only see the search.
+    requests: dict[str, int] = field(default_factory=dict)
 
     def add(self, run: SearchRun) -> SearchRun:
         self.searches.append(run)
         return run
 
     def problems(self) -> list[str]:
-        """Everything about this run that deserves a human's attention."""
-        problems = [
-            f"{run.source} ({run.search}): {run.status}"
-            + (f" - {run.detail}" if run.detail else "")
-            for run in self.searches
-            if run.status in BROKEN
-        ]
+        """Everything about this run that deserves a human's attention.
+
+        Searches that broke the same way are one line: a site that refused us
+        makes every later search of that source stop for the same reason, and
+        twelve identical lines in a cron mail hide the one that is different.
+        """
+        broken: dict[tuple[str, str, str], list[str]] = {}
+        for run in self.searches:
+            if run.status in BROKEN:
+                key = (run.source, run.status, run.detail)
+                broken.setdefault(key, []).append(run.search)
+        problems = []
+        for (source, status, detail), searches in broken.items():
+            which = searches[0] if len(searches) == 1 else f"{len(searches)} searches"
+            reason = f" - {detail}" if detail else ""
+            problems.append(f"{source} ({which}): {status}{reason}")
         for source in dict.fromkeys(run.source for run in self.searches):
             finished = [
                 run
@@ -107,6 +130,7 @@ class RunReport:
             "healthy": self.healthy(),
             "problems": self.problems(),
             "totals": self.totals(),
+            "requests": dict(sorted(self.requests.items())),
             "searches": [asdict(run) for run in self.searches],
         }
 

@@ -171,3 +171,53 @@ def test_three_runs_in_one_minute_leave_three_reports(tmp_path):
         "jobdataapi",
     }
     assert RunReport.latest(tmp_path)["searches"][0]["source"] == "jobdataapi"
+
+
+def test_a_refusal_from_the_gate_is_a_problem():
+    """blocked, cooling_down and over_budget come from sources/polite.py."""
+    for status in ("blocked", "cooling_down", "over_budget"):
+        report = report_of(run(status=status, detail="indeed.com said no"))
+
+        assert not report.healthy()
+        assert len(report.problems()) == 1  # and not also "came back empty"
+
+
+def test_searches_that_broke_the_same_way_are_one_problem():
+    """A site that refused us stops every later search of that source."""
+    detail = "refused us (HTTP 429); not asking again until 2026-09-23 15:00 UTC"
+    cooling = [
+        run(search=f"search {n}", status="cooling_down", detail=detail)
+        for n in range(12)
+    ]
+    report = report_of(
+        *cooling,
+        run(source="recruitee", search="channable", status="failed", detail="500"),
+    )
+
+    assert report.problems() == [
+        f"indeed (12 searches): cooling_down - {detail}",
+        "recruitee (channable): failed - 500",
+    ]
+
+
+def test_a_source_that_was_cooling_down_was_not_fetched(tmp_path):
+    from datetime import UTC, datetime
+
+    report = RunReport(started_at=datetime(2026, 9, 23, 3, 0, tzinfo=UTC))
+    report.add(run(source="linkedin", status="cooling_down"))
+    report.write(tmp_path)
+
+    assert "linkedin" not in RunReport.last_fetched(tmp_path)
+
+
+def test_requests_per_site_are_written(tmp_path):
+    report = report_of(run(listed=20, kept=20))
+    report.requests = {"recruitee.com": 3, "greenhouse.io": 3, "indeed.com": 12}
+
+    written = json.loads(report.write(tmp_path).read_text(encoding="utf-8"))
+
+    assert written["requests"] == {
+        "greenhouse.io": 3,
+        "indeed.com": 12,
+        "recruitee.com": 3,
+    }

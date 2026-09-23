@@ -39,7 +39,7 @@ import httpx
 
 from joblens.sources.base import Vacancy
 from joblens.sources.clean import extract_by_class, redact, to_clean_text
-from joblens.sources.http import RateLimited
+from joblens.sources.http import RateLimited, retry_after_seconds
 
 # A row is one job as JobSpy reports it, already out of pandas and into a dict.
 Rows = list[dict]
@@ -96,6 +96,7 @@ class IndeedSource:
     """
 
     name = "indeed"
+    site = "indeed.com"  # for the gate in sources/polite.py: one ask per search
 
     def __init__(
         self,
@@ -167,6 +168,7 @@ class LinkedInSource:
     """
 
     name = "linkedin"
+    site = "linkedin.com"  # the gate sees the descriptions; the search it is told
     description_url = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{id}"
     description_class = "show-more-less-html__markup"
 
@@ -261,8 +263,7 @@ class LinkedInSource:
         except httpx.HTTPError:
             return None
         if response.status_code == 429:
-            retry_after = response.headers.get("retry-after")
-            raise RateLimited(self.name, float(retry_after) if retry_after else None)
+            raise RateLimited(self.name, retry_after_seconds(response.headers))
         if response.status_code >= 400:
             return None
         # A guest page for a job that wants a login has no description div at all.
