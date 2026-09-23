@@ -43,6 +43,7 @@ from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
 from joblens.sources.netherlands import select
+from joblens.sources.overheid import SITEMAP, OverheidSource
 from joblens.sources.polite import FetchState, Gate, PoliteTransport, Refused, Rules
 from joblens.sources.recruitee import RecruiteeSource
 from joblens.sources.report import RunReport, SearchRun
@@ -66,6 +67,7 @@ SOURCES = (
     "recruitee",
     "greenhouse",
     "smartrecruiters",
+    "overheid",
     "jobdataapi",
     "indeed",
     "linkedin",
@@ -290,6 +292,18 @@ def build_sources(
     elif name == "greenhouse":
         for entry in config.get("greenhouse", []):
             yield entry["slug"], GreenhouseSource(entry["slug"], client)
+    elif name == "overheid":
+        settings = config.get("overheid", {})
+        if settings.get("enabled"):
+            yield (
+                "werkenbijdeoverheid.nl",
+                OverheidSource(
+                    client,
+                    sitemap=settings.get("sitemap", SITEMAP),
+                    scope=scope,
+                    known_keys=store.existing_keys("overheid"),
+                ),
+            )
     elif name == "smartrecruiters":
         known = store.existing_keys("smartrecruiters")  # these cost no request
         for entry in config.get("smartrecruiters", []):

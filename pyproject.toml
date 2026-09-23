@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.28.1",
     "numpy>=2.5.3",
     "openai>=3.14.1",
+    "protego>=0.7.0",
     "pydantic>=2.13.5",
     "pypdf>=6.19.0",
     "python-dotenv>=1.2.3",
@@ -29,7 +30,8 @@ dev = [
 ]
 # Only needed to scrape Indeed/LinkedIn: uv sync --group scrape
 # Not installed by default, so the library, the tests and the evals stay on the
-# five dependencies above.
+# dependencies above. (protego, since 5.5: robots.txt as RFC 9309 reads it,
+# wildcards included, which the standard library's robotparser does not do.)
 scrape = [
     "python-jobspy",
 ]

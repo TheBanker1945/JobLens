@@ -2042,3 +2042,68 @@ job its own board closed: the employer's board is the authority, a copy is not.
 
 `data_status.py` has an "open" column per source now, and the fetch table a
 "gone" column per board: the jobs that board stopped listing tonight.
+
+## 5.5 — The first source that crawls: government vacancies, and robots.txt
+
+Everything JobLens read until now was a documented API or, for Indeed, the
+app's own endpoint through JobSpy. werkenbijdeoverheid.nl has neither. It has a
+sitemap that lists every government vacancy (1,394 yesterday, 1,416 today; a
+superset of werkenvoornederland.nl's 1,192) and a web page per vacancy. Reading
+those is *crawling*, so this milestone brings the thing 5.1 deferred to it.
+
+**robots.txt, for crawls only.** A source that reads web pages marks each
+request with `extensions=CRAWL`; the transport then reads that site's
+robots.txt once a run (through the gate, like any request, so a challenge page
+on robots.txt is still a refusal) and checks the page against it. An API request
+carries no mark and is not checked: 5.1 measured jobdataapi and SmartRecruiters
+disallowing their own documented APIs. What robots.txt says:
+
+| robots.txt | what the gate does |
+|---|---|
+| disallows the page | `Disallowed`; the page is never requested; the report says `disallowed` |
+| `Crawl-delay: 10` (AcademicTransfer) | waits 10 s between pages there |
+| `Request-rate: 10/1` (this site) | nothing: 0.1 s is faster than our own 1.5 s |
+| missing (4xx) | everything allowed (RFC 9309) |
+| unreadable (5xx, no answer) | nothing allowed until the next run |
+
+**One new dependency, protego, and the reason is a measurement.** On the
+robots.txt files saved in the analysis, Python's own `urllib.robotparser` says
+`/vacatures/ict?page=2` is **allowed** on nationalevacaturebank.nl, whose rule
+is `Disallow: /vacatures/*?page=`; it reads the `*` literally. protego (Scrapy's
+parser, BSD, no dependencies of its own) follows RFC 9309 and says disallowed.
+A robots parser that gets wildcards wrong fails exactly where it matters, so
+this is not the place to hand-roll one.
+
+**The source, in the order that costs least.**
+
+1. The sitemap, one request. Each URL ends in the vacancy id
+   (`...-DEF2660-2008-5412`) and starts with the title in kebab case, so the
+   sitemap is both a complete listing (the government board closes jobs like
+   any employer board, 5.4) and a list of titles.
+2. The scope on that title before any page is asked for: 116 of 1,394 titles
+   were software, data or AI work.
+3. The page: its facts come from the analytics data layer
+   (`Functienaam`, `Rijksorganisatie`, `Standplaats`, `Startdatum`,
+   `Einddatum`). There is no JSON-LD on this site. The text is the page's six
+   `<section id="..._anchor">` blocks, headings included ("Dit ga je doen",
+   "Dit vragen wij", ...), which needed `clean.extract_elements`: the old
+   helper stopped at the first match.
+
+**The first run** (2026-09-23, on the store copy):
+
+| | |
+|---|---|
+| requests | 102: robots.txt, the sitemap, 100 pages (the `--limit` cap; the rest the next night) |
+| time | 4 minutes, at 1.5–2.5 s a page |
+| stored | 64 new vacancies, median text 8,400 characters, shortest 4,269 |
+| read but outside the provinces | 36 of the 100 (Apeldoorn, Groningen, Heerlen: the place is only on the page) |
+
+The employers are the point: KNAW, RIVM, Rijkswaterstaat, Logius, DUO, KVK,
+the Rechtspraak's IT organisation, Defensie, the AIVD. None of them was
+reachable through any source before.
+
+Three things the government data does that the boards did not. A place written
+"Leeuwardemn" (a typo on the site), "Rijnstraat 8" (an address) and "\\": all
+three are unknown places, so the scope keeps them, as designed. And one
+civil-engineering title slipped through (*Senior engineer waterbouw*);
+"waterbouw" went into `not_roles`.

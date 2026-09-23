@@ -29,11 +29,16 @@ What this is not: a way around a refusal. No proxies, no rotating addresses, no
 browser disguise, no retries. When a site says no, the source stops and the run
 report says so; a person decides what happens next.
 
-robots.txt is deliberately not checked here. Measured 2026-09-22: jobdataapi.com
-disallows /api/ and api.smartrecruiters.com disallows everything, while both
-document those very endpoints as public APIs. robots.txt is written for crawlers
-and search indexes; for a documented API the provider's docs and rate limits are
-the permission. It arrives with the first source that crawls web pages (5.5).
+robots.txt governs what is *crawled*, not every request. Measured 2026-09-22:
+jobdataapi.com disallows /api/ and api.smartrecruiters.com disallows
+everything, while both document those very endpoints as public APIs. robots.txt
+is written for crawlers and search indexes; for a documented API the provider's
+docs and rate limits are the permission. A source that reads web pages -- a
+sitemap and the pages it lists, since 5.5 -- marks its requests with `CRAWL`,
+and only those are checked against the site's robots.txt (read with protego,
+which follows RFC 9309 including the `*` and `$` wildcards that
+nationalevacaturebank.nl and jobbird.com use). A Crawl-delay or Request-rate
+there can slow the gate down for that site, never speed it up.
 """
 
 import json
@@ -46,8 +51,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
+from protego import Protego
 
 from joblens.sources.http import RateLimited, retry_after_seconds
+
+# Pass as `extensions=CRAWL` on a request that reads a web page rather than a
+# documented API: the transport then checks robots.txt first.
+CRAWL = {"joblens_crawl": True}
+ROBOTS_AGENT = "JobLens"  # the product token of our User-Agent
 
 
 class Refused(Exception):
@@ -75,6 +86,16 @@ class OverBudget(Refused):
     """We asked this site as often as one run is allowed to."""
 
     status = "over_budget"
+
+
+class Disallowed(Refused):
+    """The site's robots.txt does not allow this page to be crawled.
+
+    Not remembered as a refusal: it is a standing rule rather than a mood, and
+    it is read again every run. A source configured to crawl what robots.txt
+    forbids is a mistake in sources.toml, and the report says so."""
+
+    status = "disallowed"
 
 
 # Pages that answer "no" with an ordinary 200 or 503. Each marker was seen on a
@@ -235,6 +256,12 @@ class Gate:
         self._last: dict[str, float] = {}  # when each site last answered
         self._answered: set[str] = set()
         self._refused: set[str] = set()
+        self._robots_delay: dict[str, float] = {}  # a site's own Crawl-delay
+
+    def slow_down(self, site: str, seconds: float) -> None:
+        """A site asks for more time between requests (robots.txt Crawl-delay or
+        Request-rate). Only ever slower than sources.toml, never faster."""
+        self._robots_delay[site] = max(self._robots_delay.get(site, 0.0), seconds)
 
     def ask(self, site: str) -> None:
         """Wait for our turn at `site`, or raise if we should not ask it at all."""
@@ -249,7 +276,8 @@ class Gate:
         if self.requests[site] >= budget:
             raise OverBudget(site, f"{budget} requests this run, the most allowed")
         if site in self._last:
-            pause = self.rules.delay(site) + self.rules.jitter_seconds * self._jitter()
+            delay = max(self.rules.delay(site), self._robots_delay.get(site, 0.0))
+            pause = delay + self.rules.jitter_seconds * self._jitter()
             wait = self._last[site] + pause - self._clock()
             if wait > 0:
                 self._sleep(wait)
@@ -304,9 +332,12 @@ class PoliteTransport(httpx.BaseTransport):
     def __init__(self, gate: Gate, inner: httpx.BaseTransport | None = None):
         self.gate = gate
         self.inner = inner or httpx.HTTPTransport()
+        self._robots: dict[str, Protego | None] = {}  # per origin, read once a run
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         site = site_of(request.url.host)
+        if request.extensions.get("joblens_crawl"):
+            self._obey_robots(request, site)
         self.gate.ask(site)
         try:
             response = self.inner.handle_request(request)
@@ -330,6 +361,46 @@ class PoliteTransport(httpx.BaseTransport):
 
     def close(self) -> None:
         self.inner.close()
+
+    def _obey_robots(self, request: httpx.Request, site: str) -> None:
+        origin = f"{request.url.scheme}://{request.url.netloc.decode()}"
+        if origin not in self._robots:
+            self._robots[origin] = self._read_robots(request, origin)
+        rules = self._robots[origin]
+        if rules is None:
+            raise Disallowed(site, "robots.txt could not be read, so nothing is")
+        if not rules.can_fetch(str(request.url), ROBOTS_AGENT):
+            raise Disallowed(site, f"robots.txt disallows {request.url.path}")
+        if delay := rules.crawl_delay(ROBOTS_AGENT):
+            self.gate.slow_down(site, float(delay))
+        if rate := rules.request_rate(ROBOTS_AGENT):
+            self.gate.slow_down(site, rate.seconds / rate.requests)
+
+    def _read_robots(self, request: httpx.Request, origin: str) -> Protego | None:
+        """The site's robots.txt, through the gate like any request, so a
+        challenge page on robots.txt itself (werkzoeken.nl) is still a refusal.
+
+        RFC 9309: a missing robots.txt (4xx) allows everything; one that cannot
+        be read (5xx, no answer) allows nothing, until the next run.
+        """
+        extensions = {
+            k: v for k, v in request.extensions.items() if k != "joblens_crawl"
+        }
+        robots = httpx.Request(
+            "GET",
+            f"{origin}/robots.txt",
+            headers={"User-Agent": request.headers.get("user-agent", "")},
+            extensions=extensions,
+        )
+        try:
+            response = self.handle_request(robots)
+        except httpx.HTTPError:
+            return None
+        if 400 <= response.status_code < 500:
+            return Protego.parse("")
+        if response.status_code >= 300:
+            return None
+        return Protego.parse(response.text)
 
 
 def refusal_in(response: httpx.Response) -> str | None:

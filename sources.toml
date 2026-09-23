@@ -67,12 +67,20 @@ not_roles = [
     "onderwijsontwikkel", "productontwikkelaar", "service engineer",
     "field service", "servicemonteur", "monteur", "mechanical", "werktuigbouw",
     "elektrotechn", "electrical", "process engineer", "procesengineer", "civil",
-    "civiel", "installatie", "hvac", "hydraul", "geotechn", "kabels",
+    "civiel", "installatie", "hvac", "hydraul", "waterbouw", "geotechn", "kabels",
     "facility", "sheq", "hardware", "cnc", "sales engineer",
     "sales manager", "sales executive", "presales", "pre sales",
     "account manager", "account executive", "accountant", "product manager",
     "product owner", "recruit", "docent", "teacher", "lecturer",
 ]
+
+# Government vacancies (src/joblens/sources/overheid.py). werkenbijdeoverheid.nl
+# lists every vacancy in one sitemap; the scope runs on the title in each URL
+# before a page is asked for. The first source that *crawls*: robots.txt applies
+# (it allows everything, Request-rate 10/1). --limit caps the pages per run.
+[overheid]
+enabled = true
+sitemap = "https://www.werkenbijdeoverheid.nl/sitemap-vacatures.xml"
 
 # Aggregator; anonymous tier, ~10 requests/hour per IP, 20 jobs each, no paging.
 # One request per title below, so each brings different vacancies.

@@ -34,7 +34,9 @@ from pathlib import Path
 
 from joblens.sources.base import Vacancy
 
-BOARD_SOURCES = ("recruitee", "greenhouse", "smartrecruiters")
+# Sources whose listing is complete, so a job missing from it has closed. The
+# government sitemap (5.5) lists every vacancy, so it closes jobs like a board.
+BOARD_SOURCES = ("recruitee", "greenhouse", "smartrecruiters", "overheid")
 SEARCH_MAX_AGE_DAYS = 30  # since posting
 SEARCH_SEEN_DAYS = 7  # since a search last listed it: Indeed's own window
 
