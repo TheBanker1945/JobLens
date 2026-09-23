@@ -74,6 +74,11 @@ not_roles = [
     "field service", "servicemonteur", "monteur", "mechanical", "werktuigbouw",
     "elektrotechn", "electrical", "process engineer", "procesengineer", "civil",
     "civiel", "installatie", "hvac", "hydraul", "waterbouw", "geotechn", "kabels",
+    # read in the EURES titles, 2026-09-23; "offshore" and "project engineer"
+    # are not here on purpose: "Junior Software Engineer - Maritieme, Offshore-
+    # en Industriele Automatisering" is software work, and so can the other be
+    "proces engineer", "kabelwerken", "cost engineer", "structural", "dredging",
+    "werkvoorbereider", "building automation",
     "facility", "sheq", "hardware", "cnc", "sales engineer",
     "sales manager", "sales executive", "presales", "pre sales",
     "account manager", "account executive", "accountant", "product manager",
