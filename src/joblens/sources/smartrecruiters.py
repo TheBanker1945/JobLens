@@ -48,6 +48,9 @@ class BoardStats:
     dropped_invalid: int = 0  # asked for, and no longer active or no text
     dropped_no_text: int = 0
     left_out: list[str] = field(default_factory=list)
+    # every key the listing held, fetched or not: what "still open" means for
+    # closing vacancies (sources/sightings.py)
+    listed_keys: set[str] = field(default_factory=set)
 
 
 class SmartRecruitersSource:
@@ -61,7 +64,7 @@ class SmartRecruitersSource:
         scope: Scope | None = None,
         known_keys: set[str] | frozenset[str] = frozenset(),
     ):
-        self.company = company
+        self.company = self.board = company  # `board`: which listing closes its jobs
         self.client = client
         self.scope = scope
         self.known_keys = known_keys
@@ -86,6 +89,7 @@ class SmartRecruitersSource:
         self.stats = BoardStats()
         postings = self.listing()
         self.stats.listed = len(postings)
+        self.stats.listed_keys = {f"{self.name}:{p['id']}" for p in postings}
         vacancies: list[Vacancy] = []
         for posting in postings:
             if limit is not None and len(vacancies) >= limit:

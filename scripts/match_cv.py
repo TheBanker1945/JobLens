@@ -85,7 +85,8 @@ def main() -> int:
     args = parser.parse_args()
 
     load_dotenv()
-    corpus = load_corpus(args.corpus).extracted()
+    # Open vacancies only: a job the employer took down is not a match (5.4).
+    corpus = load_corpus(args.corpus, open_only=True).extracted()
     if not corpus.vacancies:
         print(f"No extracted vacancies in the {args.corpus} corpus. Index some first.")
         return 1

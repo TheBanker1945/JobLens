@@ -25,7 +25,7 @@ class RecruiteeSource:
     def __init__(self, slug: str, client: httpx.Client):
         """`slug` is "channable" for channable.recruitee.com, or a whole host
         name such as "vacatures.coloriet.nl" for a board on its own domain."""
-        self.slug = slug
+        self.slug = self.board = slug  # `board`: which listing closes its jobs
         self.client = client
         self.base = (
             f"https://{slug}" if "." in slug else f"https://{slug}.recruitee.com"

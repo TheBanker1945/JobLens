@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from joblens.extraction.schema import VacancyDetails
 from joblens.extraction.store import DetailsStore
 from joblens.sources.base import Vacancy, dedupe
+from joblens.sources.sightings import Sightings
 from joblens.sources.store import VacancyStore
 
 # src/joblens/corpus.py -> src/joblens -> src -> the repo root.
@@ -52,10 +53,11 @@ class Funnel(BaseModel):
     not_a_vacancy: int = 0  # open applications; see NOT_A_VACANCY below
     duplicates: int = 0  # the same job found on two boards
     not_extracted: int = 0  # no fields, so it cannot be embedded like the rest
+    closed: int = 0  # the employer took it down, or it is too old (5.4)
 
     @property
     def dropped(self) -> int:
-        return self.not_a_vacancy + self.duplicates + self.not_extracted
+        return self.not_a_vacancy + self.closed + self.duplicates + self.not_extracted
 
     def line(self) -> str:
         """One line, and it says nothing when nothing was dropped."""
@@ -63,6 +65,7 @@ class Funnel(BaseModel):
             return ""
         reasons = [
             (self.not_a_vacancy, "open applications"),
+            (self.closed, "closed"),
             (self.duplicates, "duplicates"),
             (self.not_extracted, "never extracted"),
         ]
@@ -107,11 +110,18 @@ class Corpus:
         return len(self.vacancies)
 
 
-def load_corpus(name: Name, root: Path = ROOT) -> Corpus:
+def load_corpus(name: Name, root: Path = ROOT, *, open_only: bool = False) -> Corpus:
+    """`open_only` leaves out the vacancies that have closed (5.4).
+
+    Ranking a CV asks for it: recommending a job that was taken down last week
+    is the one mistake a person notices first. The evals do not: they compare
+    rankings over one fixed set, and a labelled vacancy disappearing because it
+    closed would move the score for a reason that has nothing to do with search.
+    """
     if name == "samples":
         return _load_samples(root / "data" / "samples", root)
     if name == "raw":
-        return _load_raw(root / "data" / "raw")
+        return _load_raw(root / "data" / "raw", open_only)
     raise ValueError(f"unknown corpus {name!r}, expected one of {NAMES}")
 
 
@@ -158,7 +168,7 @@ def is_vacancy(vacancy: Vacancy) -> bool:
     return not NOT_A_VACANCY.match(vacancy.title)
 
 
-def _load_raw(directory: Path) -> Corpus:
+def _load_raw(directory: Path, open_only: bool = False) -> Corpus:
     store = VacancyStore(directory / "vacancies")
     sources = store.sources()
     records = DetailsStore(directory / "extracted").load_all(sources)
@@ -168,11 +178,17 @@ def _load_raw(directory: Path) -> Corpus:
     # can change and re-measure without fetching anything again. Counted on the
     # way out too, for the same reason: this is where a vacancy disappears.
     jobs = [v for v in vacancies if is_vacancy(v)]
-    kept = dedupe(jobs)
+    # Closed before duplicates: of two copies of one job, the open one stays.
+    current = jobs
+    if open_only:
+        sightings = Sightings.load(directory / "sightings.json")
+        current = [v for v in jobs if sightings.is_open(v)]
+    kept = dedupe(current)
     funnel = Funnel(
         loaded=len(vacancies),
         not_a_vacancy=len(vacancies) - len(jobs),
-        duplicates=len(jobs) - len(kept),
+        closed=len(jobs) - len(current),
+        duplicates=len(current) - len(kept),
     )
     details = {key: record.details for key, record in records.items()}
     return Corpus("raw", kept, details, funnel)

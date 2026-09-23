@@ -1978,3 +1978,67 @@ requests a site may take per run, because nothing was stored yet. From the
 second run on it is the listing pages (about 20) plus new jobs only. If a
 larger board list ever makes a first run hit the budget, the report says
 `over_budget` and the rest arrives the next night.
+
+## 5.4 — Vacancies close: knowing which, without forgetting any
+
+The store is append-only and has no sense of time. A vacancy fetched on
+20 September was still "there" a month later, and the matcher would recommend
+it. Two employer-site vacancies from 20 September were 404 by the 22nd.
+Recommending a job that was taken down last week is the first mistake a person
+notices.
+
+**Two kinds of source know different things.**
+
+- *An employer board lists every job it has.* So a stored job it no longer lists
+  has closed, and on the night it went. Only after a **successful** fetch, and
+  never on an **empty** one: a board that suddenly lists nothing is more likely
+  broken than emptied, and closing everything on it would be the worst guess.
+  SmartRecruiters counts every job in its listing as seen, including the ones it
+  never fetched a text for.
+- *A search lists what matches this week.* A job missing from tonight's Indeed
+  search may just be older than its window, so absence proves nothing.
+
+**`data/raw/sightings.json`** records per stored key: first seen, last seen,
+the board it was listed on, and when it closed. Written whole to a temporary
+file and moved into place, so a run that dies halfway leaves yesterday's file.
+A job stored before sightings existed has no board on record; it closes only
+when *every* board of its source answered and none listed it.
+
+**Nothing is deleted, and the evals do not see the difference.**
+`load_corpus(..., open_only=True)` is what matching and search ask for; the
+funnel counts what it left out ("14 closed"). The evals keep the default and
+read everything, because a labelled vacancy disappearing because it closed would
+move a score for a reason that has nothing to do with retrieval (the 3.7 lesson
+about a growing corpus, applied in advance).
+
+**The first rule for searches was wrong, and Indeed said so.** The plan was age:
+a search job older than 30 days is closed. On the first measurement, six Indeed
+jobs were "183 to 334 days old" by their `date_posted`, while Indeed had returned
+them the day before in a *last-7-days* search. Indeed re-lists old postings as
+new. So a search job is open while a search still lists it (seen in the last
+7 days) or while it is young (30 days). A job its board keeps advertising is
+advertised.
+
+**Then the duplicate rule of 3.2 hid a job from its own board.** The store keeps
+the *first* copy of a job and drops the rest. Wildflowers' "PLC Software
+Engineer" was stored as an Indeed copy; the Wildflowers board (added in 5.3)
+lists it every night, but its listing was a duplicate and never stored. So the
+Indeed copy aged out while the employer was still advertising the job. The
+store now says *which* copy a duplicate matched (`StoreResult.twins`), and a
+board listing a job moves that copy's "last seen" forward. It never reopens a
+job its own board closed: the employer's board is the authority, a copy is not.
+
+**Measured on the 824-vacancy copy (2026-09-23):**
+
+| | |
+|---|---|
+| Greenhouse jobs closed on the first night with sightings | 8, all Adyen and Catawiki |
+| of those, checked against Adyen's board by hand | 7 of 7 really gone (board now 211 jobs) |
+| Indeed jobs closed by the first (age-only) rule | 8 |
+| after "a search still lists it" | 6 |
+| after "its own board lists it" | 4, and each of those jobs is still in the app through an open copy |
+| what matching ranks | 808 of 824; 12 closed, 2 open applications, 2 duplicates |
+| what the evals read | everything, as before |
+
+`data_status.py` has an "open" column per source now, and the fetch table a
+"gone" column per board: the jobs that board stopped listing tonight.
