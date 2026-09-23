@@ -29,6 +29,7 @@ from joblens.sources.base import Vacancy
 from joblens.sources.boards import load_config
 from joblens.sources.polite import FetchState
 from joblens.sources.report import RunReport
+from joblens.sources.sightings import Sightings
 from joblens.sources.store import VacancyStore
 
 ROOT = Path(__file__).parent.parent
@@ -36,6 +37,7 @@ RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 EXTRACTED_DIR = ROOT / "data" / "raw" / "extracted"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
 STATE_PATH = ROOT / "data" / "raw" / "fetch-state.json"
+SIGHTINGS_PATH = ROOT / "data" / "raw" / "sightings.json"
 CACHE_DIR = ROOT / "data" / "cache"
 
 
@@ -62,11 +64,16 @@ def main() -> int:
     fetched = RunReport.last_fetched(RUNS_DIR)
     now = datetime.now(UTC)
 
+    sightings = Sightings.load(SIGHTINGS_PATH)
+    open_total = 0
     print(
-        f"{'source':<12} {'stored':>7} {'extracted':>10} {'newest':>8} {'fetched':>9}"
+        f"{'source':<12} {'stored':>7} {'open':>6} {'extracted':>10} {'newest':>8} "
+        f"{'fetched':>9}"
     )
     for source, group in vacancies.items():
         extracted = sum(1 for v in group if v.key in details)
+        still_open = sum(sightings.is_open(v, now) for v in group)
+        open_total += still_open
         when = (
             ago(now - fetched[source])
             if source in fetched
@@ -76,10 +83,14 @@ def main() -> int:
         )
         note = "" if source in enabled else "  (disabled in sources.toml)"
         print(
-            f"{source:<12} {len(group):>7} {extracted:>10} {newest(group):>8} "
-            f"{when:>9}{note}"
+            f"{source:<12} {len(group):>7} {still_open:>6} {extracted:>10} "
+            f"{newest(group):>8} {when:>9}{note}"
         )
-    print(f"{'total':<12} {total:>7} {len(details):>10}")
+    print(f"{'total':<12} {total:>7} {open_total:>6} {len(details):>10}")
+    print(
+        "open: an employer board still lists it; a search job was listed in the "
+        "last 7 days or is at most 30 days old (src/joblens/sources/sightings.py)"
+    )
 
     print(f"\nembedded: {embedded(vacancies, details, args.style)}")
 

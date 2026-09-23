@@ -84,20 +84,30 @@ class SeenJobs:
     """
 
     def __init__(self) -> None:
-        self._labels: set[str] = set()
-        self._content: dict[str, list[str | None]] = {}
+        self._labels: dict[str, str] = {}  # fingerprint -> the key stored under it
+        self._content: dict[str, list[tuple[str | None, str]]] = {}  # (city, key)
 
     def add(self, vacancy: Vacancy) -> None:
-        self._labels.add(vacancy.fingerprint)
-        self._content.setdefault(vacancy.content_fingerprint, []).append(vacancy.city)
+        self._labels.setdefault(vacancy.fingerprint, vacancy.key)
+        places = self._content.setdefault(vacancy.content_fingerprint, [])
+        places.append((vacancy.city, vacancy.key))
 
     def has(self, vacancy: Vacancy) -> bool:
+        return self.find(vacancy) is not None
+
+    def find(self, vacancy: Vacancy) -> str | None:
+        """The key of the stored copy of this job, or None.
+
+        Which copy matters since 5.4: the store keeps the first copy it saw, and
+        when an employer's board lists a job we hold as an Indeed copy, that
+        listing is news about the Indeed copy (sources/sightings.py).
+        """
         if vacancy.fingerprint in self._labels:
-            return True
-        cities = self._content.get(vacancy.content_fingerprint)
-        return cities is not None and any(
-            same_place(city, vacancy.city) for city in cities
-        )
+            return self._labels[vacancy.fingerprint]
+        for city, key in self._content.get(vacancy.content_fingerprint, []):
+            if same_place(city, vacancy.city):
+                return key
+        return None
 
     def __len__(self) -> int:
         return len(self._labels)

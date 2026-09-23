@@ -11,7 +11,7 @@ decides what counts as the same job.
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from joblens.sources.base import SeenJobs, Vacancy
@@ -24,6 +24,8 @@ class StoreResult:
     stored: int = 0
     known: int = 0  # same source, same id: seen in an earlier run
     duplicate: int = 0  # the same job, found through another source
+    # for each duplicate: the key of the copy that is stored instead of it
+    twins: dict[str, str] = field(default_factory=dict)
 
 
 class VacancyStore:
@@ -70,12 +72,14 @@ class VacancyStore:
         seen = self.seen()
         fresh: list[Vacancy] = []
         known_again = duplicates = 0
+        twins: dict[str, str] = {}
         for vacancy in vacancies:
             if vacancy.key in known:
                 known_again += 1
                 continue
-            if seen.has(vacancy):
+            if twin := seen.find(vacancy):
                 duplicates += 1
+                twins[vacancy.key] = twin
                 continue
             known.add(vacancy.key)
             seen.add(vacancy)
@@ -86,7 +90,7 @@ class VacancyStore:
             with self.path_for(source).open("a", encoding="utf-8") as handle:
                 for vacancy in fresh:
                     handle.write(vacancy.model_dump_json() + "\n")
-        return StoreResult(len(fresh), known_again, duplicates)
+        return StoreResult(len(fresh), known_again, duplicates, twins)
 
     def load(self, source: str) -> list[Vacancy]:
         path = self.path_for(source)

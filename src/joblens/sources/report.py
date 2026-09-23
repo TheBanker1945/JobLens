@@ -57,6 +57,10 @@ class SearchRun:
     duplicate: int = 0  # the same job, already stored through another source
     dropped_no_text: int = 0
     dropped_invalid: int = 0
+    # An employer board lists every job it has: a stored one it stopped listing
+    # has closed, and one it lists again has reopened (sources/sightings.py).
+    closed: int = 0
+    reopened: int = 0
     detail: str = ""  # why it broke, in one line
     left_out: list[str] = field(default_factory=list)  # "title -- why", at most 25
 
@@ -68,6 +72,9 @@ class RunReport:
     # Requests per site, as the gate counted them. The scraped sources count one
     # per search: JobSpy sends its own requests, and we only see the search.
     requests: dict[str, int] = field(default_factory=dict)
+    # Per board source: stored jobs that no board of it lists any more, closed
+    # once every board of that source answered (sightings.close_unseen).
+    closed_unlisted: dict[str, int] = field(default_factory=dict)
 
     def add(self, run: SearchRun) -> SearchRun:
         self.searches.append(run)
@@ -131,6 +138,8 @@ class RunReport:
             "stored",
             "known",
             "duplicate",
+            "closed",
+            "reopened",
         )
         return {
             name: sum(getattr(run, name) for run in self.searches) for name in fields
@@ -144,6 +153,7 @@ class RunReport:
             "problems": self.problems(),
             "totals": self.totals(),
             "requests": dict(sorted(self.requests.items())),
+            "closed_unlisted": dict(sorted(self.closed_unlisted.items())),
             "searches": [asdict(run) for run in self.searches],
         }
 

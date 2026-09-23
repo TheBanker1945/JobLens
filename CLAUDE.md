@@ -138,6 +138,16 @@ conceptually, not just have working code.
   never removes stored vacancies that labels refer to; `--no-scope` stores all
   Dutch jobs. Change a word list only with a measurement: run it over the store
   and Mahdi's labels, and every "would apply" must stay in.
+- Vacancies close; the store never forgets. data/raw/sightings.json
+  (src/joblens/sources/sightings.py) records when each was last listed. An
+  employer board lists every job it has, so a stored job it stops listing has
+  closed (only after a successful, non-empty fetch). A search job is open while
+  a search listed it in the last 7 days or it is at most 30 days old; age alone
+  is wrong, Indeed re-lists jobs 200+ days old as new. A board listing a job we
+  hold as another source's copy keeps that copy open; it never reopens a job
+  its own board closed. Matching and search use `load_corpus(open_only=True)`;
+  the evals keep the default (everything), so a closed labelled vacancy cannot
+  move their scores.
 - Scraping never runs while someone is using JobLens: scripts/daily_update.sh
   fetches on a schedule, and search only reads what is already stored.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source

@@ -49,7 +49,8 @@ def test_the_same_job_from_another_board_is_not_stored_twice(tmp_path):
     store.add([indeed])
     result = store.add([linkedin])
 
-    assert result == StoreResult(duplicate=1)  # punctuation and case do not matter
+    # punctuation and case do not matter; and it says which copy it matched (5.4)
+    assert result == StoreResult(duplicate=1, twins={"linkedin:9": "recruitee:1"})
     assert store.load("linkedin") == []
 
 
@@ -87,7 +88,9 @@ def test_without_a_company_the_same_advert_is_still_one_job(tmp_path):
 
     store.add([first])
 
-    assert store.add([again]) == StoreResult(duplicate=1)
+    assert store.add([again]) == StoreResult(
+        duplicate=1, twins={"recruitee:2": "recruitee:1"}
+    )
 
 
 def test_the_same_advert_under_two_company_names_is_one_job(tmp_path):
@@ -100,7 +103,9 @@ def test_the_same_advert_under_two_company_names_is_one_job(tmp_path):
 
     store.add([first])
 
-    assert store.add([again]) == StoreResult(duplicate=1)
+    assert store.add([again]) == StoreResult(
+        duplicate=1, twins={"recruitee:2": "recruitee:1"}
+    )
 
 
 def test_one_description_pasted_into_two_roles_stays_two_jobs(tmp_path):

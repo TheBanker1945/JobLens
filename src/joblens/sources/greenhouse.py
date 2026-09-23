@@ -19,7 +19,7 @@ class GreenhouseSource:
     name = "greenhouse"
 
     def __init__(self, slug: str, client: httpx.Client):
-        self.slug = slug
+        self.slug = self.board = slug  # `board`: which listing closes its jobs
         self.client = client
 
     def fetch(self, limit: int | None = None) -> list[Vacancy]:

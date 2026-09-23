@@ -25,6 +25,10 @@ arrived, a board refusing us), so a scheduled run can tell us it went bad.
 Every request goes through one gate (src/joblens/sources/polite.py): paced per
 site, capped per run, and a site that refuses us is remembered in
 data/raw/fetch-state.json, so the next run leaves it alone for a while.
+
+Every listing also says what is still open. A job an employer board no longer
+lists has closed, and data/raw/sightings.json says since when
+(src/joblens/sources/sightings.py); matching leaves closed jobs out.
 """
 
 import argparse
@@ -49,6 +53,7 @@ from joblens.sources.scraped import (
     LinkedInSource,
     ScrapeTimeout,
 )
+from joblens.sources.sightings import BOARD_SOURCES, Sightings
 from joblens.sources.smartrecruiters import SmartRecruitersSource
 from joblens.sources.store import VacancyStore
 
@@ -56,6 +61,7 @@ ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
 RUNS_DIR = ROOT / "data" / "raw" / "runs"
 STATE_PATH = ROOT / "data" / "raw" / "fetch-state.json"
+SIGHTINGS_PATH = ROOT / "data" / "raw" / "sightings.json"
 SOURCES = (
     "recruitee",
     "greenhouse",
@@ -98,10 +104,12 @@ def main() -> int:
     )
     print_cooling_down(gate)
     scope = None if args.no_scope else Scope.from_config(config["scope"])
+    sightings = Sightings.load(SIGHTINGS_PATH)
+    now = datetime.now(UTC)
 
     print(
         f"{'source':<12} {'what':<30} {'listed':>6} {'kept':>5} {'dutch':>6} "
-        f"{'fits':>5} {'new':>5} {'known':>6} {'dup':>4}"
+        f"{'fits':>5} {'new':>5} {'known':>6} {'dup':>4} {'gone':>5}"
     )
     report = RunReport()
     with new_client(transport=PoliteTransport(gate)) as client:
@@ -109,11 +117,22 @@ def main() -> int:
             built = list(build_sources(source_name, config, client, store, scope))
             if not built and source_name in SCRAPED:
                 print(f"{source_name:<12} {'(disabled in sources.toml)':<30}")
+            every_board_answered = bool(built)
             for label, source in built:
                 run = report.add(SearchRun(source_name, label[:30]))
                 if not fetch_into(
-                    run, source, gate, config, args, store, markers, scope
+                    run,
+                    source,
+                    gate,
+                    config,
+                    args,
+                    store,
+                    markers,
+                    scope,
+                    sightings=sightings,
+                    now=now,
                 ):
+                    every_board_answered = False
                     print(
                         f"{run.source:<12} {run.search:<30} {run.status}: {run.detail}"
                     )
@@ -122,12 +141,21 @@ def main() -> int:
                 print(
                     f"{run.source:<12} {run.search:<30} {run.listed:>6} {run.kept:>5} "
                     f"{run.dutch:>6} {fits:>5} {run.stored:>5} {run.known:>6} "
-                    f"{run.duplicate:>4}"
+                    f"{run.duplicate:>4} {run.closed:>5}"
                 )
                 if run.capped:
                     print(f"{'':<12} --limit left out {run.capped} Dutch vacancies")
+            # A job stored before sightings began has no board on record, so no
+            # single board can close it; every board of the source together can.
+            if source_name in BOARD_SOURCES and every_board_answered:
+                stored = store.existing_keys(source_name)
+                closed = sightings.close_unseen(source_name, stored, now)
+                if closed:
+                    report.closed_unlisted[source_name] = closed
+                    print(f"{'':<12} {closed} stored jobs no board lists any more")
 
     gate.finish()  # a site that answered all night is forgiven its old refusals
+    sightings.save()
     report.requests = dict(gate.requests)
     asked = ", ".join(f"{site} {n}" for site, n in sorted(gate.requests.items()))
     print(f"\nrequests per site: {asked or 'none'}")
@@ -154,6 +182,9 @@ def fetch_into(
     store: VacancyStore,
     markers: list[str],
     scope: Scope | None = None,
+    *,
+    sightings: Sightings | None = None,
+    now: datetime | None = None,
 ) -> bool:
     """Run one search and write the result into `run`. False if it broke.
 
@@ -220,6 +251,17 @@ def fetch_into(
     run.known = result.known + skipped_known
     if not run.listed:
         run.status = "empty"
+
+    if sightings is not None:
+        # What the source listed, fetched or not, is what is still open.
+        listed = getattr(stats, "listed_keys", None) or {v.key for v in vacancies}
+        board = getattr(source, "board", None)  # the employer boards only
+        now = now or datetime.now(UTC)
+        run.reopened = sightings.seen(listed, board, now)
+        # A job we hold under another source's key was listed here too.
+        sightings.seen_elsewhere(set(result.twins.values()), now)
+        if board is not None:
+            run.closed = sightings.close_missing(board, run.source, listed, now)
     return True
 
 

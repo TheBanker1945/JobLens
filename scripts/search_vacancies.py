@@ -45,7 +45,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    corpus = load_corpus(args.corpus)
+    corpus = load_corpus(args.corpus, open_only=True)  # closed jobs are not results
     if not corpus.vacancies:
         print("Nothing to search. Fetch and index some vacancies first.")
         return 1
