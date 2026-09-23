@@ -39,11 +39,12 @@ from pathlib import Path
 import httpx
 
 from joblens.sources.boards import load_config
+from joblens.sources.careersite import CareerSiteSource
 from joblens.sources.eures import EuresSource, nuts_codes
 from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
-from joblens.sources.netherlands import select
+from joblens.sources.netherlands import is_dutch, select
 from joblens.sources.overheid import SITEMAP, OverheidSource
 from joblens.sources.polite import FetchState, Gate, PoliteTransport, Refused, Rules
 from joblens.sources.recruitee import RecruiteeSource
@@ -70,6 +71,7 @@ SOURCES = (
     "greenhouse",
     "smartrecruiters",
     "workday",
+    "careersite",
     "overheid",
     "jobdataapi",
     "eures",
@@ -120,7 +122,9 @@ def main() -> int:
     report = RunReport()
     with new_client(transport=PoliteTransport(gate)) as client:
         for source_name in wanted:
-            built = list(build_sources(source_name, config, client, store, scope))
+            built = list(
+                build_sources(source_name, config, client, store, scope, sightings)
+            )
             if not built and source_name in SCRAPED:
                 print(f"{source_name:<12} {'(disabled in sources.toml)':<30}")
             every_board_answered = bool(built)
@@ -261,6 +265,16 @@ def fetch_into(
     if not run.listed:
         run.status = "empty"
 
+    if sightings is not None and scope is not None and hasattr(source, "known_keys"):
+        # A source that pays a request per page: what it read tonight and did
+        # not store is not read again under this scope. Capped pages are not
+        # among them; the cap left them unjudged.
+        left_out = {
+            v.key
+            for v in vacancies
+            if not (args.all_countries or is_dutch(v, markers)) or not scope.keep(v)
+        }
+        sightings.pass_over(left_out | set(result.twins), scope.fingerprint, now)
     if sightings is not None:
         # What the source listed, fetched or not, is what is still open.
         listed = getattr(stats, "listed_keys", None) or {v.key for v in vacancies}
@@ -295,13 +309,37 @@ def build_sources(
     client: httpx.Client,
     store: VacancyStore,
     scope: Scope | None = None,
+    sightings: Sightings | None = None,
 ):
+    def known(source: str) -> set[str]:
+        """Pages that cost no request: stored, or read and left out under this
+        very scope (sightings.pass_over). A changed scope reads them again."""
+        keys = store.existing_keys(source)
+        if sightings is not None and scope is not None:
+            keys |= sightings.passed_over(source, scope.fingerprint)
+        return keys
+
     if name == "recruitee":
         for entry in config.get("recruitee", []):
             yield entry["slug"], RecruiteeSource(entry["slug"], client)
     elif name == "greenhouse":
         for entry in config.get("greenhouse", []):
             yield entry["slug"], GreenhouseSource(entry["slug"], client)
+    elif name == "careersite":
+        known_pages = known("careersite")
+        for entry in config.get("careersite", []):
+            yield (
+                entry["site"],
+                CareerSiteSource(
+                    entry["site"],
+                    entry["sitemap"],
+                    entry["pattern"],
+                    client,
+                    scope=scope,
+                    known_keys=known_pages,
+                    place_in_url=entry.get("place_in_url", False),
+                ),
+            )
     elif name == "overheid":
         settings = config.get("overheid", {})
         if settings.get("enabled"):
@@ -311,22 +349,26 @@ def build_sources(
                     client,
                     sitemap=settings.get("sitemap", SITEMAP),
                     scope=scope,
-                    known_keys=store.existing_keys("overheid"),
+                    known_keys=known("overheid"),
                 ),
             )
     elif name == "smartrecruiters":
-        known = store.existing_keys("smartrecruiters")  # these cost no request
+        known_postings = known("smartrecruiters")
         for entry in config.get("smartrecruiters", []):
             source = SmartRecruitersSource(
-                entry["company"], client, scope=scope, known_keys=known
+                entry["company"], client, scope=scope, known_keys=known_postings
             )
             yield entry["company"], source
     elif name == "workday":
-        known = store.existing_keys("workday")
+        known_jobs = known("workday")
         robots: dict = {}  # robots.txt read once per host, shared by its sites
         for entry in config.get("workday", []):
             source = WorkdaySource(
-                entry["board"], client, scope=scope, known_keys=known, robots=robots
+                entry["board"],
+                client,
+                scope=scope,
+                known_keys=known_jobs,
+                robots=robots,
             )
             yield entry["board"], source
     elif name == "indeed":

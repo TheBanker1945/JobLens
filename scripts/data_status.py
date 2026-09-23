@@ -144,7 +144,13 @@ def enabled_sources(config: dict) -> set[str]:
     them: a company board when it lists a company, the rest when enabled."""
     boards = {
         name
-        for name in ("recruitee", "greenhouse", "smartrecruiters", "workday")
+        for name in (
+            "recruitee",
+            "greenhouse",
+            "smartrecruiters",
+            "workday",
+            "careersite",
+        )
         if config.get(name)
     }
     switched = {

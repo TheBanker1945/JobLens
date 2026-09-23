@@ -43,6 +43,7 @@ BOARD_SOURCES = (
     "smartrecruiters",
     "overheid",
     "workday",
+    "careersite",
 )
 SEARCH_MAX_AGE_DAYS = 30  # since posting
 SEARCH_SEEN_DAYS = 7  # since a search last listed it: Indeed's own window
@@ -54,6 +55,10 @@ class Sighting:
     last_seen: datetime
     board: str | None = None  # "channable": which listing it was seen on
     closed_at: datetime | None = None
+    # Read, and not stored: out of scope once the page said where, or the same
+    # job as one already stored. The scope's fingerprint at that moment, so the
+    # page is not read again every night -- until the scope changes.
+    passed_over: str | None = None
 
 
 class Sightings:
@@ -74,6 +79,7 @@ class Sightings:
                     last_seen=datetime.fromisoformat(raw["last_seen"]),
                     board=raw.get("board"),
                     closed_at=_date(raw.get("closed_at")),
+                    passed_over=raw.get("passed_over"),
                 )
         return sightings
 
@@ -87,6 +93,7 @@ class Sightings:
                 "first_seen": s.first_seen.isoformat(timespec="seconds"),
                 "last_seen": s.last_seen.isoformat(timespec="seconds"),
                 "board": s.board,
+                "passed_over": s.passed_over,
                 "closed_at": s.closed_at.isoformat(timespec="seconds")
                 if s.closed_at
                 else None,
@@ -131,6 +138,22 @@ class Sightings:
                 self.entries[key] = Sighting(now, now)
             else:
                 entry.last_seen = now
+
+    def pass_over(self, keys: set[str], fingerprint: str, now: datetime) -> None:
+        """These pages were read and not stored. Measured 2026-09-23: without
+        this, wolfgroep.nl cost 102 requests a night, most of them the same 29
+        duplicates and 23 pages outside the provinces, read again and again."""
+        for key in keys:
+            entry = self.entries.setdefault(key, Sighting(now, now))
+            entry.passed_over = fingerprint
+
+    def passed_over(self, source: str, fingerprint: str) -> set[str]:
+        """The keys of `source` read and left out under this very scope."""
+        return {
+            key
+            for key, entry in self.entries.items()
+            if entry.passed_over == fingerprint and key.startswith(f"{source}:")
+        }
 
     def close_missing(self, board: str, source: str, listed: set[str], now) -> int:
         """A board was fetched successfully: its open jobs that it no longer

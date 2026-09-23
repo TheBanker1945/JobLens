@@ -34,6 +34,8 @@ many costs a third of a cent; dropping the right one costs the job.
 """
 
 import csv
+import hashlib
+import json
 import unicodedata
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -176,6 +178,16 @@ class Scope:
         if unknown:
             raise ValueError(f"not a Dutch province: {', '.join(sorted(unknown))}")
 
+    @property
+    def fingerprint(self) -> str:
+        """Changes when the provinces or word lists change. A page read and left
+        out under one scope is remembered with this, so it is not read again
+        every night -- until the scope changes and it might fit after all."""
+        words = json.dumps(
+            [sorted(self.chosen), sorted(self.roles), sorted(self.not_roles)]
+        )
+        return hashlib.sha256(words.encode()).hexdigest()[:12]
+
     @classmethod
     def from_config(cls, table: Mapping, places: Places | None = None) -> "Scope":
         return cls(
@@ -197,6 +209,13 @@ class Scope:
 
     def keep(self, vacancy: Vacancy) -> bool:
         return self.check(vacancy).keep
+
+    def names_a_chosen_place(self, text: str) -> bool:
+        """Whether `text` names a place in the chosen provinces -- strictly: an
+        unknown place does not count. For worldwide listings whose URLs carry
+        the city ("/en/job/amsterdam/..."), where "no Dutch place named" means
+        a job somewhere else, not a job that forgot to say where."""
+        return any(p & self.chosen for p in self.places.find(text).values())
 
     def where(self, location: str) -> str:
         """Why this location is outside the scope, or "" if it is not."""
