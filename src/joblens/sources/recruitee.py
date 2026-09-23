@@ -3,6 +3,11 @@
 Public JSON, no key, no registration. The vacancy text is split over two fields,
 `description` and `requirements`; the requirements hold the skills, so both are
 needed.
+
+Many Dutch employers run Recruitee under their own name: vacatures.coloriet.nl
+answers /api/offers/ exactly like coloriet.recruitee.com would (44 offers,
+measured 2026-09-22). So a board is either a slug or a host name; a slug never
+has a dot in it.
 """
 
 from datetime import datetime
@@ -18,22 +23,26 @@ class RecruiteeSource:
     name = "recruitee"
 
     def __init__(self, slug: str, client: httpx.Client):
+        """`slug` is "channable" for channable.recruitee.com, or a whole host
+        name such as "vacatures.coloriet.nl" for a board on its own domain."""
         self.slug = slug
         self.client = client
+        self.base = (
+            f"https://{slug}" if "." in slug else f"https://{slug}.recruitee.com"
+        )
 
     def fetch(self, limit: int | None = None) -> list[Vacancy]:
         """The whole board unless `limit` says otherwise: one request returns
         every offer, so the script caps after the Dutch filter instead."""
-        url = f"https://{self.slug}.recruitee.com/api/offers/"
-        offers = get_json(self.client, url, self.name).get("offers", [])
-        return [self._vacancy(offer) for offer in offers[:limit]]
+        offers = get_json(self.client, f"{self.base}/api/offers/", self.name)
+        return [self._vacancy(offer) for offer in offers.get("offers", [])[:limit]]
 
     def _vacancy(self, offer: dict) -> Vacancy:
         body = f"{offer.get('description', '')}\n{offer.get('requirements', '')}"
         return Vacancy(
             source=self.name,
             source_id=str(offer["id"]),
-            url=offer.get("careers_url") or f"https://{self.slug}.recruitee.com",
+            url=offer.get("careers_url") or self.base,
             title=offer["title"].strip(),
             company=offer.get("company_name") or self.slug,
             city=offer.get("city"),

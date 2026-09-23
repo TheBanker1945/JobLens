@@ -1,0 +1,207 @@
+# Employer boards JobLens reads directly: one request per board per run, and on
+# SmartRecruiters one more per new vacancy inside the scope (sources.toml).
+#
+# Found by scripts/discover_boards.py from the links in stored vacancies,
+# checked with one request each, and accepted by a person; the line above each
+# entry says what the check found. Adding one by hand works the same way.
+# Company boards are public, so this file is committed: a fork gets the list.
+#
+# Recruitee: slug is "channable" for channable.recruitee.com, or a whole host
+# name ("vacatures.coloriet.nl") for a Recruitee board on the employer's domain.
+# Greenhouse: the board token from boards-api.greenhouse.io/v1/boards/{slug}.
+# SmartRecruiters: the company id from jobs.smartrecruiters.com/{company}/...
+
+# The six boards of 2.3, chosen by hand.
+[[recruitee]]
+slug = "channable"
+[[recruitee]]
+slug = "nmbrs"
+[[recruitee]]
+slug = "vandebron"
+
+[[greenhouse]]
+slug = "adyen"
+[[greenhouse]]
+slug = "catawiki"
+[[greenhouse]]
+slug = "databricks"
+
+# discovered 2026-09-23: 265 jobs, 265 Dutch, 1 in scope (8 stored links)
+[[recruitee]]
+slug = "ggzcentraal"
+
+# discovered 2026-09-23: 15 jobs, 15 Dutch, 15 in scope (8 stored links)
+[[recruitee]]
+slug = "sdcrotterdam.swisscom.ch"
+
+# discovered 2026-09-23: 42 jobs, 42 Dutch, 9 in scope (7 stored links)
+[[smartrecruiters]]
+company = "KPN"
+
+# discovered 2026-09-23: 17 jobs, 17 Dutch, 13 in scope (5 stored links)
+[[recruitee]]
+slug = "jobs.wildflowers.dev"
+
+# discovered 2026-09-23: 125 jobs, 125 Dutch, 35 in scope (5 stored links)
+[[smartrecruiters]]
+company = "SopraSteria1"
+
+# discovered 2026-09-23: 65 jobs, 41 Dutch, 21 in scope (4 stored links)
+[[greenhouse]]
+slug = "jetbrains"
+
+# discovered 2026-09-23: 29 jobs, 29 Dutch, 7 in scope (4 stored links)
+[[smartrecruiters]]
+company = "EVERIENCE"
+
+# discovered 2026-09-23: 4 jobs, 4 Dutch, 3 in scope (3 stored links)
+[[smartrecruiters]]
+company = "Varrlyn"
+
+# discovered 2026-09-23: 19 jobs, 19 Dutch, 6 in scope (3 stored links)
+[[recruitee]]
+slug = "lefebvresdu"
+
+# discovered 2026-09-23: 31 jobs, 11 Dutch, 7 in scope (2 stored links)
+[[recruitee]]
+slug = "deephealth"
+
+# discovered 2026-09-23: 17 jobs, 17 Dutch, 2 in scope (2 stored links)
+[[recruitee]]
+slug = "werkenbijvalkservices.nl"
+
+# discovered 2026-09-23: 126 jobs, 126 Dutch, 1 in scope (2 stored links)
+[[recruitee]]
+slug = "ggzingeest"
+
+# discovered 2026-09-23: 654 jobs, 622 Dutch, 8 in scope (2 stored links)
+[[recruitee]]
+slug = "vdkgroep"
+
+# discovered 2026-09-23: 77 jobs, 77 Dutch, 6 in scope (2 stored links)
+[[smartrecruiters]]
+company = "Boskalis"
+
+# discovered 2026-09-23: 306 jobs, 306 Dutch, 12 in scope (2 stored links)
+[[smartrecruiters]]
+company = "Coolblue"
+
+# discovered 2026-09-23: 686 jobs, 686 Dutch, 21 in scope (2 stored links)
+[[smartrecruiters]]
+company = "DeloitteNetherlands"
+
+# discovered 2026-09-23: 4 jobs, 4 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "multitankcard"
+
+# discovered 2026-09-23: 9 jobs, 9 Dutch, 2 in scope (1 stored links)
+[[recruitee]]
+slug = "riverflex"
+
+# discovered 2026-09-23: 47 jobs, 16 Dutch, 9 in scope (1 stored links)
+[[greenhouse]]
+slug = "flowtraders"
+
+# discovered 2026-09-23: 7 jobs, 7 Dutch, 2 in scope (1 stored links)
+[[recruitee]]
+slug = "rtl"
+
+# discovered 2026-09-23: 1 jobs, 1 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "careers.aimms.com"
+
+# discovered 2026-09-23: 13 jobs, 13 Dutch, 7 in scope (1 stored links)
+[[recruitee]]
+slug = "werkenbijbudgetthuis.nl"
+
+# discovered 2026-09-23: 27 jobs, 23 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "werkenbij.boslogistics.eu"
+
+# discovered 2026-09-23: 11 jobs, 10 Dutch, 9 in scope (1 stored links)
+[[recruitee]]
+slug = "careers.twd.nl"
+
+# discovered 2026-09-23: 18 jobs, 13 Dutch, 4 in scope (1 stored links)
+[[greenhouse]]
+slug = "workwize"
+
+# discovered 2026-09-23: 7 jobs, 7 Dutch, 4 in scope (1 stored links)
+[[recruitee]]
+slug = "jobs.ticketswap.com"
+
+# discovered 2026-09-23: 8 jobs, 8 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "jobs.rjc.nl"
+
+# discovered 2026-09-23: 42 jobs, 31 Dutch, 19 in scope (1 stored links)
+[[recruitee]]
+slug = "xebiacareers"
+
+# discovered 2026-09-23: 25 jobs, 6 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "headfirst"
+
+# discovered 2026-09-23: 12 jobs, 11 Dutch, 4 in scope (1 stored links)
+[[recruitee]]
+slug = "careers.tellent.com"
+
+# discovered 2026-09-23: 5 jobs, 5 Dutch, 4 in scope (1 stored links)
+[[recruitee]]
+slug = "helloprint"
+
+# discovered 2026-09-23: 31 jobs, 3 Dutch, 3 in scope (1 stored links)
+[[greenhouse]]
+slug = "redwoodsoftware"
+
+# discovered 2026-09-23: 102 jobs, 102 Dutch, 4 in scope (1 stored links)
+[[smartrecruiters]]
+company = "SGS"
+
+# discovered 2026-09-23: 37 jobs, 37 Dutch, 2 in scope (1 stored links)
+[[recruitee]]
+slug = "werkenbij.kader.nl"
+
+# discovered 2026-09-23: 2 jobs, 2 Dutch, 2 in scope (1 stored links)
+[[recruitee]]
+slug = "jobs.wearebit.com"
+
+# discovered 2026-09-23: 27 jobs, 27 Dutch, 5 in scope (1 stored links)
+[[recruitee]]
+slug = "werkenbijquooker.nl"
+
+# discovered 2026-09-23: 118 jobs, 118 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "louwman"
+
+# discovered 2026-09-23: 21 jobs, 21 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "werkenbij.gls.nl"
+
+# discovered 2026-09-23: 164 jobs, 164 Dutch, 3 in scope (1 stored links)
+[[smartrecruiters]]
+company = "Eurofins"
+
+# discovered 2026-09-23: 1 jobs, 1 Dutch, 1 in scope (1 stored links)
+[[recruitee]]
+slug = "jobs.vicompany.nl"
+
+# discovered 2026-09-23: 82 jobs, 2 Dutch, 1 in scope (1 stored links)
+[[greenhouse]]
+slug = "mozilla"
+
+# discovered 2026-09-23: 254 jobs, 5 Dutch, 4 in scope (1 stored links)
+[[greenhouse]]
+slug = "speechify"
+
+# discovered 2026-09-23: 199 jobs, 12 Dutch, 6 in scope (1 stored links)
+[[greenhouse]]
+slug = "flexport"
+
+# discovered 2026-09-23: 105 jobs, 105 Dutch, 14 in scope (1 stored links)
+[[smartrecruiters]]
+company = "Sia"
+
+# discovered 2026-09-23: 150 jobs, 150 Dutch, 38 in scope (1 stored links)
+[[recruitee]]
+slug = "conclusion"

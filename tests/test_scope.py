@@ -141,6 +141,11 @@ def test_software_and_ai_work_is_in_scope(title):
         # Kept by the first real run, and not the work, 2026-09-23.
         "Planontwikkelaar Renovatie en Verduurzaming",
         "Senior thermal-hydraulics engineer",
+        # From the boards discovery added (SGS, Boskalis, Eurofins), same day.
+        "Lead Engineer Kabels & Leidingen",
+        "Geotechnical Engineer",
+        "Facility Engineer",
+        "SHEQ Engineer",
     ],
 )
 def test_other_work_is_not(title):

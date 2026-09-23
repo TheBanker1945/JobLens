@@ -1,5 +1,7 @@
 # Where vacancies come from. All of these are public endpoints: no key, no
-# registration, no trial. Adding a company is one line here.
+# registration, no trial. The employer boards (Recruitee, Greenhouse,
+# SmartRecruiters) are listed in boards.toml since 5.3; this file holds the
+# settings and the searches.
 #
 # Fetching rules: one request per company, a User-Agent that names the project,
 # nothing is fetched twice (see data/raw/, never committed), and every request
@@ -65,28 +67,12 @@ not_roles = [
     "onderwijsontwikkel", "productontwikkelaar", "service engineer",
     "field service", "servicemonteur", "monteur", "mechanical", "werktuigbouw",
     "elektrotechn", "electrical", "process engineer", "procesengineer", "civil",
-    "civiel", "installatie", "hvac", "hydraul", "hardware", "cnc",
-    "sales engineer",
+    "civiel", "installatie", "hvac", "hydraul", "geotechn", "kabels",
+    "facility", "sheq", "hardware", "cnc", "sales engineer",
     "sales manager", "sales executive", "presales", "pre sales",
     "account manager", "account executive", "accountant", "product manager",
     "product owner", "recruit", "docent", "teacher", "lecturer",
 ]
-
-# Company career pages on Recruitee: {slug}.recruitee.com/api/offers/
-[[recruitee]]
-slug = "channable"
-[[recruitee]]
-slug = "nmbrs"
-[[recruitee]]
-slug = "vandebron"
-
-# Company boards on Greenhouse: boards-api.greenhouse.io/v1/boards/{slug}/jobs
-[[greenhouse]]
-slug = "adyen"
-[[greenhouse]]
-slug = "catawiki"
-[[greenhouse]]
-slug = "databricks"
 
 # Aggregator; anonymous tier, ~10 requests/hour per IP, 20 jobs each, no paging.
 # One request per title below, so each brings different vacancies.

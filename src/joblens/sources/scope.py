@@ -183,10 +183,17 @@ class Scope:
         )
 
     def check(self, vacancy: Vacancy) -> Verdict:
-        where = self.where(f"{vacancy.city or ''}, {location_text(vacancy)}")
+        location = f"{vacancy.city or ''}, {location_text(vacancy)}"
+        return self.check_listing(vacancy.title, location)
+
+    def check_listing(self, title: str, location: str) -> Verdict:
+        """The same question for a job not fetched yet: a title and a place from
+        a board's listing. SmartRecruiters asks it before paying a request for
+        the vacancy text."""
+        where = self.where(location)
         if where:
             return Verdict(False, where)
-        return self.what(vacancy.title)
+        return self.what(title)
 
     def keep(self, vacancy: Vacancy) -> bool:
         return self.check(vacancy).keep

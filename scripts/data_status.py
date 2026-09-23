@@ -17,7 +17,6 @@ Usage:
 
 import argparse
 import sys
-import tomllib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -27,6 +26,7 @@ from joblens.embeddings.documents import build_document
 from joblens.embeddings.store import CachedEmbedder
 from joblens.extraction.store import DetailsStore
 from joblens.sources.base import Vacancy
+from joblens.sources.boards import load_config
 from joblens.sources.polite import FetchState
 from joblens.sources.report import RunReport
 from joblens.sources.store import VacancyStore
@@ -43,6 +43,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--max-age-hours", type=float, default=36.0)
     parser.add_argument("--config", type=Path, default=ROOT / "sources.toml")
+    parser.add_argument("--boards", type=Path, default=ROOT / "boards.toml")
     # `structured`, the style the index reads since 3.1. The old default counted
     # vectors for `structured_raw`, which nothing searches any more.
     parser.add_argument("--style", default="structured")
@@ -57,7 +58,7 @@ def main() -> int:
     vacancies = {source: store.load(source) for source in sources}
     total = sum(len(group) for group in vacancies.values())
     details = DetailsStore(EXTRACTED_DIR).load_all(sources)
-    enabled = enabled_sources(tomllib.loads(args.config.read_text(encoding="utf-8")))
+    enabled = enabled_sources(load_config(args.config, args.boards))
     fetched = RunReport.last_fetched(RUNS_DIR)
     now = datetime.now(UTC)
 
@@ -130,7 +131,11 @@ def main() -> int:
 def enabled_sources(config: dict) -> set[str]:
     """The sources a scheduled fetch asks, read the way fetch_vacancies.py reads
     them: a company board when it lists a company, the rest when enabled."""
-    boards = {name for name in ("recruitee", "greenhouse") if config.get(name)}
+    boards = {
+        name
+        for name in ("recruitee", "greenhouse", "smartrecruiters")
+        if config.get(name)
+    }
     switched = {
         name
         for name in ("jobdataapi", "indeed", "linkedin")
