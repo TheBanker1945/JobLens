@@ -9,6 +9,7 @@ Two steps, both needed before anything is stored:
 
 import html
 import re
+from collections.abc import Callable
 from html.parser import HTMLParser
 
 BLOCK_END = re.compile(r"</(p|div|li|h[1-6]|tr|section|article)>", re.I)
@@ -89,44 +90,56 @@ def extract_by_class(raw: str, class_name: str) -> str | None:
     library: it is one element we need, matched on one class, and the parser is
     already there.
     """
-    picker = _ElementByClass(class_name)
+    found = extract_elements(
+        raw, lambda attrs: class_name in (attrs.get("class") or "").split(), first=True
+    )
+    return found[0] if found else None
+
+
+def extract_elements(
+    raw: str, match: Callable[[dict[str, str | None]], bool], *, first: bool = False
+) -> list[str]:
+    """The inner HTML of every element whose attributes `match` accepts.
+
+    werkenbijdeoverheid.nl splits a vacancy over six <section id="..._anchor">
+    elements ("Dit ga je doen", "Dit vragen wij", ...), so one element is not
+    enough there. An element inside a matching element is part of it, not a
+    second match.
+    """
+    picker = _ElementPicker(match, first)
     picker.feed(raw)
     picker.close()
-    return "".join(picker.parts) if picker.found else None
+    return ["".join(parts) for parts in picker.found]
 
 
-class _ElementByClass(HTMLParser):
+class _ElementPicker(HTMLParser):
     """Copies everything between an element's start and end tag, nesting included."""
 
-    def __init__(self, class_name: str):
+    def __init__(self, match: Callable[[dict[str, str | None]], bool], first: bool):
         super().__init__(convert_charrefs=True)
-        self.class_name = class_name
-        self.parts: list[str] = []
-        self.found = False
-        self.depth = 0  # 0 = not inside the element we want
+        self.match = match
+        self.first = first  # stop at the first match
+        self.found: list[list[str]] = []
+        self.depth = 0  # 0 = not inside an element we want
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.depth == 0:
-            if self.found or not self._matches(attrs):
-                return  # the first match is the one we keep
-            self.found = True
+            if (self.first and self.found) or not self.match(dict(attrs)):
+                return
+            self.found.append([])
             self.depth = 1
             return  # the element's own start tag is not part of its inner HTML
         if tag not in VOID_TAGS:
             self.depth += 1
-        self.parts.append(self.get_starttag_text() or f"<{tag}>")
+        self.found[-1].append(self.get_starttag_text() or f"<{tag}>")
 
     def handle_endtag(self, tag: str) -> None:
         if self.depth == 0 or tag in VOID_TAGS:
             return
         self.depth -= 1
         if self.depth > 0:  # the element's own end tag closes it, and is dropped
-            self.parts.append(f"</{tag}>")
+            self.found[-1].append(f"</{tag}>")
 
     def handle_data(self, data: str) -> None:
         if self.depth > 0:
-            self.parts.append(data)
-
-    def _matches(self, attrs: list[tuple[str, str | None]]) -> bool:
-        classes = dict(attrs).get("class") or ""
-        return self.class_name in classes.split()
+            self.found[-1].append(data)

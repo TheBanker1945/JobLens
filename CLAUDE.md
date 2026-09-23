@@ -125,9 +125,17 @@ conceptually, not just have working code.
   the [politeness] table in sources.toml. Never add a way around a refusal: no
   proxies, rotating IPs, browser disguise or retries. A refusal marker is added
   only after it was seen on a real response.
-- robots.txt governs what is *crawled* (web pages, sitemaps: from 5.5). A
+- robots.txt governs what is *crawled*: a source that reads web pages passes
+  `extensions=CRAWL` (src/joblens/sources/polite.py), and only those requests
+  are checked, with protego (RFC 9309, wildcards included; the stdlib parser
+  would have allowed what nationalevacaturebank.nl disallows). Crawl-delay can
+  slow the gate, never speed it up; an unreadable robots.txt allows nothing. A
   documented public API is used as documented; jobdataapi and SmartRecruiters
   disallow their own documented APIs in robots.txt.
+- Government vacancies come from werkenbijdeoverheid.nl's sitemap
+  (src/joblens/sources/overheid.py): the scope runs on the title in each URL
+  before a page is fetched, the facts come from the page's dataLayer, and the
+  sitemap closes jobs like a board.
 - Phase 5 (docs/vacancy-sources-phase-5.md) widens the sources. Scope decided
   2026-09-22: Zuid-Holland, Noord-Holland, Utrecht and Zeeland, software and AI
   engineering and similar. src/joblens/sources/scope.py applies it to *new*

@@ -30,6 +30,7 @@ BROKEN = (
     "blocked",
     "cooling_down",
     "over_budget",
+    "disallowed",  # robots.txt forbids what sources.toml asks to crawl (5.5)
 )
 MIN_SAMPLE = 10  # below this many jobs a share is noise, not a signal
 MAX_EMPTY_SHARE = 0.3  # more descriptions missing than this: something is wrong
