@@ -33,7 +33,7 @@ robots.txt is deliberately not checked here. Measured 2026-09-22: jobdataapi.com
 disallows /api/ and api.smartrecruiters.com disallows everything, while both
 document those very endpoints as public APIs. robots.txt is written for crawlers
 and search indexes; for a documented API the provider's docs and rate limits are
-the permission. It arrives with the first source that crawls web pages (5.4).
+the permission. It arrives with the first source that crawls web pages (5.5).
 """
 
 import json

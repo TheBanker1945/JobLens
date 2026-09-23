@@ -118,13 +118,19 @@ conceptually, not just have working code.
   the [politeness] table in sources.toml. Never add a way around a refusal: no
   proxies, rotating IPs, browser disguise or retries. A refusal marker is added
   only after it was seen on a real response.
-- robots.txt governs what is *crawled* (web pages, sitemaps: from 5.4). A
+- robots.txt governs what is *crawled* (web pages, sitemaps: from 5.5). A
   documented public API is used as documented; jobdataapi and SmartRecruiters
   disallow their own documented APIs in robots.txt.
 - Phase 5 (docs/vacancy-sources-phase-5.md) widens the sources. Scope decided
   2026-09-22: Zuid-Holland, Noord-Holland, Utrecht and Zeeland, software and AI
-  engineering and similar. Only in-scope vacancies are indexed; the scope is
-  config, and it never removes stored vacancies that labels refer to.
+  engineering and similar. src/joblens/sources/scope.py applies it to *new*
+  vacancies before they are stored (so before anything is paid to index them):
+  the place is looked up in the CBS list of all 2,502 Dutch places
+  (places_nl.csv, refreshed by scripts/update_places.py), the title against the
+  word lists in the [scope] table of sources.toml. An unknown place is kept. It
+  never removes stored vacancies that labels refer to; `--no-scope` stores all
+  Dutch jobs. Change a word list only with a measurement: run it over the store
+  and Mahdi's labels, and every "would apply" must stay in.
 - Scraping never runs while someone is using JobLens: scripts/daily_update.sh
   fetches on a schedule, and search only reads what is already stored.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source

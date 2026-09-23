@@ -14,11 +14,19 @@ the whole board -- and the expensive step after it is extraction, which costs
 money per vacancy. So the cap sits between the filter and the store, and it
 lives here rather than in the script so that the order is something a test can
 check.
+
+Since 5.2 there are two filters before the cap: Dutch, then the scope (the
+provinces and the kind of work, sources/scope.py). The same lesson twice: a cap
+that runs before the scope spends its places on nursing jobs in Eindhoven.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from joblens.sources.base import Vacancy
+
+if TYPE_CHECKING:  # scope.py imports location_text from here
+    from joblens.sources.scope import Scope
 
 COUNTRY_NAMES = ("NL", "NLD", "NETHERLANDS")
 
@@ -47,8 +55,10 @@ class Selection:
     """What goes to the store, and what the two steps before it took out."""
 
     kept: list[Vacancy]
-    dutch: int  # passed the filter, before the cap
-    capped: int  # passed the filter, then left out by the cap
+    dutch: int  # passed the Dutch filter
+    capped: int  # passed both filters, then left out by the cap
+    out_of_scope: int = 0  # Dutch, but not in the scope
+    left_out: list[str] = field(default_factory=list)  # "title -- why", per job
 
 
 def select(
@@ -57,16 +67,32 @@ def select(
     *,
     limit: int | None,
     all_countries: bool = False,
+    scope: "Scope | None" = None,
 ) -> Selection:
-    """The Dutch vacancies first, then at most `limit` of them. In that order.
+    """The Dutch vacancies, then those in scope, then at most `limit`. In order.
 
-    `capped` is counted rather than silently applied, because a cap that bites
-    looks exactly like a quiet board unless somebody says so.
+    `capped` and `out_of_scope` are counted rather than silently applied: a
+    filter that bites looks exactly like a quiet board unless somebody says so.
     """
     dutch = (
         vacancies
         if all_countries
         else [vacancy for vacancy in vacancies if is_dutch(vacancy, markers)]
     )
-    kept = dutch if limit is None else dutch[:limit]
-    return Selection(kept=kept, dutch=len(dutch), capped=len(dutch) - len(kept))
+    wanted, left_out = dutch, []
+    if scope is not None:
+        wanted = []
+        for vacancy in dutch:
+            verdict = scope.check(vacancy)
+            if verdict.keep:
+                wanted.append(vacancy)
+            else:
+                left_out.append(f"{vacancy.title} -- {verdict.reason}")
+    kept = wanted if limit is None else wanted[:limit]
+    return Selection(
+        kept=kept,
+        dutch=len(dutch),
+        capped=len(wanted) - len(kept),
+        out_of_scope=len(dutch) - len(wanted),
+        left_out=left_out,
+    )

@@ -49,12 +49,16 @@ class SearchRun:
     # not a problem below -- but a cap that bites looks exactly like a quiet
     # board unless it is counted (see sources/netherlands.py).
     capped: int = 0
+    # Dutch jobs outside the scope (sources/scope.py): counted, and named in
+    # `left_out`, so a scope that is too narrow can be seen and widened.
+    out_of_scope: int = 0
     stored: int = 0
     known: int = 0  # already stored under this source
     duplicate: int = 0  # the same job, already stored through another source
     dropped_no_text: int = 0
     dropped_invalid: int = 0
     detail: str = ""  # why it broke, in one line
+    left_out: list[str] = field(default_factory=list)  # "title -- why", at most 25
 
 
 @dataclass
@@ -118,7 +122,16 @@ class RunReport:
         return not self.problems()
 
     def totals(self) -> dict[str, int]:
-        fields = ("listed", "kept", "dutch", "capped", "stored", "known", "duplicate")
+        fields = (
+            "listed",
+            "kept",
+            "dutch",
+            "out_of_scope",
+            "capped",
+            "stored",
+            "known",
+            "duplicate",
+        )
         return {
             name: sum(getattr(run, name) for run in self.searches) for name in fields
         }
