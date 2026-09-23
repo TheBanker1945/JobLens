@@ -112,6 +112,38 @@ def test_a_robots_txt_that_cannot_be_read_allows_nothing():
     assert seen == ["/robots.txt"]
 
 
+def test_a_redirected_robots_txt_is_followed():
+    """werkenbijantonius.nl, 2026-09-23: robots.txt answers 301 to the www
+    host. The first version read that as unreadable and shut the site out."""
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(f"{request.url.host}{request.url.path}")
+        if request.url.host == "example.nl" and request.url.path == "/robots.txt":
+            return httpx.Response(
+                301, headers={"location": "https://www.example.nl/robots.txt"}
+            )
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nDisallow: /intern/\n")
+        return httpx.Response(200, text="<html>a vacancy</html>")
+
+    fake = FakeTime()
+    gate = Gate(
+        FetchState(), Rules(jitter_seconds=0), sleep=fake.sleep, clock=fake.clock
+    )
+    client = new_client(transport=PoliteTransport(gate, httpx.MockTransport(handler)))
+
+    client.get("https://example.nl/vacatures/a", extensions=CRAWL)
+    with pytest.raises(Disallowed):
+        client.get("https://example.nl/intern/b", extensions=CRAWL)
+
+    assert seen == [
+        "example.nl/robots.txt",
+        "www.example.nl/robots.txt",
+        "example.nl/vacatures/a",
+    ]
+
+
 def test_a_crawl_delay_slows_the_gate_down():
     """academictransfer.com asks for Crawl-delay: 10; our own is 1.5 s."""
     client, _, _, fake = site("User-agent: *\nCrawl-delay: 10\n")
