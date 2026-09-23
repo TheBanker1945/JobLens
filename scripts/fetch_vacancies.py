@@ -33,6 +33,7 @@ lists has closed, and data/raw/sightings.json says since when
 
 import argparse
 import sys
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -236,6 +237,15 @@ def fetch_into(
         return False
     except httpx.HTTPError as err:
         run.status, run.detail = "failed", type(err).__name__
+        return False
+    except Exception as err:
+        # A bug in one adapter must not stop the other sources, or the end of
+        # the run (sightings, the report). 2026-09-23: one Workday posting
+        # without a path crashed the whole first real run halfway. The search
+        # is failed, the report says why, the run exits non-zero, and the
+        # traceback goes to the log for whoever fixes it.
+        traceback.print_exc()
+        run.status, run.detail = "failed", f"{type(err).__name__}: {err}"[:200]
         return False
     if site:
         gate.answered(site)
