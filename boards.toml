@@ -205,3 +205,118 @@ company = "Sia"
 # discovered 2026-09-23: 150 jobs, 150 Dutch, 38 in scope (1 stored links)
 [[recruitee]]
 slug = "conclusion"
+
+# discovered 2026-09-23: 190 jobs, 61 Dutch, 18 in scope (1 stored links)
+[[workday]]
+board = "nngroup.wd3/WDExternal"
+
+# discovered 2026-09-23: 193 jobs, no Netherlands facet, 8 in scope (1 stored links)
+[[workday]]
+board = "alliander.wd3/alliander"
+
+# discovered 2026-09-23: 53 jobs, 26 Dutch, 4 in scope (1 stored links)
+[[workday]]
+board = "eriks.wd3/Careers"
+
+# discovered 2026-09-23: 848 jobs, 49 Dutch, 3 in scope (1 stored links)
+[[workday]]
+board = "philips.wd3/jobs-and-careers"
+
+# discovered 2026-09-23: 1509 jobs, 25 Dutch, 2 in scope (1 stored links)
+[[workday]]
+board = "salesforce.wd12/External_Career_Site"
+
+# discovered 2026-09-23: 559 jobs, 25 Dutch, 2 in scope (1 stored links)
+[[workday]]
+board = "solenis.wd1/Solenis"
+
+# discovered 2026-09-23: 58 jobs, 17 Dutch, 1 in scope (2 stored links)
+[[workday]]
+board = "spectris.wd3/Malvern_Panalytical_Careers"
+
+# discovered 2026-09-23: 25 jobs, no Netherlands facet, 1 in scope (1 stored links)
+[[workday]]
+board = "dtn.wd1/DTN_Careers"
+
+# Employers' own career sites, read through their sitemap and the schema.org
+# JobPosting on each page (src/joblens/sources/careersite.py). Chosen from the
+# 5.7 survey of 82 employer domains in the stored links (2026-09-23): 22 had a
+# sitemap and a full JobPosting. The counts are vacancy pages in the sitemap.
+# `place_in_url` for worldwide sites: a page is fetched only when its URL names
+# a place in the chosen provinces.
+
+# 407 pages; industrial automation, software engineers among them
+[[careersite]]
+site = "wolfgroep.nl"
+sitemap = "https://wolfgroep.nl/job-sitemap.xml"
+pattern = "/vacature/"
+# 275 pages
+[[careersite]]
+site = "www.werkenbijumcutrecht.nl"
+sitemap = "https://www.werkenbijumcutrecht.nl/sitemap.xml"
+pattern = "/vacatures/"
+# 260 pages
+[[careersite]]
+site = "www.werkenbijipsedebruggen.nl"
+sitemap = "https://www.werkenbijipsedebruggen.nl/sitemap.xml"
+pattern = "/vacatures/"
+# 53 pages
+[[careersite]]
+site = "careers.vanlanschotkempen.com"
+sitemap = "https://careers.vanlanschotkempen.com/sitemap.xml"
+pattern = "/vacatures/"
+# 20 pages
+[[careersite]]
+site = "werkenbijbosman.com"
+sitemap = "https://werkenbijbosman.com/sitemap"
+pattern = "/vacatures/"
+# 2 pages, both data work
+[[careersite]]
+site = "insightfirst.nl"
+sitemap = "https://insightfirst.nl/wp-sitemap-posts-awsm_job_openings-1.xml"
+pattern = "/jobs/"
+# Teamtailor under the employer's name; 10 pages, Zeeland
+[[careersite]]
+site = "werkenbij.scalda.nl"
+sitemap = "https://werkenbij.scalda.nl/sitemap.xml"
+pattern = "/jobs/"
+# Teamtailor; 3 pages
+[[careersite]]
+site = "jobs.thenextchapter.nl"
+sitemap = "https://jobs.thenextchapter.nl/sitemap.xml"
+pattern = "/jobs/"
+# Teamtailor; 4 pages
+[[careersite]]
+site = "jobs.virtualvaults.com"
+sitemap = "https://jobs.virtualvaults.com/sitemap.xml"
+pattern = "/jobs/"
+# 703 pages worldwide; ING's Workday site is disallowed by its robots.txt, this is not
+[[careersite]]
+site = "careers.ing.com"
+sitemap = "https://careers.ing.com/sitemap.xml"
+pattern = "/job/"
+place_in_url = true
+# 1,389 pages worldwide
+[[careersite]]
+site = "jobs.paloaltonetworks.com"
+sitemap = "https://jobs.paloaltonetworks.com/sitemap.xml"
+pattern = "/job/"
+place_in_url = true
+# 284 pages worldwide
+[[careersite]]
+site = "careers.netapp.com"
+sitemap = "https://careers.netapp.com/sitemap.xml"
+pattern = "/job/"
+place_in_url = true
+# 1,516 pages worldwide
+[[careersite]]
+site = "jobs.ikea.com"
+sitemap = "https://jobs.ikea.com/sitemap.xml"
+pattern = "/job/"
+place_in_url = true
+# 2,420 pages worldwide
+[[careersite]]
+site = "jobs.genpt.com"
+sitemap = "https://jobs.genpt.com/sitemap.xml"
+pattern = "/job/"
+place_in_url = true

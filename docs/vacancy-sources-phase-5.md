@@ -88,3 +88,16 @@ Jobbird (sitemaps with `lastmod`, rich JSON-LD, many stale entries).
 The plan had discovery and the scope as one step. They were split on
 2026-09-23: discovery needs the scope to judge which boards are worth adding,
 and each is a milestone's worth of measuring on its own.
+
+## Left for later, named by the 5.7 survey
+
+- **Teamtailor** under employers' own domains (`jobs.{company}/jobs/{id}-...`,
+  six in the links): its `/jobs.rss` gives a whole board in one request.
+- **SAP SuccessFactors** sites (TU Delft, Leiden University, adidas, ...):
+  sitemaps, but no JobPosting on the page.
+- **Career sites whose URLs carry no city** (EPAM, DHL): `place_in_url` cannot
+  work there, and fetching every page to find the Dutch ones is too expensive.
+- **Discovery for career sites**: 5.7 chose its 14 from a one-off survey;
+  `discover_boards.py` could do the same check for every new employer domain.
+- **EURES duplicates** (5.6): no employer name, so the duplicate check cannot see
+  them. Measure how often they surface in a ranking before deciding.

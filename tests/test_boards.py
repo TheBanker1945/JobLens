@@ -76,7 +76,7 @@ def test_links_that_name_no_board_we_can_read():
     assert (
         board_of("https://www.werkenvoornederland.nl/vacatures/data-engineer") is None
     )
-    assert board_of("https://rabobank.wd3.myworkdayjobs.com/en-US/jobs/job/x") is None
+    assert board_of("https://leaseweb.teamtailor.com/jobs/8431594-cloud") is None
 
 
 def job(n: int, link: str, source: str = "indeed") -> Vacancy:
@@ -95,7 +95,7 @@ def test_candidates_are_counted_and_known_boards_left_out():
         job(1, "https://deephealth.recruitee.com/o/a"),
         job(2, "https://deephealth.recruitee.com/o/b"),
         job(3, "https://Channable.recruitee.com/o/c"),  # already read, any case
-        job(4, "https://rabobank.wd3.myworkdayjobs.com/en-US/jobs/job/x"),
+        job(4, "https://leaseweb.teamtailor.com/jobs/8431594-cloud"),
         job(5, "https://jobs.ashbyhq.com/AeroVect/5d36"),
     ]
 
@@ -104,7 +104,7 @@ def test_candidates_are_counted_and_known_boards_left_out():
     assert [(c.platform, c.board, c.links) for c in found] == [
         ("recruitee", "deephealth", 2)
     ]
-    assert unreadable == {"workday": 1, "ashby": 1}
+    assert unreadable == {"teamtailor": 1, "ashby": 1}
 
 
 # --- the board list -----------------------------------------------------------------

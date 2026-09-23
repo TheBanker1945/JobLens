@@ -40,6 +40,7 @@ from joblens.sources.recruitee import RecruiteeSource
 from joblens.sources.scope import Scope
 from joblens.sources.smartrecruiters import SmartRecruitersSource
 from joblens.sources.store import VacancyStore
+from joblens.sources.workday import WorkdaySource
 
 ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
@@ -68,6 +69,11 @@ def main() -> int:
         default=1,
         help="accept a board with at least this many jobs in scope today",
     )
+    parser.add_argument(
+        "--platform",
+        help="check only this platform's candidates (workday, recruitee, ...), "
+        "so a new adapter does not re-ask every board turned down before",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config, args.boards)
@@ -77,6 +83,8 @@ def main() -> int:
     vacancies = [v for source in store.sources() for v in store.load(source)]
     known = known_boards(load_boards(args.boards))
     found, unreadable = candidates(vacancies, known)
+    if args.platform:
+        found = [c for c in found if c.platform == args.platform]
     print(
         f"links in {len(vacancies)} stored vacancies point at {len(found)} boards "
         "JobLens does not read yet; one request each to check them\n"
@@ -90,10 +98,11 @@ def main() -> int:
         FetchState.load(STATE_PATH), Rules.from_config(config.get("politeness", {}))
     )
     checked: set[tuple[str, str]] = set()
+    robots: dict = {}  # a Workday host's robots.txt, read once for all its sites
     checks = []
     with new_client(transport=PoliteTransport(gate)) as client:
         for candidate in found:
-            one = check(candidate, client, scope, markers, known, checked)
+            one = check(candidate, client, scope, markers, known, checked, robots)
             one.verdict = one.verdict or verdict(one, args.min_in_scope)
             checks.append(one)
             print_row(one)
@@ -125,6 +134,7 @@ def check(
     markers: list[str],
     known: dict[str, set[str]],
     checked: set[tuple[str, str]],
+    robots: dict | None = None,
 ) -> Check:
     """One board, one request (a short link: two). Never raises: a board that
     fails to answer is a row in the table, not the end of the run."""
@@ -142,6 +152,19 @@ def check(
                 one.verdict = "a board already read or checked"
                 return one
         checked.add((platform, board))
+        if platform == "workday":
+            # Five pages at most: enough to see whether a site has the work,
+            # without reading all of a large one to find out.
+            source = WorkdaySource(
+                board, client, scope=scope, max_postings=100, robots=robots
+            )
+            postings = source.listing()
+            one.jobs, one.dutch = source.stats.total, source.stats.dutch
+            one.in_scope = sum(
+                not source.not_wanted(p.get("title", ""), p.get("locationsText", ""))
+                for p in postings
+            )
+            return one
         if platform == "smartrecruiters":
             postings = SmartRecruitersSource(board, client).listing()
             one.jobs = one.dutch = len(postings)  # the listing asks for NL only

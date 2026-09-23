@@ -262,5 +262,6 @@ def test_the_sightings_file_is_json_a_person_can_read(tmp_path):
         "first_seen": "2026-09-23T03:00:00+00:00",
         "last_seen": "2026-09-23T03:00:00+00:00",
         "board": "channable",
+        "passed_over": None,
         "closed_at": None,
     }

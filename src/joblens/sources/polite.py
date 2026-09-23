@@ -59,6 +59,7 @@ from joblens.sources.http import RateLimited, retry_after_seconds
 # documented API: the transport then checks robots.txt first.
 CRAWL = {"joblens_crawl": True}
 ROBOTS_AGENT = "JobLens"  # the product token of our User-Agent
+MAX_ROBOTS_REDIRECTS = 5  # RFC 9309: follow at least five
 
 
 class Refused(Exception):
@@ -381,21 +382,32 @@ class PoliteTransport(httpx.BaseTransport):
         challenge page on robots.txt itself (werkzoeken.nl) is still a refusal.
 
         RFC 9309: a missing robots.txt (4xx) allows everything; one that cannot
-        be read (5xx, no answer) allows nothing, until the next run.
+        be read (5xx, no answer) allows nothing, until the next run. Redirects
+        are followed, up to five, even to another host: werkenbijantonius.nl
+        answers 301 to www.werkenbijantonius.nl/robots.txt. The first version
+        read a redirect as "cannot be read" and so shut out every site that
+        moves between www and its bare name -- 4 of 82 in the 5.7 survey.
         """
         extensions = {
             k: v for k, v in request.extensions.items() if k != "joblens_crawl"
         }
-        robots = httpx.Request(
-            "GET",
-            f"{origin}/robots.txt",
-            headers={"User-Agent": request.headers.get("user-agent", "")},
-            extensions=extensions,
-        )
-        try:
-            response = self.handle_request(robots)
-        except httpx.HTTPError:
-            return None
+        url = f"{origin}/robots.txt"
+        for _ in range(MAX_ROBOTS_REDIRECTS + 1):
+            robots = httpx.Request(
+                "GET",
+                url,
+                headers={"User-Agent": request.headers.get("user-agent", "")},
+                extensions=extensions,
+            )
+            try:
+                response = self.handle_request(robots)
+            except httpx.HTTPError:
+                return None
+            if not response.is_redirect:
+                break
+            url = str(robots.url.join(response.headers.get("location", "")))
+        else:
+            return None  # redirected more than five times: cannot be read
         if 400 <= response.status_code < 500:
             return Protego.parse("")
         if response.status_code >= 300:
