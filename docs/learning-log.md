@@ -2107,3 +2107,54 @@ Three things the government data does that the boards did not. A place written
 three are unknown places, so the scope keeps them, as designed. And one
 civil-engineering title slipped through (*Senior engineer waterbouw*);
 "waterbouw" went into `not_roles`.
+
+## 5.6 — EURES: the way into werk.nl, and what a summary costs
+
+werk.nl, the Dutch public employment service (UWV), publishes no feed. EURES,
+the EU job portal, carries it, and the portal's own pages call a public search
+endpoint: no key, no login, but not documented by the EU either. So it is
+treated like Indeed's app API: it can change without notice. It is paced at
+the 10-second `Crawl-delay` europa.eu's robots.txt asks for, and capped at 20
+requests a run.
+
+This milestone was built by a subagent in its own worktree, in parallel with
+5.5, and cherry-picked onto 5.5 afterwards; one line in `data_status.py`
+conflicted (both milestones added a source to the same tuple).
+
+**Measured before a line was written (13 requests):**
+
+- **The regions are NUTS 2024 codes.** Utrecht is NL35 (it was NL31) and
+  Zuid-Holland NL36 (it was NL33). The old codes answer with nothing: `nl33`
+  returned 0 records, and a first probe with `nl31`–`nl34` silently searched
+  only Noord-Holland and Zeeland. So the scope's provinces become region codes,
+  and EURES filters on place before a record arrives.
+- **Title, not everywhere.** "developer" anywhere in the text returned 666
+  records in the four provinces, starting with a Georgian restaurant's content
+  specialist; in the title, 115.
+- **The text is a summary.** Descriptions stop near 2,000 characters in the
+  middle of a sentence, in the search result and the detail alike. The detail
+  adds only contact persons, names and addresses. So there are no detail
+  requests: one search is one request, and contact persons are never fetched.
+- **"Last week" means the last change.** It returned vacancies created in June,
+  so the creation date is checked against 60 days.
+- **Language:** records from the Dutch feed say `nl` even when written in
+  English; German cross-border ones say `de`. Kept: `nl` and `en`.
+
+**First run, on a copy of the store:** 10 requests, 480 listed, 80 German or too
+old, 109 outside the scope, **219 new in-scope vacancies**: Zuid-Holland 84,
+Noord-Holland 81, Utrecht 50, Zeeland 4. Two title searches earned nothing,
+because EURES matches title words one by one: "data engineer" returned 61
+records "software engineer" had already stored, and "machine learning" found
+machine operators (2 of 100 stored). Both are gone from the list. A read of the
+stored titles put the scope at about 87% right; seven trades from it
+(*proces engineer*, *kabelwerken*, *structural*, ...) went into `not_roles`,
+and "offshore" deliberately did not, because a software job carries the word.
+
+**What a summary costs.** No EURES record names its employer (0 of 219), and no
+text is longer than 1,998 characters. The duplicate check of 3.2 needs an
+employer or identical text, so it cannot recognise an EURES copy of a job we
+already hold from Indeed or a board. 68 of the 219 share a title with such a
+vacancy. That is a ceiling, not a count: "DevOps Engineer" alone accounts for
+16, and many of those are different jobs. EURES completes the corpus with jobs
+the other sources do not carry; it should not lead it. If the duplicates show
+up in rankings, `enabled = false` in `[eures]` is the one-line way out.

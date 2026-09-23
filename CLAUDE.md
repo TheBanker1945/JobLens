@@ -132,6 +132,14 @@ conceptually, not just have working code.
   slow the gate, never speed it up; an unreadable robots.txt allows nothing. A
   documented public API is used as documented; jobdataapi and SmartRecruiters
   disallow their own documented APIs in robots.txt.
+- EURES (src/joblens/sources/eures.py) carries werk.nl's feed: public but not
+  documented, paced at europa.eu's Crawl-delay of 10 s. Regions are NUTS 2024
+  (Utrecht nl35, Zuid-Holland nl36; the old nl31/nl33 return nothing,
+  silently). Title matching, word by word; only nl/en records; no detail
+  requests (the text is a ~2,000-char summary everywhere, and the detail only
+  adds contact persons). No record names its employer, so the duplicate check
+  cannot see an EURES copy of an Indeed or board job: it completes the corpus,
+  it should not lead it.
 - Government vacancies come from werkenbijdeoverheid.nl's sitemap
   (src/joblens/sources/overheid.py): the scope runs on the title in each URL
   before a page is fetched, the facts come from the page's dataLayer, and the
