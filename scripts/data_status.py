@@ -149,7 +149,7 @@ def enabled_sources(config: dict) -> set[str]:
     }
     switched = {
         name
-        for name in ("overheid", "jobdataapi", "indeed", "linkedin")
+        for name in ("overheid", "jobdataapi", "eures", "indeed", "linkedin")
         if config.get(name, {}).get("enabled")
     }
     return boards | switched

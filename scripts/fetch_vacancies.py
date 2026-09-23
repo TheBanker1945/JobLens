@@ -39,6 +39,7 @@ from pathlib import Path
 import httpx
 
 from joblens.sources.boards import load_config
+from joblens.sources.eures import EuresSource, nuts_codes
 from joblens.sources.greenhouse import GreenhouseSource
 from joblens.sources.http import RateLimited, new_client
 from joblens.sources.jobdataapi import JobDataApiSource
@@ -69,6 +70,7 @@ SOURCES = (
     "smartrecruiters",
     "overheid",
     "jobdataapi",
+    "eures",
     "indeed",
     "linkedin",
 )
@@ -355,6 +357,23 @@ def build_sources(
                     country=settings.get("country", "NL"),
                     max_age_days=settings.get("max_age_days", 7),
                     filters=tuple({"title": title} for title in settings["titles"]),
+                ),
+            )
+    elif name == "eures":
+        settings = config.get("eures", {})
+        if not settings.get("enabled"):
+            return
+        # The place half of the scope, asked of EURES itself (NUTS 2024 codes).
+        regions = nuts_codes(scope.chosen) if scope else ["nl"]
+        for title in settings.get("titles", []):
+            yield (
+                title,
+                EuresSource(
+                    client,
+                    keyword=title,
+                    locations=regions,
+                    max_age_days=settings.get("max_age_days", 60),
+                    pages=settings.get("pages_per_search", 2),
                 ),
             )
 
