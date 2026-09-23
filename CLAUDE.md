@@ -140,6 +140,20 @@ conceptually, not just have working code.
   adds contact persons). No record names its employer, so the duplicate check
   cannot see an EURES copy of an Indeed or board job: it completes the corpus,
   it should not lead it.
+- Workday career sites (src/joblens/sources/workday.py) are read through the
+  JSON their own page uses: not a documented API, so the site's robots.txt
+  decides, for both /{site}/ and the API path. Rabobank, ING (JVSGBLCOR),
+  Heijmans and Thales disallow theirs, so they are not read. A listing that
+  stopped short (400 per run, or Workday's paging ceiling) closes nothing.
+- Employers' own career sites (src/joblens/sources/careersite.py) are read
+  through their sitemap and the schema.org JobPosting on each page
+  (src/joblens/sources/jsonld.py); each is a [[careersite]] in boards.toml.
+  `place_in_url` is for worldwide sites: a page is fetched only when its URL
+  names a place in the scope. A vacancy is named by its page address.
+- A page a source paid for and did not store (outside the scope once read, or
+  a duplicate) is remembered in sightings.json with the scope's fingerprint
+  and not read again until the scope changes (wolfgroep.nl: 102 requests a
+  night -> 2).
 - Government vacancies come from werkenbijdeoverheid.nl's sitemap
   (src/joblens/sources/overheid.py): the scope runs on the title in each URL
   before a page is fetched, the facts come from the page's dataLayer, and the

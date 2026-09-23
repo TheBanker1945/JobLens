@@ -2158,3 +2158,119 @@ vacancy. That is a ceiling, not a count: "DevOps Engineer" alone accounts for
 16, and many of those are different jobs. EURES completes the corpus with jobs
 the other sources do not carry; it should not lead it. If the duplicates show
 up in rankings, `enabled = false` in `[eures]` is the one-line way out.
+
+## 5.7 — Workday, and every career site that speaks to Google
+
+The last milestone of the phase reads the employers 5.3's discovery could only
+count: Workday (19 links) and the long tail of own-domain career sites. It was
+built three ways at once, and that is part of the lesson: a subagent built
+Workday on 5.4 in its own worktree; another surveyed 82 employer domains
+through the project's own gate; the JobPosting reader was written here. The
+Workday commit was cherry-picked onto 5.6 (two one-line conflicts: both sides
+added a source to the same tuples) and switched to the shared robots parser.
+
+### Workday: the page's own plumbing, and whose rules apply to it
+
+Workday gives job seekers no documented API. Every career site is a
+single-page app that asks its own server for JSON: `POST
+/wday/cxs/{tenant}/{site}/jobs`, 20 postings at a time (a larger page comes
+back empty), and one GET per posting for the text. The order is SmartRecruiters'
+again: the Netherlands facet (found by its value; every tenant names it
+differently), the scope and "already stored" on the listing, then text.
+
+**Which rules apply.** 5.1 split the world in two: robots.txt governs what is
+crawled, a provider's documentation its API. Workday's JSON is neither, so the
+site owner's robots.txt decides, for the career site and the API path both.
+Four of fourteen say no: Rabobank disallows `/jobs/` (its whole site), ING
+`/JVSGBLCOR/`, Heijmans and Thales theirs. Reading their JSON anyway would go
+around a no that was written down. A listing that stopped short (the 400-posting
+run cap, or Workday's paging ceiling) closes nothing: absence from half a list
+proves nothing. And employer names arrive as ledger entries ("NL3M Philips
+International BV"); a name that starts with an internal code gives way to the
+tenant.
+
+| Workday, 2026-09-23 | |
+|---|---|
+| sites in stored links | 14 |
+| disallowed by their robots.txt | 4 |
+| accepted | 8 (NN, Alliander, Eriks, Philips, Salesforce, ...) |
+| first fetch | 84 requests, 42 new vacancies |
+| plainly the work | about 24 of 42 |
+
+That last number was the weakest yet: Alliander and Eriks call grid and plant
+work "engineer". Eleven exclusions (*meten en beveiligen*, *hoogspanning*,
+*maintenance engineer*, ...) went into `not_roles`; Mahdi's labels stay 10 of 10.
+
+### The survey: what 82 employer career sites actually offer
+
+Google for Jobs lists a vacancy only when its page carries a schema.org
+JobPosting, and finds pages through a sitemap. So the question was how many of
+the employer domains in the stored links offer both. Answered with 252
+requests, through the gate, before a line of the reader was written:
+
+| of 82 employer domains | |
+|---|---|
+| a sitemap with vacancy-looking URLs | 45 |
+| a JobPosting on the sample page | 28 |
+| ... with a full description | 25 |
+| **both: readable** | **22** |
+| refused (403: ah.nl, tesla.com, join.com) | 3 |
+| robots.txt disallows the sitemap | 5 |
+
+What the other sixty are: SAP SuccessFactors sites with sitemaps and no
+JobPosting (TU Delft, Leiden University, adidas, ...), Teamtailor under the
+employer's name (better read through its RSS feed than page by page), and
+pages whose job list is JavaScript. Those are adapters for later; the survey
+names them.
+
+**The survey also found a bug in 5.5.** A robots.txt that answers with a
+redirect (werkenbijantonius.nl 301s to the www host) was read as "cannot be
+read", which means "allow nothing": four sites were shut out without a word.
+RFC 9309 says follow at least five redirects; now we do.
+
+### The reader, and what the first real runs corrected
+
+`jsonld.py` knows the JobPosting variants (in a list, in an `@graph`, the
+organisation as a name or an object, one place or several, a teaser instead
+of a text). `careersite.py` reads a site the way the government sitemap is read
+(5.5): the sitemap is a complete listing that closes jobs, the scope runs on
+the title in each URL, and only then is a page fetched. A vacancy is named by
+its page address, because that is known before the page is read.
+
+Half of the readable sites are worldwide: ING lists 703 pages from Manila to
+Amsterdam, IKEA 1,516. The title scope alone would fetch every software job on
+the planet, so `place_in_url` fetches a page only when its URL names a place in
+the chosen provinces. NetApp: 284 pages, 2 fetched, 2 stored. ING, whose
+Workday site its robots.txt closes, is read here: 6 vacancies.
+
+The first run failed on three sites and quietly on two more, and every one was
+a fact about the real web, not about the plan: ING and IKEA answer their
+sitemap with a 301; Ipse de Bruggen writes Google's sitemap namespace from 2005;
+Insight First's JobPosting names no place, so the Dutch filter dropped it; and
+ING's URLs end in two ids, so "the last segment is the title" gave an empty
+title. Each is fixed and each is a test.
+
+### Pages that cost a request, read once
+
+The first runs exposed a cost that had been there since 5.3. A page read and
+not stored (outside the provinces once it said where, or the same job as one
+already stored) was not "known", so every night read it again. Wolfgroep cost
+102 requests a night, most of them the same pages. Such a page is now
+remembered in `sightings.json` with the scope's fingerprint, and not read again
+until the scope changes; widening the scope reads it once more, which a test
+walks through over three nights.
+
+| wolfgroep.nl | requests |
+|---|---|
+| first run | 102 |
+| second (left-out pages remembered) | 37, and it reached the end of its list |
+| from then on | 2 (robots.txt and the sitemap) |
+
+All 14 career sites together: 35 requests and 48 seconds a night once read.
+
+### Where the phase leaves the corpus
+
+On the copy of the store this phase has been measured on, from 404 vacancies
+at the start (2026-09-22) to 992: the scope, 45 employer boards, government,
+EURES, Workday and 14 career sites. Mahdi's "would apply" labels were kept in
+scope after every word-list change.
