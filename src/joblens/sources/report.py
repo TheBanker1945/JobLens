@@ -62,6 +62,9 @@ class SearchRun:
     # has closed, and one it lists again has reopened (sources/sightings.py).
     closed: int = 0
     reopened: int = 0
+    # The board listed only part of its jobs (Workday past its page limit), so
+    # nothing on it was closed: absence from half a listing proves nothing.
+    incomplete: bool = False
     detail: str = ""  # why it broke, in one line
     left_out: list[str] = field(default_factory=list)  # "title -- why", at most 25
 

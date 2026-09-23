@@ -58,6 +58,7 @@ from joblens.sources.scraped import (
 from joblens.sources.sightings import BOARD_SOURCES, Sightings
 from joblens.sources.smartrecruiters import SmartRecruitersSource
 from joblens.sources.store import VacancyStore
+from joblens.sources.workday import WorkdaySource
 
 ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "vacancies"
@@ -68,6 +69,7 @@ SOURCES = (
     "recruitee",
     "greenhouse",
     "smartrecruiters",
+    "workday",
     "overheid",
     "jobdataapi",
     "eures",
@@ -149,6 +151,9 @@ def main() -> int:
                 )
                 if run.capped:
                     print(f"{'':<12} --limit left out {run.capped} Dutch vacancies")
+                if run.incomplete:  # a listing that stopped short closes nothing
+                    every_board_answered = False
+                    print(f"{'':<12} listing incomplete: nothing on it was closed")
             # A job stored before sightings began has no board on record, so no
             # single board can close it; every board of the source together can.
             if source_name in BOARD_SOURCES and every_board_answered:
@@ -264,7 +269,10 @@ def fetch_into(
         run.reopened = sightings.seen(listed, board, now)
         # A job we hold under another source's key was listed here too.
         sightings.seen_elsewhere(set(result.twins.values()), now)
-        if board is not None:
+        # A board that listed only part of its jobs (Workday past a page limit)
+        # says nothing about the rest, so it closes nothing.
+        run.incomplete = not getattr(stats, "complete", True)
+        if board is not None and not run.incomplete:
             run.closed = sightings.close_missing(board, run.source, listed, now)
     return True
 
@@ -313,6 +321,14 @@ def build_sources(
                 entry["company"], client, scope=scope, known_keys=known
             )
             yield entry["company"], source
+    elif name == "workday":
+        known = store.existing_keys("workday")
+        robots: dict = {}  # robots.txt read once per host, shared by its sites
+        for entry in config.get("workday", []):
+            source = WorkdaySource(
+                entry["board"], client, scope=scope, known_keys=known, robots=robots
+            )
+            yield entry["board"], source
     elif name == "indeed":
         settings = config.get("indeed", {})
         if not settings.get("enabled"):

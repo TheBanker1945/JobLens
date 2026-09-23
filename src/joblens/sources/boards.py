@@ -40,6 +40,14 @@ READABLE: tuple[tuple[str, re.Pattern], ...] = (
     ),
     ("smartrecruiters", re.compile(r"^https?://jobs\.smartrecruiters\.com/([^/?]+)/")),
 )
+# Workday: {tenant}.wd{N}.myworkdayjobs.com/{locale}/{site}/job/..., the locale
+# ("en-US", "nl-NL") sometimes left out. The board is "tenant.wdN/site"; 14
+# such sites in the links stored on 2026-09-23.
+WORKDAY = re.compile(
+    r"^https?://([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/"
+    r"(?:[a-z]{2}-[A-Z]{2}/)?([A-Za-z0-9_-]+)/",
+    re.I,
+)
 # A short link (grnh.se/yhp3vzer2us): one request to see where it goes. On
 # 2026-09-23 the one tried went to the employer's own careers page, which names
 # no board; the check says so rather than guessing.
@@ -52,7 +60,6 @@ RECRUITEE_PATH = re.compile(r"/o/[^/]+")
 # adapter is chosen by what the links say rather than by guess.
 NOT_READABLE: tuple[tuple[str, re.Pattern], ...] = (
     ("ashby", re.compile(r"jobs\.ashbyhq\.com/([^/?]+)", re.I)),
-    ("workday", re.compile(r"([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com", re.I)),
     ("teamtailor", re.compile(r"([a-z0-9-]+)\.teamtailor\.com", re.I)),
     ("lever", re.compile(r"jobs\.(?:eu\.)?lever\.co/([^/?]+)", re.I)),
     ("workable", re.compile(r"apply\.workable\.com/([^/?]+)", re.I)),
@@ -61,7 +68,12 @@ NOT_READABLE: tuple[tuple[str, re.Pattern], ...] = (
     ("personio", re.compile(r"([a-z0-9-]+)\.jobs\.personio\.", re.I)),
     ("successfactors", re.compile(r"([a-z0-9.-]+)\.hr\.cloud\.sap", re.I)),
 )
-BOARD_KEYS = {"recruitee": "slug", "greenhouse": "slug", "smartrecruiters": "company"}
+BOARD_KEYS = {
+    "recruitee": "slug",
+    "greenhouse": "slug",
+    "smartrecruiters": "company",
+    "workday": "board",  # "rabobank.wd3/jobs": tenant, data centre, career site
+}
 
 
 @dataclass(frozen=True)
@@ -116,6 +128,9 @@ def board_of(link: str) -> tuple[str, str] | None:
             return platform, match.group(1)
     if match := SHORT_LINK.search(link):
         return "grnh.se", match.group(1)
+    if match := WORKDAY.search(link):
+        tenant, datacenter, site = match.groups()
+        return "workday", f"{tenant.lower()}.{datacenter.lower()}/{site}"
     if RECRUITEE_PATH.search(urlparse(link).path):
         host = urlparse(link).netloc.lower()
         if not any(pattern.search(link) for _, pattern in NOT_READABLE):
