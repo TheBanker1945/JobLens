@@ -151,8 +151,14 @@ class WorkdaySource:
         """The postings in scope that are not stored yet, at most `limit` of
         them: the limit counts text requests, the only ones that cost."""
         self.stats = WorkdayStats()
-        postings = self.listing()
-        self.stats.listed = len(postings)
+        listed = self.listing()
+        self.stats.listed = len(listed)
+        # A posting with no path cannot be read or named. Philips' Netherlands
+        # listing held two that were only a requisition number,
+        # {"bulletFields": ["590813"]} (2026-09-23), and the first real run
+        # crashed on them.
+        postings = [p for p in listed if p.get("externalPath")]
+        self.stats.dropped_invalid = len(listed) - len(postings)
         self.stats.listed_keys = {self.key(p["externalPath"]) for p in postings}
         vacancies: list[Vacancy] = []
         for posting in postings:

@@ -2274,3 +2274,15 @@ On the copy of the store this phase has been measured on, from 404 vacancies
 at the start (2026-09-22) to 992: the scope, 45 employer boards, government,
 EURES, Workday and 14 career sites. Mahdi's "would apply" labels were kept in
 scope after every word-list change.
+
+### The first run on the real store crashed, and what that exposed
+
+Merged and run on Mahdi's own store, the fetch stopped at the fourth Workday
+site with a `KeyError`. Philips' Netherlands listing holds two "postings" that
+are only a requisition number (`{"bulletFields": ["590813"]}`), no title and no
+path; the copy of the store had been measured before they appeared. The
+adapter now skips and counts them. The bigger lesson was the second one: an
+unexpected error in *one* adapter stopped every source after it and the end of
+the run, so `sightings.json` and the run report were never written. A bug in an
+adapter is now that search's "failed", with its reason in the report and its
+traceback in the log, and the run carries on and still exits non-zero.

@@ -273,6 +273,19 @@ def test_a_job_that_no_longer_takes_applications_or_has_no_text_is_dropped():
     assert empty.fetch() == [] and empty.stats.dropped_no_text == 1
 
 
+def test_a_posting_that_is_only_a_requisition_number_is_skipped():
+    """Philips, 2026-09-23: two Dutch "postings" were {"bulletFields":
+    ["590813"]}, no title and no path, and the first real run crashed on them."""
+    stub = {"bulletFields": ["590813"], "nl": True}
+    workday = source(FakeWorkday([posting(1, "Python Developer"), stub]))
+
+    vacancies = workday.fetch()
+
+    assert [v.title for v in vacancies] == ["Python Developer"]
+    assert workday.stats.dropped_invalid == 1
+    assert len(workday.stats.listed_keys) == 1
+
+
 # --- robots.txt ------------------------------------------------------------------
 
 

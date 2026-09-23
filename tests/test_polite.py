@@ -532,3 +532,23 @@ def test_linkedin_throttling_is_remembered_for_the_next_run(tmp_path):
     assert run.status == "throttled"
     remembered = FetchState.load(path).sites["linkedin.com"]
     assert remembered.reason == "descriptions stopped arriving"
+
+
+def test_a_bug_in_one_adapter_fails_its_search_and_nothing_else(tmp_path, capsys):
+    """2026-09-23: a KeyError in the Workday adapter stopped the first real run
+    halfway, before the other sources, the sightings and the report."""
+
+    class Broken:
+        name = "workday"
+
+        def fetch(self, limit=None):
+            raise KeyError("externalPath")
+
+    gate, _ = make_gate()
+    run = SearchRun("workday", "philips.wd3/jobs-and-careers")
+
+    assert not fetch_into(run, Broken(), gate, {}, ARGS, VacancyStore(tmp_path), [])
+
+    assert run.status == "failed"
+    assert run.detail == "KeyError: 'externalPath'"
+    assert "Traceback" in capsys.readouterr().err  # the log keeps the stack
