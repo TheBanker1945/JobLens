@@ -124,7 +124,7 @@ URL = re.compile(r"\b(?:https?://|www\.)\S+", re.I)
 PROFILE_HOSTS = (
     "linkedin.com github.com gitlab.com bitbucket.org codeberg.org twitter.com "
     "instagram.com facebook.com stackoverflow.com medium.com youtube.com "
-    "kaggle.com huggingface.co behance.net dribbble.com"
+    "kaggle.com huggingface.co behance.net dribbble.com slideshare.net speakerdeck.com"
 ).split()
 BARE_PROFILE = re.compile(
     r"(?:\bx\.com|" + "|".join(re.escape(host) for host in PROFILE_HOSTS) + r")/\S+",
@@ -164,20 +164,19 @@ COUNTRY_CODE_PHONE = re.compile(
     r"\d(?:" + SEPARATOR + r"\d){8,11}(?![\w-])"
 )
 
-# A number *with* its "+", glued to the letters in front of it. `PHONE` wants
-# no letter before a number, which is right in prose and wrong on a contact line
-# set in an icon font: the phone icon extracts as letters, "ne+31 6 12 345 678"
-# (a real CV, 2026-09-24, on both of its language versions), and the number
-# went to the cloud. A "+" and seven or more digits is a phone number whatever
-# stands in front of it.
+# A phone number glued to the letters in front of it. `PHONE` wants no letter
+# before a number, which is right in prose and wrong on a contact line set in an
+# icon font: the icon extracts as letters or as its own name, so the number
+# arrives as "ne+31 6 12 345 678" or "/mobile_phone06-12 34 56 78" (two real
+# CVs, 2026-09-24; the second one reached the cloud before this rule existed).
+# Both of PHONE's shapes, with nothing asked of the character in front: a "+"
+# or a leading "0" and nine or more digits is a phone number whatever precedes
+# it.
 GLUED_PHONE = re.compile(
-    r"(?<=[^\W\d_])\+\d{1,3}"
-    + SEPARATOR
-    + r"(?:\(0\)"
-    + SEPARATOR
-    + r")?\d(?:"
-    + SEPARATOR
-    + r"\d){6,11}(?![\w-])"
+    r"(?<=[^\W\d_])(?:"
+    rf"\+\d{{1,3}}{SEPARATOR}(?:\(0\){SEPARATOR})?\d(?:{SEPARATOR}\d){{6,11}}"
+    rf"|0\d(?:{SEPARATOR}\d){{7,10}}"
+    r")(?![\w-])"
 )
 
 # Eight or more digits in a row. A burgerservicenummer is nine of them, a phone

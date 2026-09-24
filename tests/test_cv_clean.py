@@ -226,13 +226,22 @@ def test_a_long_run_of_digits_goes_whatever_it_is():
 
 ICON_FONT_CONTACT_LINE = (
     "/ne+31 6 12 345 678 /♀nednlinkedin.com/in/jan-bakker-1234567\n"
+    "/mobile_phone06-98 76 54 32 • ✉ jan@example.com\n"
     "/g♀bebakkerjb.com /gtbgithub.com/jbakker-dev\n"
     "Amsterdam, Nederland"
 )
 
 
 @pytest.mark.parametrize(
-    "secret", ["12 345 678", "linkedin.com", "1234567", "bakkerjb.com", "jbakker-dev"]
+    "secret",
+    [
+        "12 345 678",
+        "98 76 54 32",
+        "linkedin.com",
+        "1234567",
+        "bakkerjb.com",
+        "jbakker-dev",
+    ],
 )
 def test_contact_details_glued_to_icon_glyphs_do_not_survive(secret):
     """An icon font extracts as letters glued to what follows it, so neither a
