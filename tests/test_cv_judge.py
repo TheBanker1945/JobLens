@@ -8,6 +8,7 @@ import json
 
 import pytest
 from conftest import FakeClient
+from pydantic import ValidationError
 
 from joblens.cv.documents import QueryPart
 from joblens.cv.judge import (
@@ -15,6 +16,7 @@ from joblens.cv.judge import (
     Verdict,
     judge_match,
     judge_matches,
+    shown_vacancy,
     verify,
 )
 from joblens.cv.match import CVMatch
@@ -59,7 +61,12 @@ def evidence(quote: str) -> dict:
 
 
 def gap(quote: str) -> dict:
-    return {"requirement": "hbo", "vacancy_quote": quote, "required": True}
+    return {
+        "requirement": "hbo",
+        "vacancy_quote": quote,
+        "required": True,
+        "knockout": False,
+    }
 
 
 def test_a_quote_that_crosses_a_line_break_is_still_a_quote():
@@ -250,3 +257,52 @@ def test_a_quote_must_be_whole_words_in_the_source(quote, source):
 )
 def test_whole_word_quotes_still_pass(quote, source):
     assert quoted(quote, searchable(source))
+
+
+def knockout_gap(required: bool = True) -> dict:
+    return gap("een afgeronde hbo-opleiding") | {
+        "requirement": "BIG-registratie",
+        "required": required,
+        "knockout": True,
+    }
+
+
+def test_a_knockout_makes_the_verdict_weak():
+    """The one gap that decides the verdict on its own: the schema holds the
+    model to it, the way it holds the number to the band."""
+    with pytest.raises(ValidationError, match="knockout"):
+        judgement(verdict="possible", fit=50, gaps=[knockout_gap()])
+
+    weak = judgement(verdict="weak", fit=10, gaps=[knockout_gap()])
+    assert weak.gaps[0].knockout
+
+
+def test_a_nice_to_have_cannot_rule_anyone_out():
+    with pytest.raises(ValidationError, match="nice-to-have"):
+        judgement(verdict="weak", fit=10, gaps=[knockout_gap(required=False)])
+
+
+def test_years_short_is_not_a_knockout_and_leaves_the_verdict_open():
+    """A stretch gap can sit under any verdict: it moves the fit, not the band."""
+    stretch = gap("minimaal 3 jaar ervaring")
+    assert judgement(verdict="strong", fit=78, gaps=[stretch]).verdict is Verdict.STRONG
+
+
+def test_the_reasons_are_written_before_the_verdict():
+    """A model writes fields in schema order, so the order is the reasoning."""
+    order = list(MatchJudgement.model_json_schema()["properties"])
+    assert order == ["evidence", "gaps", "summary", "verdict", "fit"]
+
+
+def test_the_heading_the_model_was_shown_can_be_quoted():
+    """The two quotes 6.1's baseline dropped were the vacancy's heading line,
+    which the model had been given."""
+    shown = shown_vacancy(MATCH)
+
+    kept = verify(
+        judgement(gaps=[gap("Verpleegkundige (Fivoor · Utrecht)")]), CV, shown
+    )
+    ours = verify(judgement(gaps=[gap("The vacancy: Verpleegkundige")]), CV, shown)
+
+    assert len(kept.judgement.gaps) == 1
+    assert ours.judgement.gaps == []

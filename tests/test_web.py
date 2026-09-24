@@ -53,6 +53,7 @@ def judged(number: int, verdict: str, fit: int) -> Judged:
                     "requirement": "vier jaar ervaring",
                     "vacancy_quote": "Je hebt minimaal 4 jaar ervaring.",
                     "required": True,
+                    "knockout": False,
                 }
             ],
         }

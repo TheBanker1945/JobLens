@@ -56,7 +56,12 @@ def judged(number: int, fit: int, *gaps: tuple[str, str, bool]) -> Judged:
             "summary": "Een samenvatting.",
             "evidence": [],
             "gaps": [
-                {"requirement": r, "vacancy_quote": q, "required": required}
+                {
+                    "requirement": r,
+                    "vacancy_quote": q,
+                    "required": required,
+                    "knockout": False,
+                }
                 for r, q, required in gaps
             ],
         }

@@ -34,7 +34,11 @@ from joblens.llm.types import ChatClient
 # when the model, the rubric and this prompt are the same, so the prompt has a
 # version and the report prints it. Bump it whenever SYSTEM_PROMPT or the bands
 # change, and old numbers stop pretending to be comparable with new ones.
-PROMPT_VERSION = "3.6"
+#
+# 3.7 (6.2): the reasons come before the verdict, a knockout is a short list and
+# marked on the gap, and years, degrees and seniority move the fit instead of
+# deciding the verdict. docs/learning-log.md, 6.2, has the numbers.
+PROMPT_VERSION = "3.7"
 
 
 class Verdict(StrEnum):
@@ -76,31 +80,34 @@ class Gap(BaseModel):
         "EXACTLY, at most 25 words."
     )
     required: bool = Field(
-        description="true if the vacancy states this as a requirement (eis, "
-        "'je hebt', 'minimaal'), false if it is a nice-to-have ('pré', 'plus')."
+        description="true if the vacancy states this as a requirement ('vereist', "
+        "'minimaal', 'je hebt', 'you have', 'must'), false if it is a nice-to-have "
+        "('pré', 'een plus', 'mooi meegenomen', 'bij voorkeur', 'nice to have') or "
+        "only describes the work ('je werkt met', 'wat ga je doen')."
+    )
+    knockout: bool = Field(
+        description="true only if this rules the person out however well the rest "
+        "fits, because applying cannot close it: a registration or licence the work "
+        "legally needs (BIG, a driving licence for a driving job), the right to "
+        "work, being enrolled as a student when the job is for students, a "
+        "language at the level the vacancy states. Years of experience, a degree "
+        "or 'hbo werk- en denkniveau', seniority and missing tools are never a "
+        "knockout."
     )
 
 
 class MatchJudgement(BaseModel):
+    """The reasons first, the verdict last.
+
+    A model writes its answer in the order the schema lists the fields, and
+    Gemini keeps that order. In 3.6 the verdict and the number came first, so
+    they were decided before a single piece of evidence had been written and
+    the evidence could only justify them. Now the evidence and the gaps are
+    written first and the verdict is read off them.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
-    verdict: Verdict = Field(
-        description="strong: this person would be a serious candidate, the "
-        "requirements they cannot meet are minor. possible: they could apply but "
-        "something real is missing or unproven. weak: this is not their job, or a "
-        "hard requirement is unmet."
-    )
-    fit: int = Field(
-        ge=0,
-        le=100,
-        description="0-100, and it must sit inside the verdict's band: strong "
-        "75-100, possible 40-74, weak 0-39. Use the range, not only round numbers.",
-    )
-    summary: str = Field(
-        description="One or two sentences, honest and specific to this person and "
-        "this vacancy. Name the thing that decides it. No compliments, no "
-        "encouragement, nothing that could be said about any other candidate."
-    )
     evidence: list[Evidence] = Field(
         description="At most 5, strongest first. Only what the CV actually states."
     )
@@ -108,6 +115,28 @@ class MatchJudgement(BaseModel):
         description="At most 5, most important first. What this vacancy asks for "
         "that the CV does not show. An empty list means the CV covers everything "
         "the vacancy asks -- rare, and you should be sure."
+    )
+    summary: str = Field(
+        description="One or two sentences, honest and specific to this person and "
+        "this vacancy. Name the thing that decides it. No compliments, no "
+        "encouragement, nothing that could be said about any other candidate."
+    )
+    verdict: Verdict = Field(
+        description="strong: this is the kind of work this person does or is ready "
+        "for next, and what they lack is no more than they could talk around in an "
+        "interview (a year or two less than asked, a neighbouring tool, a degree "
+        "their work already covers). possible: the work fits but something real is "
+        "missing (a core technology the job is built on, far more years than they "
+        "have, a seniority clearly above theirs); worth applying as a long shot. "
+        "weak: different work, or a knockout."
+    )
+    fit: int = Field(
+        ge=0,
+        le=100,
+        description="0-100, and it must sit inside the verdict's band: strong "
+        "75-100, possible 40-74, weak 0-39. High in the band when little is "
+        "missing for that band, low when it only just belongs there. Use the "
+        "range, not only round numbers.",
     )
 
     @model_validator(mode="after")
@@ -120,14 +149,34 @@ class MatchJudgement(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _a_knockout_decides_the_verdict(self) -> Self:
+        """The one gap that decides the verdict on its own has to be named as
+        one, and a named one has to decide it: the rubric in the prompt, the
+        check here, as with the bands."""
+        knockouts = [gap for gap in self.gaps if gap.knockout]
+        if any(not gap.required for gap in knockouts):
+            raise ValueError(
+                "a nice-to-have cannot be a knockout: set knockout to false, or "
+                "required to true if the vacancy states it as a requirement"
+            )
+        if knockouts and self.verdict is not Verdict.WEAK:
+            raise ValueError(
+                f"a knockout gap ({knockouts[0].requirement!r}) makes the verdict "
+                "weak; change the verdict, or set knockout to false if applying "
+                "could close it"
+            )
+        return self
+
 
 SYSTEM_PROMPT = """\
 You judge whether one person should apply to one vacancy. You are given their CV
 and the vacancy text, both of which may be Dutch or English.
 
-You are not a recruiter writing to a candidate. You are a tool this person uses to
-decide where to spend a limited number of applications, and you are more useful
-when you disappoint them.
+You are not a recruiter screening a pile of candidates. You are a tool this person
+uses to decide where to spend a limited number of applications, and you are more
+useful when you disappoint them. People are hired with fewer years than an advert
+asks and without its exact degree; they are not hired into work they cannot do.
 
 Rules:
 - **Every quote must be copied exactly** from the text you were given, character
@@ -140,9 +189,23 @@ Rules:
 - Judge the requirements, not the vocabulary. A vacancy full of words that also
   appear on the CV is not a match if the work is different (a sales job at a data
   company is not a data job).
-- A hard requirement the person cannot meet (a diploma level, a registration, a
-  licence, a language) makes the verdict weak, however well the rest fits. Say
-  which one.
+- **Write the evidence and the gaps first, then decide.** The verdict and the fit
+  follow from them.
+- **Knockouts are few.** Only a requirement that applying cannot close rules the
+  person out on its own: a registration or licence the work legally needs, the
+  right to work, being a student when the job is for students, a language at the
+  stated level. Mark that gap `knockout` and the verdict is weak. Say which one.
+- **Years, degrees and seniority are a stretch, not a knockout.** Name them as
+  gaps and weigh them: a year or two short in work this person already does costs
+  little; twice their experience or a senior role costs a lot. They move the fit
+  and can make the verdict possible; on their own they do not make it weak.
+- **Dutch adverts:** "hbo werk- en denkniveau" and "hbo-denkniveau" describe a
+  level of working and thinking, not a diploma, and experience can show it. Lines
+  about the work itself ("je werkt met", "wat ga je doen", "jouw taken") describe
+  the job, not a requirement: a tool named only there is a nice-to-have.
+- **A list is several requirements.** For "je hebt ervaring met C#, Python en
+  TypeScript", credit each one the CV shows as evidence and list only the missing
+  ones as a gap.
 - Distance and hours matter when both sides state them, and not otherwise.
 - `weak` is a normal answer. A list where everything is strong tells them nothing.
 - Write to the person, not about them: "je hebt" / "your CV shows", never their
@@ -175,6 +238,7 @@ def judge_match(
     client: ChatClient,
     *,
     mode: Mode = "schema",
+    temperature: float = 0.0,
 ) -> "Judged":
     """One vacancy, one call, and the quotes checked before it comes back."""
     vacancy = match.vacancy
@@ -189,8 +253,9 @@ def judge_match(
         system_prompt=SYSTEM_PROMPT,
         mode=mode,
         max_tokens=MAX_OUTPUT_TOKENS,
+        temperature=temperature,
     )
-    checked = verify(result.details, cv_text, vacancy.text)
+    checked = verify(result.details, cv_text, shown_vacancy(match))
     return Judged(
         match=match,
         judgement=checked.judgement,
@@ -201,6 +266,19 @@ def judge_match(
         output_tokens=result.output_tokens,
         latency_s=result.latency_s,
     )
+
+
+def shown_vacancy(match: CVMatch) -> str:
+    """The vacancy exactly as the judge was shown it: its heading line, then the
+    advert. What a gap quote is checked against.
+
+    Until 6.2 only the advert was, and the only two quotes dropped over 751 in
+    6.1's baseline were the model quoting the heading -- "Medior /Senior Java
+    Software Engineer (Keylane · Utrecht)" -- which it had been given. Checking
+    the text the model saw is not a loosening: nothing it was not shown passes.
+    The "## The vacancy:" label is ours and is left out, so it cannot be quoted.
+    """
+    return f"{match.vacancy.title}{_where(match)}\n\n{match.vacancy.text}"
 
 
 def _where(match: CVMatch) -> str:
@@ -298,6 +376,7 @@ def judge_matches(
     client: ChatClient,
     *,
     mode: Mode = "schema",
+    temperature: float = 0.0,
     workers: int = WORKERS,
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
@@ -312,25 +391,54 @@ def judge_matches(
     caller can store it before the next one lands: an eval that pays for a
     hundred calls should not lose all of them to the hundred-and-first.
     """
+    return judge_pairs(
+        [(cv_text, match) for match in matches],
+        client,
+        mode=mode,
+        temperature=temperature,
+        workers=workers,
+        on_done=on_done,
+        on_judged=on_judged,
+    )
+
+
+def judge_pairs(
+    pairs: list[tuple[str, CVMatch]],
+    client: ChatClient,
+    *,
+    mode: Mode = "schema",
+    temperature: float = 0.0,
+    workers: int = WORKERS,
+    on_done=None,
+    on_judged: Callable[[Judged], None] | None = None,
+) -> tuple[list[Judged], list[str]]:
+    """`judge_matches` for pairs that do not share a CV.
+
+    A person's shortlist is one CV against many vacancies; an external benchmark
+    is two hundred CVs against ten job descriptions. The call is the same.
+    """
     judged: list[Judged] = []
     failures: list[str] = []
 
-    def one(match: CVMatch):
-        return match, judge_match(cv_text, match, client, mode=mode)
+    def one(pair: tuple[str, CVMatch]):
+        cv_text, match = pair
+        return match, judge_match(
+            cv_text, match, client, mode=mode, temperature=temperature
+        )
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for match, result in _as_completed(pool, matches, one, failures):
+        for match, result in _as_completed(pool, pairs, one, failures):
             judged.append(result)
             if on_judged:
                 on_judged(result)
             if on_done:
-                on_done(len(judged) + len(failures), len(matches), match)
+                on_done(len(judged) + len(failures), len(pairs), match)
     return sorted(judged, key=lambda j: j.rank_key, reverse=True), failures
 
 
-def _as_completed(pool, matches, work, failures):
+def _as_completed(pool, pairs, work, failures):
     """Yield results as they arrive, so progress means what it says."""
-    futures = {pool.submit(work, match): match for match in matches}
+    futures = {pool.submit(work, pair): pair[1] for pair in pairs}
     for future in as_completed(futures):
         match = futures[future]
         try:
