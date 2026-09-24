@@ -17,6 +17,7 @@ model that invented a line from a CV will happily invent a second one, and the
 honest thing to show is a shorter list of claims that are all true.
 """
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from enum import StrEnum
@@ -299,12 +300,17 @@ def judge_matches(
     mode: Mode = "schema",
     workers: int = WORKERS,
     on_done=None,
+    on_judged: Callable[[Judged], None] | None = None,
 ) -> tuple[list[Judged], list[str]]:
     """Judge a shortlist, best first. Returns what came back and what failed.
 
     One vacancy failing is not the run failing: nineteen judged vacancies are
     still worth reading, so the failure is collected and named rather than
     raised.
+
+    `on_judged` receives each judgement as it arrives, in this thread, so a
+    caller can store it before the next one lands: an eval that pays for a
+    hundred calls should not lose all of them to the hundred-and-first.
     """
     judged: list[Judged] = []
     failures: list[str] = []
@@ -315,6 +321,8 @@ def judge_matches(
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for match, result in _as_completed(pool, matches, one, failures):
             judged.append(result)
+            if on_judged:
+                on_judged(result)
             if on_done:
                 on_done(len(judged) + len(failures), len(matches), match)
     return sorted(judged, key=lambda j: j.rank_key, reverse=True), failures
