@@ -53,9 +53,26 @@ NOT_A_POSTCODE = (
 ACRONYMS_AFTER_A_YEAR = (
     "IT AI ML QA UX UI BI HR PM PO VP BA MA BS MS NL EU UK US BV"
 ).split()
+NOT_A_YEAR_AND_ACRONYM = (
+    r"(?!(?:19|20)\d{2} ?(?:" + "|".join(ACRONYMS_AFTER_A_YEAR) + r")\b)"
+)
 POSTCODE = re.compile(
-    r"\b(?!(?:19|20)\d{2} ?(?:" + "|".join(ACRONYMS_AFTER_A_YEAR) + r")\b)"
-    r"[1-9]\d{3} ?(?!(?:" + "|".join(NOT_A_POSTCODE) + r")\b)[A-Za-z]{2}\b(?!-)"
+    r"\b" + NOT_A_YEAR_AND_ACRONYM + r"[1-9]\d{3} ?"
+    r"(?!(?:" + "|".join(NOT_A_POSTCODE) + r")\b)[A-Za-z]{2}\b(?!-)"
+)
+
+# The line above a postcode, or the words before it on the same line, when they
+# end in a house number: "De Drie Linden 14" over "2345 XY Voorschoten". STREET
+# below needs a Dutch street suffix, and two of ten real CVs (2026-09-24) lived
+# on a street without one -- "Molenakkers 5B" -- so the postcode went and the
+# street stayed. The postcode is what makes this safe: it has to be the address
+# kind, capitals and then a city or the end of the line, so "2021 AB testing"
+# under a line ending in a version number is not an address.
+ADDRESS_BEFORE_POSTCODE = re.compile(
+    r"(?m)^[ \t]*[^\W\d_][^\d\n]{0,40}?[ \t]+(?!(?:19|20)\d{2}\b)\d{1,5}[ \t]*"
+    r"[a-zA-Z]?\b"
+    r"(?=[ \t,]*(?:\n[ \t]*)?" + NOT_A_YEAR_AND_ACRONYM + r"[1-9]\d{3} ?[A-Z]{2}\b"
+    r"[ \t,]*(?:[A-Z]|$))"
 )
 
 # A street line: a word ending in a Dutch street suffix, then a house number.
@@ -76,11 +93,20 @@ STREET = re.compile(
     re.I,
 )
 
-# "Geboortedatum: 3 maart 1995" -- the label and the rest of the line.
-BIRTH_LINE = re.compile(
-    r"(?im)^.*\b(geboortedatum|geboortedag|geboren(?:\s+op)?|date\s+of\s+birth|"
-    r"birth\s*date|dob)\b.*$"
+# "Geboortedatum: 3 maart 1995" -- the label and the date after it. Not the whole
+# line: a real CV wrote "Geboren 3 maart 1995 – woonachtig in Woerden", and
+# taking the line took the one fact on it that matching needs (2026-09-24). The
+# "[" guard stops the rule from finding its own "[date of birth removed]".
+BIRTH_LABEL = (
+    r"(?<!\[)\b(?:geboortedatum|geboortedag|geboren(?:\s+op)?|date\s+of\s+birth|"
+    r"birth\s*date|dob)\b"
 )
+BIRTH_DATE = re.compile(
+    rf"(?i){BIRTH_LABEL}[^\n]{{0,30}}?\b(?:19|20)\d{{2}}\b(?:[-/.]\d{{1,2}}){{0,2}}"
+)
+# A label with no four-digit year after it ("Geboren: 3-5-'95") still takes the
+# rest of the line, because there is no end of the date to stop at.
+BIRTH_LINE = re.compile(rf"(?im){BIRTH_LABEL}.*$")
 # A full day-month-year date. Work history is written in years or months
 # ("2019 - 2023", "maart 2021"), so a complete date in a CV is almost always a
 # date of birth -- and on the rare occasion it is a project date, losing it
@@ -89,9 +115,25 @@ FULL_DATE = re.compile(r"\b\d{1,2}[-/.]\d{1,2}[-/.](?:19|20)\d{2}\b")
 
 URL = re.compile(r"\b(?:https?://|www\.)\S+", re.I)
 # A profile link written without a scheme, e.g. "linkedin.com/in/jane-doe".
+#
+# No "\b" in front, except for x.com, which would otherwise be found at the end
+# of any domain. A CV whose contact line is set in an icon font extracts the
+# icon as letters glued to the link -- "nednlinkedin.com/in/...",
+# "gtbgithub.com/..." on a real CV (2026-09-24) -- and a word boundary there is
+# exactly what does not exist.
+PROFILE_HOSTS = (
+    "linkedin.com github.com gitlab.com bitbucket.org codeberg.org twitter.com "
+    "instagram.com facebook.com stackoverflow.com medium.com youtube.com "
+    "kaggle.com huggingface.co behance.net dribbble.com"
+).split()
 BARE_PROFILE = re.compile(
-    r"\b(?:linkedin|github|gitlab|instagram|facebook|x)\.com/\S+", re.I
+    r"(?:\bx\.com|" + "|".join(re.escape(host) for host in PROFILE_HOSTS) + r")/\S+",
+    re.I,
 )
+# "Github:// jbakker", "Maven:// nl.jbakker": a site name and a handle, written
+# as if it were a link. Only this shape: "GitHub: Actions" in a skills list is a
+# skill, and "://" is never how a skill is written.
+LABELLED_HANDLE = re.compile(r"\b[A-Za-z]+:// ?@?[\w.-]+")
 
 # An IBAN is unmistakable and never belongs on a CV.
 IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z]{4}\d{10}\b")
@@ -122,6 +164,22 @@ COUNTRY_CODE_PHONE = re.compile(
     r"\d(?:" + SEPARATOR + r"\d){8,11}(?![\w-])"
 )
 
+# A number *with* its "+", glued to the letters in front of it. `PHONE` wants
+# no letter before a number, which is right in prose and wrong on a contact line
+# set in an icon font: the phone icon extracts as letters, "ne+31 6 12 345 678"
+# (a real CV, 2026-09-24, on both of its language versions), and the number
+# went to the cloud. A "+" and seven or more digits is a phone number whatever
+# stands in front of it.
+GLUED_PHONE = re.compile(
+    r"(?<=[^\W\d_])\+\d{1,3}"
+    + SEPARATOR
+    + r"(?:\(0\)"
+    + SEPARATOR
+    + r")?\d(?:"
+    + SEPARATOR
+    + r"\d){6,11}(?![\w-])"
+)
+
 # Eight or more digits in a row. A burgerservicenummer is nine of them, a phone
 # number written solid is ten, and a bank or customer number is whatever it is:
 # a CV has no honest use for a run this long, and the removal list shows what
@@ -133,8 +191,10 @@ DIGIT_RUN = re.compile(r"(?<![\w-])\d{8,}(?![\w-])")
 RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("url", URL),
     ("url", BARE_PROFILE),
+    ("url", LABELLED_HANDLE),
     ("email", EMAIL),
     ("iban", IBAN),
+    ("date of birth", BIRTH_DATE),
     ("date of birth", BIRTH_LINE),
     ("date of birth", FULL_DATE),
     # The country-code rule goes first: "0031 70 700 0510" starts with a zero,
@@ -142,7 +202,11 @@ RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     # can, leaving the last block on the page.
     ("phone", COUNTRY_CODE_PHONE),
     ("phone", PHONE),
+    ("phone", GLUED_PHONE),
     ("long number", DIGIT_RUN),
+    # Before STREET, so "Jan Steenstraat 1" goes as one address and not as a
+    # street with a first name left in front of it.
+    ("address", ADDRESS_BEFORE_POSTCODE),
     ("address", STREET),
     ("postcode", POSTCODE),
 )
@@ -172,8 +236,8 @@ def redact_cv(text: str, *, name: str | None = None) -> Redacted:
     for kind, pattern in RULES:
         text = _remove(text, pattern, kind, removals)
     if name:
-        for pattern in _name_patterns(name):
-            text = _remove(text, pattern, "name", removals)
+        for kind, pattern in _name_patterns(name):
+            text = _remove(text, pattern, kind, removals)
     return Redacted(_tidy(text), removals)
 
 
@@ -200,23 +264,78 @@ NAME_PARTICLES = frozenset(
 BEFORE_A_YEAR = r"(?!\.?[ \t]*(?:(?:19|20)\d{2}|'\d{2})\b)"
 
 
-def _name_patterns(name: str) -> list[re.Pattern[str]]:
+# A name part at least this long is looked for *inside* a domain name, where
+# "bakkerjb.com" or "janbakker.nl" is a personal site. Shorter parts are
+# not: a three-letter surname is too likely to be the start of an employer's
+# domain.
+MIN_PART_IN_A_DOMAIN = 4
+
+# Characters an identifier is made of: a handle, a domain, the path of a link.
+IDENTIFIER = r"[\w.@/-]"
+
+
+def _name_patterns(name: str) -> list[tuple[str, re.Pattern[str]]]:
     """The whole name first, then each part, so "Jan de Vries" does not survive
     as "Vries" further down the page. Initials, two-letter words and the
-    particles above are left alone: they match too much of an ordinary CV."""
+    particles above are left alone: they match too much of an ordinary CV.
+
+    Before either, the two places a name hides from a word match (found on four
+    of ten real CVs, 2026-09-24): run together into a handle
+    ("LinkedIn:// janbakker"), and inside a personal domain
+    ("janbakker.nl", "bakkerjb.com"). The whole handle or domain goes,
+    since what is left of it would still point at the person.
+    """
+    words = name.split()
     parts = [
         part
-        for part in name.split()
+        for part in words
         if len(part) > 2 and part.casefold() not in NAME_PARTICLES
     ]
-    whole = " ".join(name.split())
-    patterns = [re.compile(rf"\b{re.escape(whole)}\b", re.I)]
+    whole = " ".join(words)
+    # A run needs a real part in it: "van der" alone would join to "vander" and
+    # take Vanderlande with it.
+    patterns: list[tuple[str, re.Pattern[str]]] = [
+        ("name", re.compile(_joined(run), re.I))
+        for run in _runs(words)
+        if len("".join(run)) >= 6 and any(word in parts for word in run)
+    ]
     patterns += [
-        re.compile(rf"\b{re.escape(part)}\b{BEFORE_A_YEAR}", re.I)
+        (
+            "url",
+            re.compile(
+                rf"(?<![\w.@-])[\w-]*{re.escape(part)}[\w-]*(?:\.[\w-]+)*"
+                rf"\.[a-z]{{2,6}}\b(?:/\S*)?",
+                re.I,
+            ),
+        )
+        for part in dict.fromkeys(parts)
+        if len(part) >= MIN_PART_IN_A_DOMAIN
+    ]
+    patterns.append(("name", re.compile(rf"\b{re.escape(whole)}\b", re.I)))
+    patterns += [
+        ("name", re.compile(rf"\b{re.escape(part)}\b{BEFORE_A_YEAR}", re.I))
         for part in dict.fromkeys(parts)
         if part.casefold() != whole.casefold()
     ]
     return patterns
+
+
+def _runs(words: list[str]) -> list[list[str]]:
+    """Every stretch of two or more consecutive words of the name, longest first:
+    "Jan van der Berg" gives "janvanderberg", "vanderberg", "derberg" and so on."""
+    return [
+        words[start:end]
+        for length in range(len(words), 1, -1)
+        for start in range(len(words) - length + 1)
+        for end in [start + length]
+    ]
+
+
+def _joined(run: list[str]) -> str:
+    """The words written as one handle -- "janbakker", "jan-bakker",
+    "jan.bakker" -- and the rest of the identifier around them."""
+    handle = r"[-_.]?".join(re.escape(word) for word in run)
+    return rf"{IDENTIFIER}*{handle}{IDENTIFIER}*"
 
 
 def _tidy(text: str) -> str:
