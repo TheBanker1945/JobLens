@@ -162,6 +162,22 @@ def main() -> int:
     except (httpx.ConnectError, openai.APIConnectionError) as err:
         print(f"Cannot reach a server: {err}")
         return 1
+    except openai.APIStatusError as err:
+        # Reached and refused: a 503 "high demand" from Gemini ended seven of
+        # ten runs on 2026-09-24 as a traceback, before a single line of output.
+        # The SDK has already retried it twice. One judge call failing this way
+        # is collected as that vacancy's failure; this is reading the CV or
+        # embedding the query, without which there is no run at all.
+        print(
+            f"The model provider refused the request ({err.status_code}), after "
+            "retrying. Nothing was judged and nothing was stored.\n"
+            + (
+                "503 and 429 are the provider being busy: try again in a few minutes."
+                if err.status_code in (429, 503)
+                else f"{err.message[:300]}"
+            )
+        )
+        return 1
 
     outcome = assess(judged, corpus=len(corpus), corpus_name=args.corpus)
     summary = summarise_gaps(
