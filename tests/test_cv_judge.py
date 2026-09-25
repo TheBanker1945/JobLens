@@ -205,6 +205,24 @@ def test_one_vacancy_failing_does_not_lose_the_others():
     assert "indeed:1" in failures[0]
 
 
+def test_each_judgement_is_handed_over_as_it_arrives():
+    """An eval stores every answer before the next one lands, so a run that
+    dies halfway keeps what it already paid for."""
+    client = FakeClient(
+        json.dumps(judgement().model_dump(mode="json")),
+        "not json at all",
+        "still not json",
+    )
+    seen = []
+
+    judged, failures = judge_matches(
+        CV, [MATCH, MATCH], client, workers=1, on_judged=seen.append
+    )
+
+    assert seen == judged
+    assert len(seen) == 1 and len(failures) == 1
+
+
 @pytest.mark.parametrize(
     ("quote", "source"),
     [

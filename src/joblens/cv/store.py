@@ -7,6 +7,13 @@ word in the CV, or the model, and it is a different entry rather than a stale on
 
 This holds derived personal data -- a profile is someone's career in JSON -- so it
 lives in `data/cache/`, which git ignores, and never next to the code.
+
+It is also where every judgement an eval paid for is kept, and more than one
+process writes it: `match_cv.py` in one terminal, an eval in another. So a write
+reads the file again and adds to what is there, and swaps the result in whole
+(6.1). Without the first, the process that writes last deletes whatever the other
+one added since it started; without the second, a crash mid-write leaves half a
+JSON file and every entry in it unreadable.
 """
 
 import hashlib
@@ -25,19 +32,9 @@ class CVCache:
         return self.entries.get(self._key(kind, model, text))
 
     def put(self, kind: str, model: str, text: str, payload: dict) -> None:
-        """Add one entry, keeping whatever other processes added meanwhile.
-
-        Two processes share this file more often than it looks: a match in one
-        terminal while an eval runs in another, or a second worktree whose
-        data/cache is a link to this one (both on 2026-09-24). Writing back the
-        copy read at startup deleted every entry the other had added since, and
-        emptying the file before refilling it let the other read half of it.
-        So the file is read again just before writing, and replaced in one step.
-        Two writes in the same few milliseconds can still lose one entry; this is
-        a cache, and the price of that is one extraction bought twice.
-        """
+        key = self._key(kind, model, text)
         self.entries = self._read() | self.entries
-        self.entries[self._key(kind, model, text)] = payload
+        self.entries[key] = payload
         self.path.parent.mkdir(parents=True, exist_ok=True)
         handle = tempfile.NamedTemporaryFile(
             "w", encoding="utf-8", dir=self.path.parent, suffix=".tmp", delete=False

@@ -2287,6 +2287,103 @@ the run, so `sightings.json` and the run report were never written. A bug in an
 adapter is now that search's "failed", with its reason in the report and its
 traceback in the log, and the run carries on and still exits non-zero.
 
+## 6.1 — Measuring the judge by the order it puts things in
+
+Phase 6 is the judge. It started as an analysis (2026-09-23) of why the judge
+and Mahdi disagree, and the first finding was that the eval could not see the
+problem at all.
+
+The judge eval counted two mistakes: `strong` on a "would not apply" (the
+expensive one) and `weak` on a "would apply" (the cheap one). On the real CV's
+newest run the count looked tolerable. But the judge is not used to count. It
+is used to *sort*: `Judged.rank_key` orders the list by verdict and fit. On that
+run the judge had called all five "would apply" vacancies on the shortlist
+`weak`, put its one `strong` (84) on a vacancy Mahdi would not apply to, made
+the same calls in four runs out of four, and ordered the twelve vacancies
+**worse** than retrieval had: nDCG 0.82 in retrieval's order, 0.75 in the
+judge's. With the older `raw` retrieval the judge had helped (0.58 to 0.74).
+Better retrieval turned the judge from a help into a cost, and no line on the
+old screen could show it.
+
+### Two numbers about order
+
+`joblens/evals/judging.py`, printed per CV and never averaged:
+
+- **concordance**: of every two vacancies the person graded differently, the
+  share the judge puts the right way round. A tie counts half: a judge that
+  gives three vacancies 15 has not chosen between them. 0.5 is a coin.
+- **nDCG of the same vacancies in two orders**, the judge's and retrieval's,
+  each against the best order of those vacancies. It scores the reordering,
+  not whether retrieval found everything; `evals/matching.py` does that.
+
+### Judging what was labelled, not what was shortlisted
+
+A shortlist holds the ~5 labelled vacancies retrieval happened to put in its
+top 12. `--labelled` judges every vacancy the person labelled instead: 24 on the
+real CV, 149 differently-graded pairs instead of about 40, and no index to
+build. That last part matters today for a practical reason as well: other runs
+are indexing new vacancies into the same store while this is measured, and the
+corpus grew from 520 to 530 between two runs of this eval. A number built from
+labelled pairs does not move when the corpus does. Retrieval's order for those
+vacancies comes from the newest stored run of that CV, which ranked the whole
+corpus (4.1), and the screen names the run.
+
+### The baseline, prompt 3.6
+
+`uv run python scripts/eval_judge.py --labelled --strip-name "Mohammed Mahdi"`,
+all five CVs, 124 judgements, $0.21 for the ~60 that were not already stored:
+
+| cv | labelled | pairs | concordance judge / retrieval | nDCG judge / retrieval |
+|---|---|---|---|---|
+| mohammed (real) | 24 | 149 | **0.75** / 0.56 | 0.78 / 0.79 |
+| lisa_de_vries | 21 | 128 | 0.97 / - | 1.00 / - |
+| sanne_vermeulen | 22 | 144 | **0.75** / - | 0.93 / - |
+| youssef_bakker | 17 | 94 | 0.90 / - | 0.95 / - |
+| ingrid_solheim (control) | 40 | 0 | 0 strong, 0 possible, 40 weak, highest fit 10 | |
+
+751 quotes, two dropped. The fit number is worth more than the shortlist
+suggested: 0.75 concordance on the real CV against 0.56 for retrieval's order.
+What costs it the nDCG is the top of the list: the only `strong` is a "would
+not", and 7 of the 9 "would apply" are `weak`. The invented CVs have no stored
+run with a full ranking, so they have no retrieval column.
+
+**Both dropped quotes are the vacancy's title line**, and they point at a check
+that is looking at the wrong text rather than a judge inventing one. The prompt
+shows the model `## The vacancy: Medior /Senior Java Software Engineer (Keylane
+· Utrecht)` above the advert; `verify` looks only in the advert. The model
+quoted what it was shown. Fixed in 6.2 by checking against exactly the text the
+model saw, which is not a loosening: nothing it was not given can pass.
+
+### Two things that changed under the eval
+
+- **Each judgement is stored as it arrives** (`judge_matches(on_judged=...)`),
+  not when the run ends. A run that pays for a hundred calls no longer loses
+  them all to the hundred-and-first.
+- **`CVCache` reads the file again before it writes, and swaps the new file in
+  whole.** It is written by `match_cv.py` and the evals at the same time, and
+  used to be rewritten from whatever the writer had loaded at its start: the
+  last process to write deleted what the other had added, and a crash
+  mid-write left half a JSON file.
+
+### The rule 6.2 has to pass, written before it runs
+
+A new judge configuration (prompt, temperature, thinking) replaces 3.6 only if,
+in `eval_judge.py --labelled` on all five CVs:
+
+1. **Control**: Ingrid still gets 0 `strong` and 0 `possible`, and the refusal
+   is right for all five CVs.
+2. **Honesty**: no quote is dropped that the model was shown, and no more
+   `strong` on a "would not apply" than 3.6's one.
+3. **The real CV**: concordance above 3.6's 0.75 by more than two runs of
+   3.6 itself differ (measured first, in 6.2), **and** the judge's nDCG at
+   least retrieval's (0.79). The second half is the question this phase
+   exists for: the judge's order has to earn its place over retrieval's.
+4. **The invented CVs**: the worst case of the four scored CVs does not fall
+   below 0.75, and no invented CV loses more than 0.05. Their labels were
+   written by Claude with the same "a hard requirement caps it" rule the judge
+   follows, so a small drop there can be the point; a large one is a broken
+   judge.
+
 ## Audit — Ten real CVs from strangers, and what they broke
 
 Everything in phase 2 was measured on four CVs we wrote and one real one. This
