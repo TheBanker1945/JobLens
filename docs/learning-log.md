@@ -2388,3 +2388,37 @@ Measured and left for a decision, not fixed:
   is not in the text the quote is checked against; and `match_cv.py` does not
   store the raw answers, so a run cannot be re-checked later the way the eval
   can.
+
+### Decided the next day, and built
+
+Mahdi took four of the five: a fallback reader, "or" lists out of the
+headline, the cap per employer, and not loosening the duplicate check.
+
+**A second reader, used only when it is clearly better.** When more than 2% of
+pypdf's words are over 20 characters, the PDF is read again with pdfminer.six,
+and that text is kept only if it at least halves the share. Both conditions
+earned their place: normal CVs sit at 1.6% at most, and on the one real CV that
+always read fine, pdfminer's text is *worse* than pypdf's (2.0% against 0.5%).
+Of eleven real PDFs exactly the two broken ones switch (40.2% → 0.2% and 3.6% →
+1.6%), and re-run end to end the first quotes its CV in ordinary spaced
+sentences where it used to quote runs of glued words, while the second's lost
+claim now passes the check. The fixture could not copy the real damage this
+time — pypdf's space rule depends on font details a hand-written PDF does not
+reproduce — so the tests glue pypdf's output themselves and run pdfminer for
+real.
+
+**A choice is not a gap in any one skill.** A gap naming two or more skills with
+"or", "of", "en/of" or "/" *between* them goes to "could not be grouped". The
+skills are masked before looking, so the "/" in CI/CD is no choice and "knowledge
+of Python and SQL" is no "of". 153 of the 943 stored gaps (16%) move, and read by
+hand they are choices; "and" lists are grouped as before.
+
+**Two per employer.** The five-Sopra-Steria shortlist now judges two, prints the
+three it skipped, and spends those calls on five other employers. The ranking
+does not move; the run stores which rows were capped, and the cut is drawn below
+the last one judged. On the stored runs, 2 of 10 web CVs change and the real
+CV's shortlist does not, so no labelled vacancy moves.
+
+And the re-run showed why the quote check is not loosened: of three claims it
+dropped for one CV, two stitched non-adjacent lines of a skills table together
+and one — "PostgreSQL 3 Jaar" — is on no line of that CV at all.
