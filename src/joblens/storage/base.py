@@ -18,16 +18,33 @@ person it would be a parameter that is always the same string, and an unused
 field is a lie about what the code does. A second person is a directory level in
 `FileStore` or a collection in a Firestore store: it changes the implementation
 and not one caller, which is the whole point of the seam.
+
+**7.2 is where the second person arrived**, and the seam held: `PostgresStore`
+is built for one user (`Database.store_for(user_id)`), and every method below
+answers for that user only. `FileStore` is still the one person on this
+laptop, and the scripts and evals keep using it.
+
+**CVs are the one new thing (`CVStore`).** Until the web app, a CV was a file a
+script was pointed at. An upload has to be kept -- its redacted text, what a
+model made of it, and for a while the file itself -- so the database store
+keeps CVs too. `FileStore` does not: the CLI still reads CVs from disk.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from pydantic import BaseModel
 
 from joblens.cv.outcome import Fit
+from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord
+from joblens.cv.schema import CVProfile
 from joblens.evals.matching import CVLabels
+
+# How long an uploaded file is kept after it was uploaded (Mahdi, 2026-09-25).
+# Long enough that a better reader can read it again during the tester phase;
+# the redacted text and the profile stay after the file is gone.
+KEEP_ORIGINAL = timedelta(days=30)
 
 
 class RunSummary(BaseModel):
@@ -75,10 +92,71 @@ class Store(Protocol):
 
     def save_labels(self, labels: CVLabels) -> str: ...
 
-    # Preferences have no schema yet, on purpose: milestone 4.5 writes one from
-    # real reasons rather than from a guess at a form, and until then the store
-    # persists whatever mapping it is handed. The seam exists so that the day
-    # there is a schema, there is already one place that reads and writes it.
-    def load_preferences(self, cv: str) -> dict | None: ...
+    # What this person wants from their next job: one set per person, not per
+    # CV (7.2) -- a CV is facts about the past, preferences constrain the
+    # future. Stored as the mapping it is handed; 7.3 gives it a schema.
+    def load_preferences(self) -> dict | None: ...
 
-    def save_preferences(self, cv: str, values: dict) -> str: ...
+    def save_preferences(self, values: dict) -> str: ...
+
+
+class User(BaseModel):
+    """Someone with an account. Everything they store hangs off `id`."""
+
+    id: str
+    email: str | None = None  # null until 7.5 signs people in
+    display_name: str | None = None
+    locale: str | None = None  # en, nl, de, fr or es; None until chosen
+    created_at: datetime
+
+
+class CVRecord(BaseModel):
+    """A CV as the app keeps it. The uploaded file is kept apart (`original`)."""
+
+    id: str
+    name: str  # the file stem: what runs and labels call this CV
+    filename: str
+    text: str  # redacted: the only version that is sent anywhere
+    digest: str  # of `text`, as a run's stamp has it (cv/runs.py `digest`)
+    profile: CVProfile | None = None  # what a model made of it
+    strip_name: str | None = None  # the name redaction removed
+    uploaded_at: datetime
+    active: bool
+
+
+class CVStore(Protocol):
+    """One active CV per person, and the ones they had before it."""
+
+    def add_cv(
+        self,
+        filename: str,
+        text: str,
+        *,
+        profile: CVProfile | None = None,
+        strip_name: str | None = None,
+        original: bytes | None = None,
+        at: datetime | None = None,
+    ) -> CVRecord:
+        """Store a CV as the active one; the one that was active becomes history.
+
+        `original` is the uploaded file, kept for `KEEP_ORIGINAL` and then
+        purged. `text` must already be redacted: a store keeps what it is
+        given and does not check.
+        """
+        ...
+
+    def cvs(self) -> list[CVRecord]:
+        """Newest first, the active one among them."""
+        ...
+
+    def active_cv(self) -> CVRecord | None: ...
+
+    def load_cv(self, cv_id: str) -> CVRecord: ...
+
+    def activate_cv(self, cv_id: str) -> CVRecord:
+        """Make an older CV the active one again."""
+        ...
+
+    def original(self, cv_id: str) -> CVFile | None:
+        """The uploaded file, while it is kept; None once it has expired."""
+        ...
