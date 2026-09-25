@@ -16,6 +16,16 @@ tables -- worth adding the day a real CV needs it, not before), PyMuPDF (AGPL,
 which is wrong for a public MIT repo), and OCR (a different problem, and the
 error below tells the owner of a scanned CV what to do instead).
 
+**pdfminer.six, second, since 2026-09-24.** One of ten real CVs came out of pypdf
+as `Developmentofwebshopsforclients...`: XeLaTeX placed each word with a gap rather
+than a space character, in a font that gives pypdf no space width to measure the
+gap against. pdfminer.six works out spaces from the gaps between glyphs and reads
+it cleanly, with each job's lines kept together. It is only a second opinion:
+pypdf still reads every CV, and pdfminer's text is used only when pypdf's is
+glued *and* pdfminer's is clearly less so -- because on the real CV that has
+always read fine, pdfminer's text is the worse of the two. pdfplumber, which
+sits on pdfminer, glued the same file as pypdf did.
+
 **The third failure, found on a real CV in 3.6.1: a PDF that has a text layer and
 still does not say what it displays.** Some exporters subset a font and write a
 `ToUnicode` map that points at the *private use area* -- `<0551> <0555> <E073>`
@@ -37,9 +47,11 @@ import logging
 import re
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from pdfminer.high_level import extract_text
+from pdfminer.layout import LAParams
 from pypdf import PdfReader
 
 TEXT_SUFFIXES = frozenset({".txt", ".md"})
@@ -75,6 +87,21 @@ UNREADABLE = "?"
 # 1.3% that broke a real CV: below the line the text is still worth reading, and
 # the safety comes from marking the holes rather than from the threshold.
 REFUSE_ABOVE = 0.10
+
+# A "word" this long is almost always words run together: across ten real CVs
+# and five others, at most 1.6% of the words were, and those were links. On
+# the CV whose PDF places words without spaces, 40% were; on one where only
+# some lines do, 3.6%.
+GLUED_WORD = 20
+# Above this share pypdf's text is read a second time, with pdfminer.six. A
+# false alarm costs one more read and changes nothing, because the second text
+# is used only if it at least halves the share (`_better_reading`).
+GLUED_ABOVE = 0.02
+
+# What pdfminer writes for a glyph with no Unicode meaning: "(cid:294)". It is
+# the same hole as a private-use character, so it becomes one and is counted,
+# marked and reported by the same code.
+CID = re.compile(r"\(cid:\d+\)")
 
 # How many damaged lines the warning prints. Enough to recognise which parts of
 # the CV are gone, few enough to stay a warning rather than a second copy of it.
@@ -131,6 +158,17 @@ class CVDocument:
     text: str
     pages: int  # 1 for a text file: it has no pages, and it is all one document
     damage: Damage = field(default_factory=Damage)
+    reader: str = "pypdf"  # or "pdfminer.six", when pypdf's text was glued
+    glued: float = 0.0  # the share of run-together words in pypdf's text
+
+    def reading_note(self) -> str | None:
+        """One line when the second reader was used, so the switch is visible."""
+        if self.reader == "pypdf":
+            return None
+        return (
+            f"note: pypdf ran {self.glued:.0%} of this PDF's words together (it "
+            "places words without spaces), so it was read with pdfminer.six."
+        )
 
     @property
     def kind(self) -> str:
@@ -151,7 +189,7 @@ def read_cv(path: Path) -> CVDocument:
 
 
 def _read_pdf(path: Path) -> CVDocument:
-    with _collect_pypdf_warnings() as warnings:
+    with _collect_warnings("pypdf") as warnings:
         reader = PdfReader(path)
         if reader.is_encrypted:
             # An empty password covers the common "protected from editing" case.
@@ -164,6 +202,11 @@ def _read_pdf(path: Path) -> CVDocument:
                 ) from err
         pages = [page.extract_text() or "" for page in reader.pages]
     text = _tidy("\n\n".join(pages))
+    glued, reader = glued_share(text), "pypdf"
+    if glued > GLUED_ABOVE:
+        second = _read_with_pdfminer(path)
+        if _better_reading(text, second):
+            text, reader = second, "pdfminer.six"
     # Counted without the glyphs: a page of characters that carry no meaning is
     # as empty as a page with nothing on it.
     unreadable = len(PRIVATE_USE.findall(text))
@@ -177,7 +220,32 @@ def _read_pdf(path: Path) -> CVDocument:
             "image. Export it from your editor as a text PDF, or save it as .txt "
             "or .md and point at that."
         )
-    return _document(path, text, pages=len(pages), reader_warnings=len(warnings))
+    document = _document(path, text, pages=len(pages), reader_warnings=len(warnings))
+    return replace(document, reader=reader, glued=glued)
+
+
+def glued_share(text: str) -> float:
+    """The share of "words" long enough to be several run together."""
+    words = text.split()
+    return sum(len(word) > GLUED_WORD for word in words) / len(words) if words else 0.0
+
+
+def _better_reading(first: str, second: str) -> bool:
+    """Whether the second reading is clearly less glued than the first: by at
+    least half, and never when the first was not glued to begin with."""
+    before = glued_share(first)
+    return before > 0 and glued_share(second) <= before / 2
+
+
+def _read_with_pdfminer(path: Path) -> str:
+    """pdfminer.six's reading, with its unmapped glyphs made private-use.
+
+    `boxes_flow=None` turns off its column detection, which otherwise moves a
+    job's dates away from its title; lines are then read top to bottom.
+    """
+    with _collect_warnings("pdfminer"):
+        raw = extract_text(path, laparams=LAParams(boxes_flow=None))
+    return _tidy(CID.sub("\ue000", raw))
 
 
 def _document(
@@ -219,8 +287,8 @@ def _assess(text: str, marked: str, reader_warnings: int) -> Damage:
 
 
 @contextmanager
-def _collect_pypdf_warnings() -> Iterator[list[logging.LogRecord]]:
-    """Catch pypdf's log lines instead of letting them flood the terminal.
+def _collect_warnings(name: str) -> Iterator[list[logging.LogRecord]]:
+    """Catch a PDF reader's log lines instead of letting them flood the terminal.
 
     A PDF with a broken font subset makes pypdf warn once per malformed CMap
     entry -- 64 lines of `Skipping broken line b'07ac 07b2 1f130'` before the
@@ -228,7 +296,7 @@ def _collect_pypdf_warnings() -> Iterator[list[logging.LogRecord]]:
     symptom of the same problem `Damage` describes, so they are collected here
     and reported as one line by whoever asked for the CV.
     """
-    logger = logging.getLogger("pypdf")
+    logger = logging.getLogger(name)
     collected: list[logging.LogRecord] = []
 
     class Collect(logging.Handler):
@@ -254,6 +322,7 @@ def _tidy(text: str) -> str:
     reads it next does better with the layout intact than with a paragraph.
     """
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
+    text = text.replace("\f", "\n")  # pdfminer ends every page with a form feed
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.split("\n")]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 

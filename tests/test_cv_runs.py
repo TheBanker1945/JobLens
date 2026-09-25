@@ -252,3 +252,32 @@ def test_the_evidence_lines_are_stored_not_only_counted(tmp_path):
     path = tmp_path / "run.json"
     path.write_text(stored.model_dump_json(), encoding="utf-8")
     assert RunRecord.model_validate_json(path.read_text()).rows[0].claims
+
+
+def test_a_capped_vacancy_is_stored_as_capped_and_not_as_the_cut():
+    """With a cap the judged ones are not the head of the ranking, so they are
+    named by key, and the cut is drawn below the last one judged."""
+    runs = [judged(1, "strong", 80), judged(3, "weak", 20)]
+    whole = ranking(5)
+
+    stored = build_record(
+        stamp(top=2, per_employer=1),
+        runs,
+        assess(runs, corpus=5),
+        ranking=whole,
+        sent={whole[0].vacancy.key, whole[2].vacancy.key},
+        capped={whole[1].vacancy.key},
+    )
+
+    assert [(row.judged, row.capped) for row in stored.ranking[:4]] == [
+        (True, False),
+        (False, True),
+        (True, False),
+        (False, False),
+    ]
+    last, first = stored.boundary()
+    assert (last.rank, first.rank) == (3, 4)
+
+
+def test_a_run_from_before_the_cap_loads_with_no_cap():
+    assert stamp().per_employer == 0

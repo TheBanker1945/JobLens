@@ -2,13 +2,15 @@
 
 import logging
 
+import pypdf
 import pytest
 from conftest import DAMAGED_CV, SAMPLE_CVS, build_pdf, scanned_pdf
 
+from joblens.cv import read
 from joblens.cv.read import (
     REFUSE_ABOVE,
     UnreadableCVError,
-    _collect_pypdf_warnings,
+    _collect_warnings,
     find_cv,
     read_cv,
 )
@@ -135,7 +137,7 @@ def test_pypdf_warnings_are_collected_instead_of_printed():
     root = logging.getLogger()
     root.addHandler(_Record(seen))
     try:
-        with _collect_pypdf_warnings() as collected:
+        with _collect_warnings("pypdf") as collected:
             logging.getLogger("pypdf._cmap").warning("Skipping broken line")
         logging.getLogger("pypdf._cmap").warning("after the read")
     finally:
@@ -184,3 +186,89 @@ def test_a_file_that_is_not_a_cv_format_is_not_offered(tmp_path):
     (tmp_path / "mahdi.docx").write_text("x")
 
     assert find_cv("mahdi", (tmp_path,)) is None
+
+
+# ---------------------------------------------------------------------------
+# A PDF whose words pypdf runs together (a real CV, 2026-09-24): XeLaTeX placed
+# each word with a gap instead of a space, in a font that gave pypdf nothing to
+# measure the gap against. That font could not be rebuilt in a hand-written
+# fixture, so these tests glue pypdf's output themselves and let everything
+# after it -- pdfminer.six included, on the committed sample PDF -- run for real.
+
+SAMPLE_PDF = SAMPLE_CVS / "lisa_de_vries.pdf"
+
+
+def glue_pypdf(monkeypatch):
+    """pypdf's reading of every page, with the spaces inside each line gone."""
+    original = pypdf.PageObject.extract_text
+
+    def glued(page, *args, **kwargs):
+        text = original(page, *args, **kwargs)
+        return "\n".join(line.replace(" ", "") for line in text.splitlines())
+
+    monkeypatch.setattr(pypdf.PageObject, "extract_text", glued)
+
+
+def test_a_pdf_that_reads_fine_is_read_once(monkeypatch):
+    def second_read(path):
+        raise AssertionError("pdfminer was asked about a PDF pypdf read fine")
+
+    monkeypatch.setattr(read, "_read_with_pdfminer", second_read)
+
+    document = read_cv(SAMPLE_PDF)
+
+    assert document.reader == "pypdf"
+    assert document.reading_note() is None
+
+
+def test_glued_text_is_read_again_and_the_better_reading_kept(monkeypatch):
+    glue_pypdf(monkeypatch)
+
+    document = read_cv(SAMPLE_PDF)
+
+    assert document.reader == "pdfminer.six"
+    assert "Data-analist — Coolblue, Rotterdam" in document.text  # spaced, as shown
+    assert document.glued > read.GLUED_ABOVE
+    assert "pdfminer.six" in document.reading_note()
+
+
+def test_a_glyph_pdfminer_cannot_map_is_a_marked_hole(monkeypatch):
+    glue_pypdf(monkeypatch)
+    monkeypatch.setattr(
+        read,
+        "extract_text",
+        lambda path, laparams: (
+            "(cid:294) (+31) Utrecht\n"
+            + "Werkervaring bij Coolblue in Rotterdam\n" * 20
+        ),
+    )
+
+    document = read_cv(SAMPLE_PDF)
+
+    assert document.text.startswith("? (+31) Utrecht")
+    assert document.damage.glyphs == 1
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "better"),
+    [
+        (
+            "Developmentofwebshopsforclientsinretail " * 5,
+            "Development of webshops " * 5,
+            True,
+        ),
+        (
+            "A CV that reads fine, word by word. " * 5,
+            "A CV that reads fine " * 5,
+            False,
+        ),
+        # less glued, but not by half: a second reader is not better for trying
+        (
+            "averyverylongwordinsidealine and more " * 5,
+            "averyverylongwordinsidealine and " * 5,
+            False,
+        ),
+    ],
+)
+def test_the_second_reading_is_kept_only_when_clearly_less_glued(first, second, better):
+    assert read._better_reading(first, second) is better

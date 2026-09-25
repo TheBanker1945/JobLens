@@ -89,6 +89,15 @@ conceptually, not just have working code.
   "?" so a hole stays visible, refuses a file that is more than 10% of them, and
   src/joblens/cv/extract.py nulls any year in a profile that is not in the CV
   text. Never repair this by loosening the quote check in src/joblens/cv/verify.py.
+- pypdf reads every PDF; pdfminer.six reads it again only when more than 2% of
+  pypdf's words are over 20 characters (words placed without spaces), and its
+  text is kept only if that share at least halves (read.py; 2026-09-24: two of
+  eleven real PDFs switch, the real CV must not -- pdfminer reads it worse).
+- The quote check's only allowance beyond formatting: a hyphen at a line end is
+  read as extracted, as a split word, or as a real hyphen (verify.py). Measured
+  over 1,925 recorded quotes: nothing that passed before fails.
+- A run judges at most two vacancies per employer (`--per-employer`,
+  PER_EMPLOYER in cv/match.py); the ranking itself never moves.
 - A CV reaches the index as its whole redacted text (3.5, measured on four
   invented CVs: best worst-case nDCG@10 of five representations, and the
   cheapest), and since 2026-09-22 also as the advert a model writes from its

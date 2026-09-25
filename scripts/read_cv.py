@@ -133,6 +133,8 @@ def report_damage(document: CVDocument) -> None:
     same question: what exactly is leaving this machine, and is it right?
     """
     damage = document.damage
+    if note := document.reading_note():
+        print(f"\n{note}")
     if damage.reader_warnings:
         print(
             f"\nnote: pypdf reported {damage.reader_warnings} warnings about broken "
