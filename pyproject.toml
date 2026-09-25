@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.28.1",
     "numpy>=2.5.3",
     "openai>=3.14.1",
+    "pdfminer-six>=20260107",
     "protego>=0.7.0",
     "pydantic>=2.13.5",
     "pypdf>=6.19.0",

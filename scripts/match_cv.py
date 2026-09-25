@@ -37,7 +37,14 @@ from joblens.corpus import NAMES, load_corpus
 from joblens.cv.documents import CV_STYLES
 from joblens.cv.gaps import GapSummary, summarise_gaps
 from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
-from joblens.cv.match import DEFAULT_STYLE, prepare_cv, rank_cv, styles_of
+from joblens.cv.match import (
+    DEFAULT_STYLE,
+    PER_EMPLOYER,
+    prepare_cv,
+    rank_cv,
+    shortlist,
+    styles_of,
+)
 from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
 from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
@@ -72,6 +79,14 @@ def main() -> int:
         f"by '+' and fused by rank (default {DEFAULT_STYLE}; 'raw' is the 3.5 way)",
     )
     parser.add_argument("--top", type=int, default=10, help="how many to judge")
+    parser.add_argument(
+        "--per-employer",
+        type=int,
+        default=PER_EMPLOYER,
+        metavar="N",
+        help=f"judge at most N vacancies from one employer (default {PER_EMPLOYER}"
+        "; 0 for no cap). The rest keep their place in the stored ranking",
+    )
     parser.add_argument("--strip-name", metavar="NAME")
     parser.add_argument(
         "--show-sent",
@@ -123,7 +138,13 @@ def main() -> int:
                     model=cv_settings.model,
                     cache=cache,
                 )
-                matches = ranking[: args.top]
+                chosen = shortlist(
+                    ranking,
+                    args.top,
+                    per_employer=args.per_employer,
+                    details=corpus.details,
+                )
+                matches = chosen.matches
 
             header(
                 prepared,
@@ -201,6 +222,7 @@ def main() -> int:
         cv_style=args.style,
         prompt_version=PROMPT_VERSION,
         top=args.top,
+        per_employer=args.per_employer,
     )
     footer(
         judged,
@@ -210,7 +232,7 @@ def main() -> int:
         failures,
         cv_settings,
         ranking=ranking,
-        shortlisted=len(matches),
+        chosen=chosen,
         funnel=corpus.funnel,
     )
     return 0
@@ -223,6 +245,7 @@ def header(prepared, args, corpus, indexed, embed_settings, cv_settings) -> None
     print(
         f"{indexed} vacancies from the {args.corpus} corpus, embedded by "
         f"{embed_settings.model}; shortlist of {args.top} as {args.style}"
+        + (f", at most {args.per_employer} per employer" if args.per_employer else "")
         + (
             " (fused by rank: scores are rank points, not cosines)"
             if "+" in args.style
@@ -248,6 +271,8 @@ def cv_style(value: str) -> str:
 def report_cv_problems(prepared) -> None:
     """Whatever is wrong with the CV itself, before any vacancy is discussed."""
     damage = prepared.document.damage
+    if note := prepared.document.reading_note():
+        print(note)
     if damage.reader_warnings:
         print(
             f"note: pypdf reported {damage.reader_warnings} warnings about broken "
@@ -363,7 +388,7 @@ def footer(
     cv_settings,
     *,
     ranking=None,
-    shortlisted=0,
+    chosen=None,
     funnel=None,
 ) -> None:
     tokens_in = sum(one.prompt_tokens for one in judged)
@@ -404,7 +429,8 @@ def footer(
         outcome,
         summary,
         ranking=ranking,
-        shortlisted=shortlisted,
+        sent={match.vacancy.key for match in chosen.matches} if chosen else None,
+        capped={match.vacancy.key for match in chosen.capped} if chosen else None,
         funnel=funnel,
         failures=failures,
         cost_usd=cost,
@@ -443,6 +469,14 @@ def show_boundary(record) -> None:
         f"{len(record.ranking)} vacancies ranked, {record.stamp.top} judged: "
         f"the whole ranking is in the run, with the score of every one of them."
     )
+    capped = [row for row in record.ranking if row.capped]
+    if capped:
+        print(
+            f"{len(capped)} ranked above the cut and not judged, because their "
+            f"employer already had {record.stamp.per_employer} on the shortlist: "
+            + ", ".join(f"#{row.rank} {shorten(row.title, 30)}" for row in capped[:4])
+            + (" …" if len(capped) > 4 else "")
+        )
     if pair := record.boundary():
         last, first = pair
         print(

@@ -12,6 +12,7 @@ that won is worth keeping: "this matched your Coolblue job" is the beginning of
 an explanation, and 3.6 turns it into one.
 """
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,9 +25,10 @@ from joblens.cv.store import CVCache
 from joblens.cv.wishlist import write_ideal_vacancy
 from joblens.embeddings.index import VacancyIndex
 from joblens.embeddings.similarity import fuse_orders
+from joblens.extraction.schema import VacancyDetails
 from joblens.llm.structured import Mode
 from joblens.llm.types import ChatClient
-from joblens.sources.base import Vacancy
+from joblens.sources.base import Vacancy, simplify
 
 
 @dataclass(frozen=True)
@@ -210,6 +212,72 @@ def rank_cv(
         )
         for one in fused
     ]
+
+
+# At most this many vacancies from one employer are sent to the judge in a run.
+# On 2026-09-24 one CV's shortlist was five near-identical jobs at one
+# employer: five judge calls, five times the same gaps, and fewer different
+# jobs to choose from. Two still shows that an employer is hiring for this
+# work; the rest stay in the stored ranking with their rank and score.
+PER_EMPLOYER = 2
+
+# The parts of a company name that say how it is registered, not who it is:
+# "Deloitte Nederland" and "Deloitte Netherlands", "Helloprint B.V." and
+# "Helloprint", "Redwood Software Inc." and "Redwood Software Nederland B.V."
+# are one employer.
+LEGAL_FORM = re.compile(
+    r"(?:\s+(?:b ?v|n ?v|inc|ltd|llc|gmbh|group|groep|holding|nederland"
+    r"|netherlands|benelux))+$"
+)
+
+
+@dataclass(frozen=True)
+class Shortlist:
+    """Who gets a judge call, and who was passed over for the cap."""
+
+    matches: list[CVMatch]
+    capped: list[CVMatch]  # ranked above the cut, skipped for their employer
+
+
+def shortlist(
+    ranking: list[CVMatch],
+    top: int,
+    *,
+    per_employer: int = PER_EMPLOYER,
+    details: dict[str, VacancyDetails] | None = None,
+) -> Shortlist:
+    """The first `top` of the ranking, at most `per_employer` from one employer.
+
+    The cap decides only who is judged; the ranking itself does not move. A
+    vacancy whose employer is not known -- EURES records name none, and
+    extraction finds it in most but not all of them -- is never capped,
+    because it cannot be told apart from anyone. `per_employer=0` is no cap.
+    """
+    chosen: list[CVMatch] = []
+    capped: list[CVMatch] = []
+    counts: dict[str, int] = {}
+    for match in ranking:
+        if len(chosen) == top:
+            break
+        name = employer(match.vacancy, details)
+        if per_employer and name and counts.get(name, 0) >= per_employer:
+            capped.append(match)
+            continue
+        if name:
+            counts[name] = counts.get(name, 0) + 1
+        chosen.append(match)
+    return Shortlist(chosen, capped)
+
+
+def employer(
+    vacancy: Vacancy, details: dict[str, VacancyDetails] | None = None
+) -> str | None:
+    """Who is hiring, as one comparable string, or None if nobody says."""
+    found = details.get(vacancy.key) if details else None
+    name = vacancy.company or (found.company if found else None)
+    if not name:
+        return None
+    return LEGAL_FORM.sub("", simplify(name)) or None
 
 
 def _wishlist(
