@@ -34,7 +34,7 @@ and the viewer do not know which judge wrote it.
 """
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Self
 
@@ -56,14 +56,18 @@ from joblens.cv.verify import quoted, searchable
 from joblens.llm.structured import Mode, extract_structured
 from joblens.llm.types import ChatClient
 
-# Stamped like PROMPT_VERSION, and two of them, because the two questions change
-# apart: a vacancy's list is stored under LIST_VERSION and re-read for every CV,
-# so a change to the second question must not throw the lists away. Bump
-# LIST_VERSION when REQUIREMENTS_PROMPT changes, CHECK_VERSION when ASSESS_PROMPT
-# or the weights do.
+# Stamped like PROMPT_VERSION, and three of them, because the three parts change
+# apart. A vacancy's list is stored under LIST_VERSION and re-read for every CV;
+# the CV's answers are stored under ANSWERS_VERSION; and the arithmetic that
+# turns answers into a verdict runs again on every read, so changing it costs no
+# call and must not throw a stored answer away. Bump LIST_VERSION when
+# REQUIREMENTS_PROMPT changes, CHECK_VERSION when ASSESS_PROMPT does, and
+# SCORE_VERSION when `Weights` or `score` do. A run is stamped with all three.
 LIST_VERSION = "6.3"
 CHECK_VERSION = "6.3.1"
-REQUIREMENTS_VERSION = f"{LIST_VERSION}/{CHECK_VERSION}"
+SCORE_VERSION = "6.3.2"
+ANSWERS_VERSION = f"{LIST_VERSION}/{CHECK_VERSION}"
+REQUIREMENTS_VERSION = f"{ANSWERS_VERSION}/{SCORE_VERSION}"
 
 KNOCKOUT = (
     "true only if this rules a person out however well the rest fits, because "
@@ -343,13 +347,26 @@ def score(
 ) -> tuple[Verdict, int]:
     """The verdict and the fit, from the answers. Arithmetic, and all of it here.
 
-    fit = 100 x (coverage of the weighted requirements, by 1 - work_share,
-                 plus the kind of work, by work_share)
+    First a share, 0 to 1: the coverage of the weighted requirements, by
+    1 - work_share, plus the kind of work, by work_share. Its band decides the
+    verdict -- 0.75 and up strong, 0.40 and up possible -- unless something
+    stands in the way:
 
-    The verdict is the band the fit falls in, except that a missing knockout or
-    different work is `weak` whatever the number says, and a wish of the CV's
-    that the vacancy contradicts keeps it from `strong`. The number is then held
-    inside that band, so the list sorts the way the verdicts read.
+    - a missing knockout, or different work: `weak`, whatever the share;
+    - a wish the CV states that the vacancy contradicts: not `strong`.
+
+    Then the fit says where in its band the vacancy sits, and **inside every
+    band a vacancy with something in the way sorts below one without**: the
+    lower half of the band is for the blocked, the upper half for the rest,
+    each ordered by its share. The first version clamped a blocked vacancy to
+    the top of the band below -- a sales job that matched half of Lisa's skills
+    became weak 39 and sorted above every data job that was only short on
+    requirements, and a part-time job on a CV asking for full-time became
+    possible 74, above jobs the person would apply to (6.3). A stated obstacle
+    is information about order, and a clamp throws it away.
+
+    A strong vacancy is never blocked, so its band is not split: fit is the
+    share, 75 to 100.
     """
     total = earned = 0.0
     for requirement, status in zip(requirements, statuses, strict=True):
@@ -362,22 +379,33 @@ def score(
     work_points = weights.work_points[work]
     # A vacancy that asks for nothing weighable is judged on the work alone.
     coverage = earned / total if total else work_points
-    fit = round(
-        100 * ((1 - weights.work_share) * coverage + weights.work_share * work_points)
-    )
+    share = (1 - weights.work_share) * coverage + weights.work_share * work_points
 
-    ruled_out = any(
+    ruled_out = work is Work.DIFFERENT or any(
         requirement.knockout and status is Status.MISSING
         for requirement, status in zip(requirements, statuses, strict=True)
     )
-    if ruled_out or work is Work.DIFFERENT:
-        return Verdict.WEAK, min(fit, BANDS[Verdict.WEAK][1])
-    if conflicts:
-        fit = min(fit, BANDS[Verdict.POSSIBLE][1])
-    for verdict in (Verdict.STRONG, Verdict.POSSIBLE):
-        if fit >= BANDS[verdict][0]:
-            return verdict, fit
-    return Verdict.WEAK, fit
+    if share >= BANDS[Verdict.STRONG][0] / 100 and not (ruled_out or conflicts):
+        return Verdict.STRONG, round(100 * share)
+    if share >= BANDS[Verdict.POSSIBLE][0] / 100 and not ruled_out:
+        return Verdict.POSSIBLE, _placed(Verdict.POSSIBLE, share, bool(conflicts))
+    return Verdict.WEAK, _placed(Verdict.WEAK, share, ruled_out or bool(conflicts))
+
+
+def _placed(verdict: Verdict, share: float, blocked: bool) -> int:
+    """A share, placed in its band's lower half when blocked, upper half if not.
+
+    The share is spread over the half by where it sits in the range the band
+    covers -- `possible` covers shares 0.40 to 0.75, `weak` 0 to 0.40 -- and a
+    blocked vacancy may bring any share, so its share is spread over 0 to 1.
+    """
+    low, high = BANDS[verdict]
+    middle = (low + high) // 2  # possible 40-57 | 58-74, weak 0-19 | 20-39
+    if blocked:
+        return low + round(share * (middle - low))
+    floor, ceiling = low / 100, (high + 1) / 100
+    position = (share - floor) / (ceiling - floor)
+    return middle + 1 + round(min(max(position, 0.0), 1.0) * (high - middle - 1))
 
 
 @dataclass(frozen=True)
@@ -386,6 +414,11 @@ class Listed:
 
     requirements: list[Requirement]
     dropped: list[Requirement]
+    # What reading the list cost this time: zero when it came from the cache.
+    # Charged to the judgement that asked for it, so a run's cost line is the
+    # whole bill -- the first 6.3 measurements printed only the second call's.
+    prompt_tokens: int = 0
+    output_tokens: int = 0
 
 
 class RequirementBook:
@@ -412,6 +445,7 @@ class RequirementBook:
             kind = f"requirements-{LIST_VERSION}"
             with self._lock:
                 hit = self.cache.get(kind, self.model, shown)
+            spent = (0, 0)
             if hit is None:
                 found = extract_structured(
                     shown,
@@ -421,9 +455,11 @@ class RequirementBook:
                     mode=self.mode,
                 )
                 hit = found.details.model_dump(mode="json")
+                spent = (found.prompt_tokens, found.output_tokens)
                 with self._lock:
                     self.cache.put(kind, self.model, shown, hit)
-        return check_requirements(VacancyRequirements.model_validate(hit), shown)
+        listed = check_requirements(VacancyRequirements.model_validate(hit), shown)
+        return replace(listed, prompt_tokens=spent[0], output_tokens=spent[1])
 
 
 def check_requirements(found: VacancyRequirements, shown: str) -> Listed:
@@ -476,8 +512,8 @@ def judge_by_requirements(
         dropped=judged.dropped,
         quotes=judged.quotes,
         raw=result.details,
-        prompt_tokens=result.prompt_tokens,
-        output_tokens=result.output_tokens,
+        prompt_tokens=result.prompt_tokens + listed.prompt_tokens,
+        output_tokens=result.output_tokens + listed.output_tokens,
         latency_s=result.latency_s,
     )
 

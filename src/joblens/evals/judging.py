@@ -40,6 +40,7 @@ from joblens.cv.judge import (
 )
 from joblens.cv.match import CVMatch
 from joblens.cv.requirements import (
+    ANSWERS_VERSION,
     REQUIREMENTS_VERSION,
     RequirementBook,
     RequirementJudgement,
@@ -74,7 +75,9 @@ class JudgeVariant:
 
     def kind(self) -> str:
         if self.method == "requirements":
-            name = f"requirement-judgement-{REQUIREMENTS_VERSION}"
+            # Not the score's version: the arithmetic runs again on every
+            # read, so a stored answer outlives a change to it.
+            name = f"requirement-judgement-{ANSWERS_VERSION}"
         else:
             name = f"judgement-{PROMPT_VERSION}"
         if self.temperature:

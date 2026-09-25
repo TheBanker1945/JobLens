@@ -98,18 +98,25 @@ def test_different_work_is_weak_whatever_the_words_share():
 
 
 def test_years_short_costs_half_what_a_missing_skill_costs():
-    """The stretch rule, as arithmetic: 6.3's whole reason to exist."""
-    _, years_short = score([PYTHON, YEARS], [Status.MET, Status.MISSING], Work.SAME)
-    _, skill_short = score([PYTHON, CSHARP], [Status.MET, Status.MISSING], Work.SAME)
+    """The stretch rule, as arithmetic: 6.3's whole reason to exist.
 
-    assert years_short > skill_short
-    assert years_short == round(100 * (0.7 * (1 / 1.5) + 0.3))
-    assert skill_short == round(100 * (0.7 * 0.5 + 0.3))
+    Python met, 3 years missing: share 0.7 x (1 / 1.5) + 0.3 = 0.77, strong.
+    Python met, C# missing:      share 0.7 x (1 / 2)   + 0.3 = 0.65, possible.
+    """
+    assert score([PYTHON, YEARS], [Status.MET, Status.MISSING], Work.SAME) == (
+        Verdict.STRONG,
+        77,
+    )
+    assert score([PYTHON, CSHARP], [Status.MET, Status.MISSING], Work.SAME) == (
+        Verdict.POSSIBLE,
+        69,
+    )
 
 
 def test_a_nice_to_have_counts_a_quarter():
+    """share 0.7 x (1 / 1.25) + 0.3 = 0.86: a strong fit is the share itself."""
     _, fit = score([PYTHON, AZURE], [Status.MET, Status.MISSING], Work.SAME)
-    assert fit == round(100 * (0.7 * (1 / 1.25) + 0.3))
+    assert fit == 86
 
 
 def test_travel_or_location_is_not_a_skill_to_miss():
@@ -118,12 +125,29 @@ def test_travel_or_location_is_not_a_skill_to_miss():
 
 
 def test_partly_is_half():
+    """share 0.7 x 0.75 + 0.3 = 0.825."""
     _, fit = score([PYTHON, CSHARP], [Status.MET, Status.PARTLY], Work.SAME)
-    assert fit == round(100 * (0.7 * 0.75 + 0.3))
+    assert fit == 82
 
 
 def test_a_vacancy_that_asks_nothing_is_judged_on_the_work_alone():
-    assert score([], [], Work.NEXT) == (Verdict.POSSIBLE, 60)
+    """share 0.6: possible, in the upper half because nothing is in the way."""
+    assert score([], [], Work.NEXT) == (Verdict.POSSIBLE, 67)
+
+
+def test_inside_a_band_what_is_blocked_sorts_below_what_is_not():
+    """The first version clamped a sales job that met every requirement to
+    weak 39, above every job in the person's own line that was only short on
+    requirements. Now the blocked half of a band is the lower one."""
+    different = score([PYTHON], [Status.MET], Work.DIFFERENT)
+    short = score([PYTHON, CSHARP, YEARS], [Status.MISSING] * 3, Work.NEXT)
+    free = score([PYTHON, CSHARP], [Status.MET, Status.MISSING], Work.NEXT)
+    wished = score([PYTHON, CSHARP], [Status.MET, Status.MET], Work.SAME, conflicts=1)
+
+    assert different == (Verdict.WEAK, 13)  # share 0.7, over the blocked 0-19
+    assert short[0] is Verdict.WEAK and short[1] > different[1]
+    assert wished == (Verdict.POSSIBLE, 57)
+    assert free[0] is Verdict.POSSIBLE and free[1] > wished[1]
 
 
 def test_a_knockout_cannot_be_a_nice_to_have():
@@ -263,10 +287,22 @@ def test_one_vacancy_end_to_end(tmp_path):
 
     judged = judge_by_requirements(CV, MATCH, client, book=book)
 
-    # coverage 1 / 2.25 of the weight, work the same: 0.7 * 0.444 + 0.3
+    # coverage 1 / 2.25 of the weight, work the same: share 0.7 * 0.444 + 0.3
+    # = 0.61, possible, nothing in the way: the upper half, 58-74.
     assert judged.judgement.verdict is Verdict.POSSIBLE
-    assert judged.judgement.fit == 61
+    assert judged.judgement.fit == 68
     assert isinstance(judged.raw, RequirementJudgement)
+    # Both calls are on the bill: the list (read now) and the answers.
+    assert judged.prompt_tokens == 200
+
+
+def test_a_stored_list_costs_nothing_the_second_time(tmp_path):
+    cache = CVCache(tmp_path / "c.json")
+    RequirementBook(cache, FakeClient(requirements_reply(PYTHON)), model="m").of(MATCH)
+
+    again = RequirementBook(cache, FakeClient(), model="m").of(MATCH)
+
+    assert (again.prompt_tokens, again.output_tokens) == (0, 0)
 
 
 def test_a_wish_the_vacancy_contradicts_keeps_it_from_strong():
@@ -285,7 +321,7 @@ def test_a_wish_the_vacancy_contradicts_keeps_it_from_strong():
 
     assert free.judgement.verdict is Verdict.STRONG
     assert bound.judgement.verdict is Verdict.POSSIBLE
-    assert bound.judgement.fit == 74
+    assert bound.judgement.fit == 57  # the top of the blocked half
     assert bound.judgement.gaps[-1].requirement == "fulltime (a wish on your CV)"
 
 

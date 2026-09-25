@@ -40,6 +40,11 @@ from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
 from joblens.cv.match import DEFAULT_STYLE, prepare_cv, rank_cv, styles_of
 from joblens.cv.outcome import Fit, Outcome, assess
 from joblens.cv.read import UnreadableCVError
+from joblens.cv.requirements import (
+    REQUIREMENTS_VERSION,
+    RequirementBook,
+    judge_by_requirements,
+)
 from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
@@ -81,6 +86,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--no-explain", action="store_true", help="retrieval only: no model calls"
+    )
+    parser.add_argument(
+        "--judge",
+        choices=["holistic", "requirements"],
+        default="holistic",
+        help="one verdict per vacancy in one go (prompt 3.6), or one answer per "
+        "requirement added up in code (6.3)",
     )
     args = parser.parse_args()
 
@@ -151,7 +163,13 @@ def main() -> int:
 
             print(f"judging {len(matches)} vacancies ...", flush=True)
             judged, failures = judge_matches(
-                prepared.text, matches, client, mode=default_mode(cv_settings)
+                prepared.text,
+                matches,
+                client,
+                mode=default_mode(cv_settings),
+                judge=requirement_judge(client, cv_settings)
+                if args.judge == "requirements"
+                else None,
             )
     except UnreadableCVError as err:
         print(err)
@@ -183,7 +201,7 @@ def main() -> int:
         embed_model=embed_settings.model,
         judge_model=cv_settings.model,
         cv_style=args.style,
-        prompt_version=PROMPT_VERSION,
+        prompt_version=judge_version(args.judge),
         top=args.top,
     )
     footer(
@@ -217,7 +235,32 @@ def header(prepared, args, corpus, indexed, embed_settings, cv_settings) -> None
     # dropped here is rejected before it can be given so much as a score.
     if line := corpus.funnel.line():
         print(line)
-    print(f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}\n")
+    print(f"judged by {cv_settings.model}, {judge_version(args.judge)}\n")
+
+
+def judge_version(judge: str) -> str:
+    """What a run's judgements are comparable with. compare_runs.py refuses two
+    runs whose versions differ, and two judges are two scales."""
+    if judge == "requirements":
+        return f"requirements {REQUIREMENTS_VERSION}"
+    return PROMPT_VERSION
+
+
+def requirement_judge(client, settings):
+    """The 6.3 judge, with every vacancy's requirements kept between runs."""
+    book = RequirementBook(
+        CVCache(CACHE_DIR / "requirements.json"),
+        client,
+        model=settings.model,
+        mode=default_mode(settings),
+    )
+
+    def judge(cv_text, match):
+        return judge_by_requirements(
+            cv_text, match, client, book=book, mode=default_mode(settings)
+        )
+
+    return judge
 
 
 def cv_style(value: str) -> str:
