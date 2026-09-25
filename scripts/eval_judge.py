@@ -62,7 +62,6 @@ from joblens.config import load_llm_settings
 from joblens.corpus import load_corpus
 from joblens.cv.documents import QueryPart
 from joblens.cv.judge import (
-    PROMPT_VERSION,
     Judged,
     Verdict,
 )
@@ -110,6 +109,13 @@ def main() -> int:
         help="judge every labelled vacancy instead of the retrieval shortlist",
     )
     parser.add_argument(
+        "--judge",
+        choices=["holistic", "requirements"],
+        default="holistic",
+        help="one verdict in one go (judge.py), or one answer per requirement "
+        "added up in code (requirements.py, 6.3)",
+    )
+    parser.add_argument(
         "--temperature", type=float, default=0.0, help="the judge's temperature"
     )
     parser.add_argument(
@@ -149,14 +155,15 @@ def main() -> int:
     cv_settings = load_llm_settings(prefix="CV")
     if args.thinking:
         cv_settings = cv_settings.model_copy(update={"thinking": args.thinking == "on"})
-    args.variant = JudgeVariant(args.temperature, cv_settings.thinking, args.sample)
+    args.variant = JudgeVariant(
+        args.temperature, cv_settings.thinking, args.sample, args.judge
+    )
     embed_settings = load_llm_settings(prefix="EMBED")
     cache = CVCache(CACHE_DIR / "cv-profiles.json")
     chosen = "every labelled vacancy" if args.labelled else f"top {args.top}"
     print(
         f"{len(labels)} CVs x {chosen} of {len(corpus)} vacancies, "
-        f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}, "
-        f"{args.variant.describe()}"
+        f"judged by {cv_settings.model}, {args.variant.describe()}"
     )
 
     rows: list[CVRun] = []
@@ -226,6 +233,7 @@ def judge_one(
         model=cv_settings.model,
         mode=default_mode(cv_settings),
         fresh=args.fresh,
+        requirements=CVCache(CACHE_DIR / "requirements.json"),
     )
     for failure in failures:
         print(f"    failed: {failure}")
