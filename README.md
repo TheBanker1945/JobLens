@@ -294,6 +294,18 @@ only their own CVs, runs and matches, can download all of it
 request that changes something must carry the header `X-JobLens: 1`, which
 another website cannot make your browser send.
 
+**Your own AI, or ours within an allowance.** Without a key of your own, your
+CV is read and your matches judged by JobLens's model (Gemini), and a tester
+has a monthly allowance on it (default $1, about 25 matches; all testers
+together $10). With your own key -- Gemini, OpenAI, Anthropic, OpenRouter or
+DeepSeek, or a local Ollama or LM Studio when JobLens runs on your machine --
+there is no limit, and your CV text goes to that provider instead. The key is
+tested with one small call before it is kept, stored encrypted with the
+server's `JOBLENS_SECRET_KEY` (`scripts/db.py new-secret`), and never shown
+again. The embedding model stays JobLens's either way: a CV is only comparable
+with vacancies embedded by the same model. `GET /api/usage` shows what you
+spent.
+
 ## The viewer: reviewing a run, and marking what it got wrong
 
 ```bash
@@ -333,6 +345,7 @@ down in `.env.example`:
 |---------|---------|--------------|
 | `CV_*` | `gemini-3.8-flash` | your CV, redacted as described above |
 | `EMBED_*` | `gemini-embedding-2` | vacancies, and your CV when it is matched against them |
+| your own key (web app, 7.6) | none | your CV and the vacancies it is judged against, if you add one |
 
 Swapping either for the commented-out Ollama block keeps that data on your own
 machine. For embeddings that costs about 13 points of hit@1, measured; what it

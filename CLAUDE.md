@@ -89,7 +89,19 @@ conceptually, not just have working code.
   reaches a server log, and opening a link shows a button rather than signing
   in (chat previews would use it up). Cookies must be Secure anywhere but
   127.0.0.1 (create_app refuses otherwise). No dev-user bypass exists; do not
-  add one. A match is a job (jobs table, one open per person,
+  add one.
+- Bring your own AI (7.6): a person may store one key for the `cv` role only
+  (embeddings stay the operator's: one vector space). Providers come from the
+  fixed list in src/joblens/llm/presets.py -- never a user-typed base URL
+  (SSRF); local ones only when allow_local_providers (the server is on the
+  user's machine). A key is tested with one call before it is stored,
+  encrypted with JOBLENS_SECRET_KEY (joblens/vault.py, Fernet; never hand-roll
+  crypto), never returned (a 4-character hint only), and never exported. A
+  model is suggested only where measured; never invent model ids. Every paid
+  call is recorded in `usage` with whose key paid; testers on the operator key
+  have JOBLENS_TESTER_MONTHLY_USD (default 1.00) and all testers together
+  JOBLENS_OPERATOR_MONTHLY_USD (10.00), checked before a paid step (402 when
+  spent); the owner and own keys are never stopped. A match is a job (jobs table, one open per person,
   enforced by a unique index), run in a thread (api/runner.py) by
   service/jobs.py, which always ends done or failed with a sentence; a restart
   marks open jobs interrupted. An upload is read, redacted and profiled once
