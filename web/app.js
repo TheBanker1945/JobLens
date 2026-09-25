@@ -182,7 +182,7 @@ function renderDetail(row) {
       detail.append(el("h4", {}, "what the vacancy asks for that your CV does not show"));
       for (const gap of row.gaps) {
         detail.append(el("div", { class: "claim" },
-          el("div", {}, `${gap.requirement} (${gap.required ? "required" : "a plus"})`),
+          el("div", {}, `${gap.requirement} (${gap.knockout ? "rules you out" : gap.required ? "required" : "a plus"})`),
           el("q", {}, gap.quote)));
       }
     }

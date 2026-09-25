@@ -64,10 +64,7 @@ from joblens.cv.documents import QueryPart
 from joblens.cv.judge import (
     PROMPT_VERSION,
     Judged,
-    MatchJudgement,
     Verdict,
-    judge_matches,
-    verify,
 )
 from joblens.cv.match import DEFAULT_STYLE, CVMatch, prepare_cv, rank_cv
 from joblens.cv.outcome import Fit, assess
@@ -76,7 +73,7 @@ from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
 from joblens.embeddings.store import CachedEmbedder, cache_path
-from joblens.evals.judging import concordance, reordered_ndcg
+from joblens.evals.judging import JudgeVariant, concordance, reordered_ndcg
 from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd, format_cost
@@ -113,6 +110,21 @@ def main() -> int:
         help="judge every labelled vacancy instead of the retrieval shortlist",
     )
     parser.add_argument(
+        "--temperature", type=float, default=0.0, help="the judge's temperature"
+    )
+    parser.add_argument(
+        "--thinking",
+        choices=["on", "off"],
+        help="override CV_THINKING for the judge (and name the answers after it)",
+    )
+    parser.add_argument(
+        "--sample",
+        type=int,
+        default=1,
+        help="ask again as a separate stored answer: 2 is the second run of the "
+        "same question, which is how run-to-run noise is measured",
+    )
+    parser.add_argument(
         "--style", default=DEFAULT_STYLE, help="how the CV asks, as in match_cv.py"
     )
     parser.add_argument(
@@ -135,18 +147,25 @@ def main() -> int:
 
     corpus = load_corpus(args.corpus).extracted()
     cv_settings = load_llm_settings(prefix="CV")
+    if args.thinking:
+        cv_settings = cv_settings.model_copy(update={"thinking": args.thinking == "on"})
+    args.variant = JudgeVariant(args.temperature, cv_settings.thinking, args.sample)
     embed_settings = load_llm_settings(prefix="EMBED")
     cache = CVCache(CACHE_DIR / "cv-profiles.json")
     chosen = "every labelled vacancy" if args.labelled else f"top {args.top}"
     print(
         f"{len(labels)} CVs x {chosen} of {len(corpus)} vacancies, "
-        f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}"
+        f"judged by {cv_settings.model}, prompt {PROMPT_VERSION}, "
+        f"{args.variant.describe()}"
     )
 
     rows: list[CVRun] = []
     tokens_in = tokens_out = 0
     try:
-        with LLMClient(cv_settings) as client:
+        # Five retries, not the default two: an eval runs a hundred calls into
+        # whatever demand spike the provider is having (6.2 lost 14 of 124 to
+        # "503 high demand"), and a failed call is only a hole in the table.
+        with LLMClient(cv_settings, max_retries=5) as client:
             for one in labels:
                 run, paid = judge_one(
                     one, corpus, client, cv_settings, embed_settings, cache, store, args
@@ -200,35 +219,18 @@ def judge_one(
             "this shortlist",
         )
 
-    kind = f"judgement-{PROMPT_VERSION}"
-    stored, todo = [], []
-    for match in matches:
-        key = _key(prepared.text, match)
-        hit = None if args.fresh else cache.get(kind, cv_settings.model, key)
-        if hit is None:
-            todo.append(match)
-        else:
-            stored.append(_rebuild(hit, match, prepared.text))
-
-    def keep(one: Judged) -> None:
-        cache.put(
-            kind,
-            cv_settings.model,
-            _key(prepared.text, one.match),
-            (one.raw or one.judgement).model_dump(mode="json"),
-        )
-
-    fresh, failures = judge_matches(
-        prepared.text,
-        todo,
+    judged, failures, paid = args.variant.judge(
+        [(prepared.text, match) for match in matches],
         client,
+        cache,
+        model=cv_settings.model,
         mode=default_mode(cv_settings),
-        on_judged=keep,
+        fresh=args.fresh,
     )
     for failure in failures:
         print(f"    failed: {failure}")
-    run.judged = sorted(stored + fresh, key=lambda j: j.rank_key, reverse=True)
-    return run, len(fresh)
+    run.judged = judged
+    return run, paid
 
 
 def shortlist(prepared, corpus, client, cv_settings, embed_settings, cache, args):
@@ -281,23 +283,6 @@ def _newest_ranking(cv: str, store: Store):
         if summary.cv == cv and summary.ranked:
             return summary.id, store.load_run(summary.id).ranked_by_key()
     return "", {}
-
-
-def _key(cv_text: str, match) -> str:
-    return f"{match.vacancy.key}\0{cv_text}\0{match.vacancy.text}"
-
-
-def _rebuild(payload: dict, match, cv_text: str) -> Judged:
-    """A stored answer, checked again with today's `verify`."""
-    raw = MatchJudgement.model_validate(payload)
-    checked = verify(raw, cv_text, match.vacancy.text)
-    return Judged(
-        match=match,
-        judgement=checked.judgement,
-        dropped=checked.dropped,
-        quotes=checked.quotes,
-        raw=raw,
-    )
 
 
 def print_faithfulness(rows) -> None:

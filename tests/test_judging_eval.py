@@ -2,7 +2,23 @@
 
 import pytest
 
-from joblens.evals.judging import concordance, reordered_ndcg
+from joblens.evals.judging import JudgeVariant, concordance, reordered_ndcg
+
+
+def test_the_default_variant_keeps_the_name_old_answers_are_stored_under():
+    """Every judgement bought before 6.2 is under "judgement-3.6"."""
+    assert JudgeVariant().kind("3.6") == "judgement-3.6"
+
+
+def test_every_setting_that_changes_the_answer_is_in_its_name():
+    names = {
+        JudgeVariant().kind("3.7"),
+        JudgeVariant(temperature=1.0).kind("3.7"),
+        JudgeVariant(thinking=True).kind("3.7"),
+        JudgeVariant(sample=2).kind("3.7"),
+        JudgeVariant(1.0, True, 2).kind("3.7"),
+    }
+    assert len(names) == 5
 
 
 def test_concordance_is_one_when_every_pair_is_the_right_way_round():

@@ -24,6 +24,7 @@ from enum import StrEnum
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from joblens.cv.match import CVMatch
 from joblens.cv.verify import quoted, searchable
@@ -34,6 +35,9 @@ from joblens.llm.types import ChatClient
 # when the model, the rubric and this prompt are the same, so the prompt has a
 # version and the report prints it. Bump it whenever SYSTEM_PROMPT or the bands
 # change, and old numbers stop pretending to be comparable with new ones.
+#
+# 3.7 (6.2) was measured and did not pass the rule written before it ran; it is
+# in the history at commit 649ade4 and docs/learning-log.md says why.
 PROMPT_VERSION = "3.6"
 
 
@@ -79,6 +83,10 @@ class Gap(BaseModel):
         description="true if the vacancy states this as a requirement (eis, "
         "'je hebt', 'minimaal'), false if it is a nice-to-have ('pré', 'plus')."
     )
+    # Rules the person out on its own. Not asked of this prompt -- left out of
+    # the schema the model sees, so 3.6 is exactly the prompt it was -- and set
+    # by the requirement judge (cv/requirements.py), which knows it per line.
+    knockout: SkipJsonSchema[bool] = False
 
 
 class MatchJudgement(BaseModel):
@@ -175,6 +183,7 @@ def judge_match(
     client: ChatClient,
     *,
     mode: Mode = "schema",
+    temperature: float = 0.0,
 ) -> "Judged":
     """One vacancy, one call, and the quotes checked before it comes back."""
     vacancy = match.vacancy
@@ -189,8 +198,9 @@ def judge_match(
         system_prompt=SYSTEM_PROMPT,
         mode=mode,
         max_tokens=MAX_OUTPUT_TOKENS,
+        temperature=temperature,
     )
-    checked = verify(result.details, cv_text, vacancy.text)
+    checked = verify(result.details, cv_text, shown_vacancy(match))
     return Judged(
         match=match,
         judgement=checked.judgement,
@@ -201,6 +211,19 @@ def judge_match(
         output_tokens=result.output_tokens,
         latency_s=result.latency_s,
     )
+
+
+def shown_vacancy(match: CVMatch) -> str:
+    """The vacancy exactly as the judge was shown it: its heading line, then the
+    advert. What a gap quote is checked against.
+
+    Until 6.2 only the advert was, and the only two quotes dropped over 751 in
+    6.1's baseline were the model quoting the heading -- "Medior /Senior Java
+    Software Engineer (Keylane · Utrecht)" -- which it had been given. Checking
+    the text the model saw is not a loosening: nothing it was not shown passes.
+    The "## The vacancy:" label is ours and is left out, so it cannot be quoted.
+    """
+    return f"{match.vacancy.title}{_where(match)}\n\n{match.vacancy.text}"
 
 
 def _where(match: CVMatch) -> str:
@@ -298,6 +321,7 @@ def judge_matches(
     client: ChatClient,
     *,
     mode: Mode = "schema",
+    temperature: float = 0.0,
     workers: int = WORKERS,
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
@@ -312,25 +336,54 @@ def judge_matches(
     caller can store it before the next one lands: an eval that pays for a
     hundred calls should not lose all of them to the hundred-and-first.
     """
+    return judge_pairs(
+        [(cv_text, match) for match in matches],
+        client,
+        mode=mode,
+        temperature=temperature,
+        workers=workers,
+        on_done=on_done,
+        on_judged=on_judged,
+    )
+
+
+def judge_pairs(
+    pairs: list[tuple[str, CVMatch]],
+    client: ChatClient,
+    *,
+    mode: Mode = "schema",
+    temperature: float = 0.0,
+    workers: int = WORKERS,
+    on_done=None,
+    on_judged: Callable[[Judged], None] | None = None,
+) -> tuple[list[Judged], list[str]]:
+    """`judge_matches` for pairs that do not share a CV.
+
+    A person's shortlist is one CV against many vacancies; an external benchmark
+    is two hundred CVs against ten job descriptions. The call is the same.
+    """
     judged: list[Judged] = []
     failures: list[str] = []
 
-    def one(match: CVMatch):
-        return match, judge_match(cv_text, match, client, mode=mode)
+    def one(pair: tuple[str, CVMatch]):
+        cv_text, match = pair
+        return match, judge_match(
+            cv_text, match, client, mode=mode, temperature=temperature
+        )
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for match, result in _as_completed(pool, matches, one, failures):
+        for match, result in _as_completed(pool, pairs, one, failures):
             judged.append(result)
             if on_judged:
                 on_judged(result)
             if on_done:
-                on_done(len(judged) + len(failures), len(matches), match)
+                on_done(len(judged) + len(failures), len(pairs), match)
     return sorted(judged, key=lambda j: j.rank_key, reverse=True), failures
 
 
-def _as_completed(pool, matches, work, failures):
+def _as_completed(pool, pairs, work, failures):
     """Yield results as they arrive, so progress means what it says."""
-    futures = {pool.submit(work, match): match for match in matches}
+    futures = {pool.submit(work, pair): pair[1] for pair in pairs}
     for future in as_completed(futures):
         match = futures[future]
         try:

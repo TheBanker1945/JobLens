@@ -307,7 +307,13 @@ def show(position: int, one: Judged) -> None:
     if judgement.gaps:
         print("    what you are missing:")
         for gap in judgement.gaps:
-            mark = "required" if gap.required else "a plus"
+            mark = (
+                "rules you out"
+                if gap.knockout
+                else "required"
+                if gap.required
+                else "a plus"
+            )
             print(f"      - {gap.requirement}  ({mark})")
             print(f'        the vacancy: "{shorten(gap.vacancy_quote)}"')
     if one.dropped:

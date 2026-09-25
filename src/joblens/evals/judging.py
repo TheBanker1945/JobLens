@@ -28,6 +28,111 @@ is a person, and there are five of them.
 
 import math
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+
+from joblens.cv.judge import (
+    PROMPT_VERSION,
+    Judged,
+    MatchJudgement,
+    judge_pairs,
+    shown_vacancy,
+    verify,
+)
+from joblens.cv.match import CVMatch
+from joblens.cv.store import CVCache
+from joblens.llm.structured import Mode
+from joblens.llm.types import ChatClient
+
+
+@dataclass(frozen=True)
+class JudgeVariant:
+    """How a judgement was asked for, beyond the model and the prompt version.
+
+    Every one of these changes the answer, so every one is part of the name the
+    answer is stored under -- otherwise a run with thinking on would be handed
+    the answers stored without it, and report them as its own. The default
+    variant keeps the name 3.6 used, so nothing already paid for is lost.
+
+    `sample` asks the same question again as a separate entry: the only way to
+    know how far two identical runs differ, which is the smallest difference
+    worth believing when two *different* runs are compared.
+    """
+
+    temperature: float = 0.0
+    thinking: bool = False
+    sample: int = 1
+
+    def kind(self, prompt_version: str) -> str:
+        name = f"judgement-{prompt_version}"
+        if self.temperature:
+            name += f"-t{self.temperature:g}"
+        if self.thinking:
+            name += "-thinking"
+        if self.sample > 1:
+            name += f"#{self.sample}"
+        return name
+
+    def judge(
+        self,
+        pairs: list[tuple[str, CVMatch]],
+        client: ChatClient,
+        cache: CVCache,
+        *,
+        model: str,
+        mode: Mode,
+        fresh: bool = False,
+    ) -> tuple[list[Judged], list[str], int]:
+        """Judge what is not stored yet, reuse what is, and store as it arrives.
+
+        Returns the judgements best first, the failures, and how many were paid
+        for. A stored answer is the model's raw one and is checked again with
+        today's `verify`, so a change to the check is measured for free.
+        """
+        kind = self.kind(PROMPT_VERSION)
+        stored, todo = [], []
+        for cv_text, match in pairs:
+            hit = None if fresh else cache.get(kind, model, pair_key(cv_text, match))
+            if hit is None:
+                todo.append((cv_text, match))
+            else:
+                stored.append(rebuild(hit, match, cv_text))
+
+        # A judgement knows its vacancy and not its CV, and one CV can be in
+        # many pairs, so the key is found through the match it was asked with.
+        keys = {id(match): pair_key(cv_text, match) for cv_text, match in todo}
+
+        def keep(one: Judged) -> None:
+            payload = (one.raw or one.judgement).model_dump(mode="json")
+            cache.put(kind, model, keys[id(one.match)], payload)
+
+        fresh_ones, failures = judge_pairs(
+            todo, client, mode=mode, temperature=self.temperature, on_judged=keep
+        )
+        judged = sorted(stored + fresh_ones, key=lambda j: j.rank_key, reverse=True)
+        return judged, failures, len(fresh_ones)
+
+    def describe(self) -> str:
+        thinking = "thinking on" if self.thinking else "thinking off"
+        sample = f", sample {self.sample}" if self.sample > 1 else ""
+        return f"temperature {self.temperature:g}, {thinking}{sample}"
+
+
+def pair_key(cv_text: str, match: CVMatch) -> str:
+    """What a stored judgement is looked up by: exactly the two texts it read."""
+    return f"{match.vacancy.key}\0{cv_text}\0{match.vacancy.text}"
+
+
+def rebuild(payload: dict, match: CVMatch, cv_text: str) -> Judged:
+    """A stored answer, checked again with today's `verify`."""
+    raw = MatchJudgement.model_validate(payload)
+    checked = verify(raw, cv_text, shown_vacancy(match))
+    return Judged(
+        match=match,
+        judgement=checked.judgement,
+        dropped=checked.dropped,
+        quotes=checked.quotes,
+        raw=raw,
+    )
 
 
 def concordance(scored: Iterable[tuple[float, int]]) -> float | None:

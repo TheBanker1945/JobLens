@@ -15,6 +15,7 @@ from joblens.cv.judge import (
     Verdict,
     judge_match,
     judge_matches,
+    shown_vacancy,
     verify,
 )
 from joblens.cv.match import CVMatch
@@ -59,7 +60,12 @@ def evidence(quote: str) -> dict:
 
 
 def gap(quote: str) -> dict:
-    return {"requirement": "hbo", "vacancy_quote": quote, "required": True}
+    return {
+        "requirement": "hbo",
+        "vacancy_quote": quote,
+        "required": True,
+        "knockout": False,
+    }
 
 
 def test_a_quote_that_crosses_a_line_break_is_still_a_quote():
@@ -250,3 +256,27 @@ def test_a_quote_must_be_whole_words_in_the_source(quote, source):
 )
 def test_whole_word_quotes_still_pass(quote, source):
     assert quoted(quote, searchable(source))
+
+
+def test_the_knockout_flag_is_not_part_of_what_3_6_asks():
+    """Gap carries `knockout` for the requirement judge; the holistic prompt's
+    schema must not, or 3.6 would no longer be the prompt it was measured as."""
+    gap_schema = MatchJudgement.model_json_schema()["$defs"]["Gap"]
+    assert "knockout" not in gap_schema["properties"]
+    assert (
+        judgement(gaps=[gap("een afgeronde hbo-opleiding")]).gaps[0].knockout is False
+    )
+
+
+def test_the_heading_the_model_was_shown_can_be_quoted():
+    """The two quotes 6.1's baseline dropped were the vacancy's heading line,
+    which the model had been given."""
+    shown = shown_vacancy(MATCH)
+
+    kept = verify(
+        judgement(gaps=[gap("Verpleegkundige (Fivoor · Utrecht)")]), CV, shown
+    )
+    ours = verify(judgement(gaps=[gap("The vacancy: Verpleegkundige")]), CV, shown)
+
+    assert len(kept.judgement.gaps) == 1
+    assert ours.judgement.gaps == []

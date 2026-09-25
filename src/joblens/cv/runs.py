@@ -86,6 +86,9 @@ class GapRow(BaseModel):
     requirement: str
     quote: str
     required: bool
+    # Rules the person out on its own (6.2). False on runs stored before it,
+    # which is what they meant: 3.6 had no way to say it.
+    knockout: bool = False
 
 
 class ClaimRow(BaseModel):
@@ -233,6 +236,7 @@ def build_record(
                     requirement=gap.requirement,
                     quote=gap.vacancy_quote,
                     required=gap.required,
+                    knockout=gap.knockout,
                 )
                 for gap in one.judgement.gaps
             ],

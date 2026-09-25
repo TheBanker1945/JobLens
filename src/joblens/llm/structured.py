@@ -72,11 +72,16 @@ def extract_structured[T: BaseModel](
     mode: Mode = "schema",
     max_attempts: int = 2,
     max_tokens: int = MAX_OUTPUT_TOKENS,
+    temperature: float = 0.0,
 ) -> StructuredResult[T]:
     """`system_prompt` must contain `{schema}`: the JSON schema goes in there.
 
     The field descriptions on the pydantic model are part of that schema, so they
     reach the model as per-field instructions rather than as documentation.
+
+    `temperature` is 0 for extraction, which wants the same answer twice. The
+    judge measures what a different value does (6.2): Google recommends 1.0 for
+    every Gemini 3 model and warns that lower values can degrade reasoning.
     """
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
@@ -103,7 +108,7 @@ def extract_structured[T: BaseModel](
     for _ in range(max_attempts):
         result = client.chat(
             messages,
-            temperature=0.0,
+            temperature=temperature,
             response_format=response_format,
             max_tokens=max_tokens,
         )
