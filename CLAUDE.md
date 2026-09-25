@@ -69,6 +69,12 @@ conceptually, not just have working code.
   it is shown (src/joblens/cv/judge.py). Never loosen that check into a fuzzy
   match; normalising formatting is safe, accepting a paraphrase is not. Bump
   PROMPT_VERSION when the prompt or the bands change.
+- The judge is measured by the order it puts labelled vacancies in
+  (`eval_judge.py --labelled`: concordance and nDCG against retrieval's order),
+  and against TalentCLEF 2026's human expert labels. Two identical runs of 3.6
+  differ by 0.09 concordance on the real CV (6.2), so read every number there
+  as a range and beat the noise before believing a change. Prompt 3.7 (lenient
+  on years and degrees) did not pass its rule and is not the judge.
 - A PDF can carry characters it does not contain: a subset font whose ToUnicode
   map points into the private use area (measured on a real CV, 2026-09-22 — 114
   glyphs, every year in the work history). src/joblens/cv/read.py marks each one
@@ -213,6 +219,7 @@ conceptually, not just have working code.
 - uv run python scripts/eval_cv_matching.py                 # which CV style wins
 - uv run python scripts/eval_judge.py                       # is the judge honest?
 - uv run python scripts/eval_judge.py --labelled            # judge vs every label, no index
+- uv run python scripts/eval_judge_talentclef.py            # judge vs human expert labels
 - uv run python scripts/compare_runs.py                     # this run vs the last
 
 ## Rules

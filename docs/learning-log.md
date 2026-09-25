@@ -2383,3 +2383,137 @@ in `eval_judge.py --labelled` on all five CVs:
    written by Claude with the same "a hard requirement caps it" rule the judge
    follows, so a small drop there can be the point; a large one is a broken
    judge.
+
+## 6.2 — Prompt 3.7, measured and not kept
+
+The analysis behind phase 6 proposed one prompt that fixed everything it
+found, and this milestone built it and then did what 6.1 said: ran it against a
+rule written down first. It did not pass, and 3.6 is still the judge.
+
+### What 3.7 changed
+
+- **The reasons before the verdict.** A model writes a JSON answer in the order
+  the schema lists its fields, and Gemini keeps that order. 3.6 lists `verdict`
+  and `fit` first, so both were decided before any evidence was written.
+- **Knockouts are a short list, marked on the gap**: a registration or licence
+  the work legally needs, the right to work, student status for a student job,
+  a language at the stated level. The schema holds the verdict to them, as it
+  holds the fit to its band.
+- **Years, degrees and seniority are a stretch**: named, weighed, and never
+  `weak` on their own. People apply meeting about half of an advert's
+  requirements (a Behavioural Insights Team trial with 10,000+ job seekers:
+  52-56%), and prior experience predicts little (r = .06 with performance in a
+  2019 meta-analysis).
+- **Dutch adverts' conventions**: "hbo werk- en denkniveau" is a level, not a
+  diploma; "je werkt met" describes the job; "pré" and "mooi meegenomen" mark a
+  nice-to-have. A requirement that lists three tools is three requirements.
+
+### The first number was the noise
+
+The rule asks a new prompt to beat 3.6 by more than two runs of 3.6 differ, so
+`--sample 2` asked every question again, stored apart. Same prompt, same
+model, temperature 0:
+
+| cv | 3.6 run 1 | 3.6 run 2 |
+|---|---|---|
+| mohammed (real) | 0.75 | **0.84** |
+| lisa_de_vries | 0.97 | 0.98 |
+| sanne_vermeulen | 0.75 | 0.76 |
+| youssef_bakker | 0.90 | 0.90 |
+
+**On the real CV two identical runs differ by 0.09**, on the invented ones by
+0.01. The verdicts barely move -- two of 24 changed band -- but the vacancies
+Mahdi would apply to sit at fit 15 to 32 and the ones he would not at 15 to 25,
+all inside `weak`, so a wobble of five points reorders many pairs. The invented
+CVs have their vacancies spread over the whole range and do not feel it. Every
+number on this CV has to be read as a range, and the bar the rule sets for 3.7
+became 0.84.
+
+### Temperature: Google says 1.0, and it does not matter here
+
+Google "strongly recommends" temperature 1.0 for every Gemini 3 model and warns
+that lower "may lead to ... looping or degraded performance". The judge runs at
+0. `--temperature 1` on 3.6: 0.82 on the real CV, 0.80 / 0.98 / 0.91 on Sanne,
+Lisa and Youssef -- inside the range two runs at 0 already span. Nothing looped.
+It stays at 0, because the rule asks a change to earn its place and this one
+did not; the knob stays, because the next model may care.
+
+### 3.7 against 3.6
+
+`eval_judge.py --labelled`, every labelled vacancy of all five CVs, three runs
+of each prompt (two at temperature 0, one at 1):
+
+| cv | 3.6 | 3.7 |
+|---|---|---|
+| mohammed (real) | 0.75 / 0.84 / 0.82 | 0.84 / 0.81 / 0.83 |
+| lisa_de_vries | 0.97 / 0.98 / 0.98 | 0.94 / 0.98 / 0.96 |
+| sanne_vermeulen | 0.75 / 0.76 / 0.80 | **0.74 / 0.73 / 0.72** |
+| youssef_bakker | 0.90 / 0.90 / 0.91 | **0.82 / 0.84 / 0.84** |
+| ingrid (control) | 0 strong, 0 possible | 0 strong, 0 possible |
+| `weak` on a "would apply", all CVs | 10 | 5 / 8 / 5 |
+
+Against the rule: the control and the refusal hold (1), no more `strong` on a
+"would not apply" (2), the real CV's 0.81-0.84 is not above 3.6's 0.84 (3,
+**fails**), Youssef loses up to 0.08 and Sanne's worst falls to 0.72 (4,
+**fails**). The one thing 3.7 clearly did was halve the cheap mistake, and that
+is not what the rule measures -- it measures order.
+
+**Why Youssef lost is the useful part.** His CV states a region (Tilburg or
+Eindhoven) and full-time hours. 3.7 called two "logistiek medewerker" jobs
+outside that region `strong` at 85 and 80, and a part-time IKEA job `possible`.
+3.6 had called all three `weak`. The prompt still said "distance and hours
+matter when both sides state them"; the new stretch rules, meant for years and
+degrees, loosened everything else with them. A wish the CV itself states is not
+a requirement to stretch past, and 6.3 gives it a field of its own.
+
+### Human expert labels: TalentCLEF 2026
+
+Every judge number so far came from labels Claude wrote or one person wrote.
+TalentCLEF 2026 Task A publishes English job descriptions and résumés whose
+pairs were "annotated by human experts, who determined whether each résumé is
+suitable for a given job offer" (CC-BY 4.0, Zenodo 10.5281/zenodo.17625261).
+`scripts/eval_judge_talentclef.py` judges a fixed 200-pair sample of the
+development set (10 jobs x 20 résumés, seed 13; `data/raw/talentclef/README.md`
+says how it was drawn, and nothing of it is committed).
+
+What the label is limits what it says. It is binary and lenient -- a part-time
+shop assistant is a 1 for a sales director -- so a verdict counts as a yes when
+it is not `weak`; it is set per job, so the number is concordance *within* each
+job; and it is a recruiter's question, not a job seeker's, so it guards against
+a judge that says yes to everything rather than measuring "would I apply".
+
+| | 3.6 | 3.7 |
+|---|---|---|
+| concordance per job, lowest / median | 0.86 / 0.95 | 0.87 / 0.94 |
+| yes (strong or possible) to the experts' 1s | 64 / 94 | 79 / 94 |
+| yes to the experts' 0s | 6 / 105 | 9 / 106 |
+
+**The judge agrees with people who are not us.** Ten jobs from cashier to HVAC
+engineer, and the worst concordance is 0.86. 3.7 said yes to more of the 1s and
+a few more of the 0s: more lenient, not better at telling them apart. It is the
+same finding as the labelled eval from a different direction: the model reads
+fit well; what the prompt changes is where it draws the line.
+
+### What stays
+
+`704d426` returns the judge to 3.6, byte for byte -- a test compares the schema
+3.6 sends with the one measured in 6.1. 3.7 is in the history at `649ade4`.
+What was not the prompt stays:
+
+- quotes are checked against the vacancy **as the model was shown it**, heading
+  included: 6.1's two dropped quotes were the heading line, and re-checking the
+  stored answers now finds 751 of 751;
+- `--temperature`, `--thinking` and `--sample`, each part of the name an answer
+  is stored under, so no variant is handed another's answers;
+- `judge_pairs`, for pairs that do not share a CV, and the TalentCLEF eval;
+- five retries instead of two: Gemini answered "503, this model is currently
+  experiencing high demand" to 14 of 124 calls in one run, and a failed call is
+  a hole in a table;
+- a `knockout` flag on a gap, left out of the schema 3.6 sends, for 6.3.
+
+**Not measured: thinking.** 3.7 failed on where it drew the line, not on how
+hard it thought, and thinking roughly doubles the cost of a call. The switch is
+there (`--thinking on`) for when a variant earns the money.
+
+**What it cost.** About $4 of judge calls over two days, most of it the three
+runs of each prompt that the noise made necessary.
