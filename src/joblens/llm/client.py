@@ -13,6 +13,16 @@ from joblens.config import LLMSettings
 from joblens.llm.providers import thinking_params
 from joblens.llm.types import ChatResult, Message, Usage
 
+# How often the SDK asks again after a connection error, a 429 or a 5xx, waiting
+# 0.5, 1, 2, 4 and 8 seconds (its own backoff, plus jitter). The SDK's default
+# is 2. Measured 2026-09-24 while Gemini answered "high demand" 503s: of 94
+# calls, 18 succeeded only on the third to fifth retry -- calls that 2 would
+# have lost -- and a batch run at 2 left 26% of its judge calls unanswered
+# where 5 left 6%. A provider that is really down now takes about 15 seconds
+# to say so. This is our own paid API being busy, not a website refusing a
+# crawler: sources/polite.py never retries, and that rule is unchanged.
+MAX_RETRIES = 5
+
 
 class LLMClient:
     """Keeps one SDK client (and its open connections) for many calls."""
@@ -22,7 +32,7 @@ class LLMClient:
         settings: LLMSettings,
         *,
         timeout: float = 120.0,  # the SDK's default is 600 s
-        max_retries: int = 2,  # retries on connection errors, 429 and 5xx
+        max_retries: int = MAX_RETRIES,  # connection errors, 429 and 5xx
         http_client: DefaultHttpxClient | None = None,  # tests pass a fake server
     ):
         self.settings = settings

@@ -21,8 +21,12 @@ import re
 
 # Characters a model swaps without meaning to: a CV writes ' and the answer comes
 # back with the typographic version, or an em dash arrives as a hyphen.
+#
+# And the typographic ligatures a PDF can carry: a CV typeset in LaTeX says
+# "ﬁnding" where the model, and everyone reading it, says "finding".
 SUBSTITUTIONS = str.maketrans(
     {"’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-"}
+    | {"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"}
 )
 
 # Formatting, not words. The first version of this check threw away a perfectly
@@ -42,6 +46,19 @@ HEADING_HASH = re.compile(r"(?<!\w)#+")
 # Where a quote may start and end in the source: not inside a word. "+" and "#"
 # count as part of a word here, so "C" does not stand in for "C++" or "C#".
 INSIDE_A_WORD = r"\w+#"
+
+# A hyphen at the end of a line, once `searchable` has turned the line break
+# into a space: "Cool- blue". Between two letters only, so "2019 - 2021" and
+# "Engineer - Amsterdam" are not line breaks.
+LINE_END_HYPHEN = re.compile(r"(?<=[^\W\d_])- (?=[^\W\d_])")
+
+# How a hyphen at a line end may be read: as the text has it ("consul- tancy",
+# which is what a quote that stops at the break matches), as the typesetter
+# splitting a word ("Cool-⏎blue" is Coolblue), or as a real hyphen that
+# happened to fall there ("One-⏎Class" is One-Class). The page does not say
+# which of the last two it is; the first keeps every quote that passed before
+# this rule existed passing.
+LINE_END_READINGS = (None, "", "-")
 
 
 def searchable(text: str) -> str:
@@ -63,9 +80,28 @@ def quoted(quote: str, source: str) -> bool:
     make, passed by the one check that exists to stop that. Requiring the
     quote to start and end on a word boundary is a tightening: nothing that
     failed before can pass now.
+
+    A word broken over two lines is read both ways it can be read, on both
+    sides, and the quote has to match one reading exactly. On ten real CVs
+    (2026-09-24) seven of eleven dropped claims were true and quoted the way a
+    person reads "Cool-⏎blue" or "Univer-⏎sity"; LaTeX hyphenates, and every
+    CV written in it is one long line-break test. This is where a line ended,
+    not what the words are: a hyphen typed inside a line is left alone, so
+    "Javaontwikkelaar" is still not found in "Java-ontwikkelaar".
     """
     cleaned = searchable(quote).strip("\"'. ")
     if not cleaned:
         return False
-    pattern = rf"(?<![{INSIDE_A_WORD}]){re.escape(cleaned)}(?![{INSIDE_A_WORD}])"
+    return any(
+        _found(_read(cleaned, joined), _read(source, joined))
+        for joined in LINE_END_READINGS
+    )
+
+
+def _read(text: str, joined: str | None) -> str:
+    return text if joined is None else LINE_END_HYPHEN.sub(joined, text)
+
+
+def _found(quote: str, source: str) -> bool:
+    pattern = rf"(?<![{INSIDE_A_WORD}]){re.escape(quote)}(?![{INSIDE_A_WORD}])"
     return re.search(pattern, source) is not None

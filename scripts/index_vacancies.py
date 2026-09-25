@@ -23,6 +23,9 @@ Usage:
 
 import argparse
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
@@ -46,6 +49,13 @@ EXTRACTED_DIR = ROOT / "data" / "raw" / "extracted"
 CACHE_DIR = ROOT / "data" / "cache"
 DEFAULT_RUN = "gemini-3.8-flash"  # the default for vacancy extraction (CLAUDE.md)
 FLUSH_EVERY = 10  # write to disk this often, so a crash costs at most 10 extractions
+# Six at a time, as the judge does (cv/judge.py). One after the other, a backlog
+# of 767 new vacancies was a 42-minute job at 3.3 s each (2026-09-24).
+WORKERS = 6
+# The SDK already retries a 429 or 5xx twice with backoff, so an error that gets
+# here is one the provider kept giving. One is that vacancy's problem; this many
+# in a row is the provider's, and asking the next 500 vacancies changes nothing.
+STOP_AFTER_API_ERRORS = 10
 
 
 def main() -> int:
@@ -81,6 +91,7 @@ def main() -> int:
     budget = args.limit
     tokens = [0, 0]
     failures: list[str] = []
+    api_errors, stopped = 0, False
 
     with LLMClient(config.settings()) as client:
         for source in sources:
@@ -89,44 +100,114 @@ def main() -> int:
             todo = [v for v in vacancies if args.reextract or v.key not in cached]
             if budget is not None:
                 todo = todo[:budget]
-            done, failed, pending = 0, 0, []
-
-            for vacancy in todo:
-                try:
-                    result = extract_vacancy(vacancy.text, client, mode=config.mode)
-                except ExtractionError as err:
-                    failed += 1
-                    failures.append(f"{vacancy.key}: {err}")
-                    continue
-                pending.append(
-                    ExtractedVacancy(
-                        key=vacancy.key, model=config.model, details=result.details
-                    )
-                )
-                tokens[0] += result.prompt_tokens
-                tokens[1] += result.output_tokens
-                done += 1
-                if len(pending) >= FLUSH_EVERY:
-                    details_store.add(source, pending)
-                    pending = []
-                progress(f"  {source}: {done}/{len(todo)}")
-
-            details_store.add(source, pending)
-            progress("")  # the counter has served its purpose
+            batch = extract_batch(todo, client, config, details_store, source)
+            failures += batch.failures
+            api_errors += batch.api_errors
+            tokens[0] += batch.tokens[0]
+            tokens[1] += batch.tokens[1]
             if budget is not None:
-                budget -= done + failed
+                budget -= batch.done + batch.failed
             print(
                 f"{source:<12} {len(vacancies):>7} {len(cached):>6} "
-                f"{done:>5} {failed:>7}"
+                f"{batch.done:>5} {batch.failed:>7}"
             )
+            if batch.stopped:
+                stopped = True
+                print(
+                    f"\nstopped: {STOP_AFTER_API_ERRORS} API errors in a row, so the "
+                    "provider is refusing rather than one vacancy failing.\n"
+                    "Everything extracted so far is saved; the rest is picked up by "
+                    "the next run."
+                )
+                break
 
     print(f"\n{tokens[0]} prompt + {tokens[1]} output tokens{price(config, tokens)}")
     for failure in failures[:5]:
         print(f"  failed: {failure[:110]}")
 
+    # The API errors decide the exit code, so the nightly run reports them; a
+    # vacancy whose answer did not validate is that vacancy's, as before.
+    refused = stopped or api_errors > 0
     if args.skip_embedding:
-        return 0
-    return embed(store, details_store, sources, args.style)
+        return 1 if refused else 0
+    # Embedding still runs after a refusal: what was extracted is worth
+    # making searchable, and it is a different endpoint that may be fine.
+    return embed(store, details_store, sources, args.style) or (1 if refused else 0)
+
+
+@dataclass
+class Batch:
+    """What one source's extraction produced."""
+
+    done: int = 0
+    failed: int = 0
+    tokens: list[int] = field(default_factory=lambda: [0, 0])
+    failures: list[str] = field(default_factory=list)
+    api_errors: int = 0  # of `failed`: the provider refused, not the answer
+    stopped: bool = False  # the provider kept refusing; the rest was not asked
+
+
+def extract_batch(todo, client, config, details_store, source) -> Batch:
+    """Extract `todo`, WORKERS at a time, saving as results arrive.
+
+    Until 2026-09-24 this was a plain loop that caught only `ExtractionError`,
+    so the first 503 ("the model is experiencing high demand") left through the
+    top of the script: the remaining sources and the embedding step never ran,
+    and up to nine paid extractions waiting for the next flush were lost with it.
+    An API error is now that vacancy's failure, and what came back is flushed
+    whatever happens.
+    """
+    batch = Batch()
+    pending: list[ExtractedVacancy] = []
+    in_a_row = 0
+    stop = threading.Event()
+
+    def one(vacancy):
+        if stop.is_set():
+            return None  # not asked; the next run picks it up
+        return extract_vacancy(vacancy.text, client, mode=config.mode)
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        futures = {pool.submit(one, vacancy): vacancy for vacancy in todo}
+        try:
+            for future in as_completed(futures):
+                vacancy = futures[future]
+                try:
+                    result = future.result()
+                except ExtractionError as err:
+                    in_a_row = 0  # the provider answered; the answer was bad
+                    batch.failed += 1
+                    batch.failures.append(f"{vacancy.key}: {err}")
+                    continue
+                except openai.APIError as err:
+                    in_a_row += 1
+                    batch.failed += 1
+                    batch.api_errors += 1
+                    batch.failures.append(f"{vacancy.key}: {type(err).__name__}: {err}")
+                    if in_a_row >= STOP_AFTER_API_ERRORS:
+                        batch.stopped = True
+                        stop.set()
+                    continue
+                if result is None:
+                    continue
+                in_a_row = 0
+                pending.append(
+                    ExtractedVacancy(
+                        key=vacancy.key, model=config.model, details=result.details
+                    )
+                )
+                batch.tokens[0] += result.prompt_tokens
+                batch.tokens[1] += result.output_tokens
+                batch.done += 1
+                if len(pending) >= FLUSH_EVERY:
+                    details_store.add(source, pending)
+                    pending = []
+                progress(f"  {source}: {batch.done}/{len(todo)}")
+        finally:
+            stop.set()  # on an interrupt, what has not started returns at once
+            details_store.add(source, pending)
+            progress("")  # the counter has served its purpose
+    return batch
 
 
 def embed(
