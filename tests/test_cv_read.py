@@ -9,6 +9,7 @@ from conftest import DAMAGED_CV, SAMPLE_CVS, build_pdf, scanned_pdf
 from joblens.cv import read
 from joblens.cv.read import (
     REFUSE_ABOVE,
+    CVFile,
     UnreadableCVError,
     _collect_warnings,
     find_cv,
@@ -31,6 +32,41 @@ def test_reads_the_committed_pdf_including_its_second_page():
     assert document.pages == 2
     assert "Coolblue" in document.text  # page one
     assert "Vaardigheden" in document.text  # page two
+
+
+@pytest.mark.parametrize("name", ["lisa_de_vries.pdf", "lisa_de_vries.md"])
+def test_an_upload_reads_exactly_as_the_file_it_came_from(name):
+    """A browser hands over a name and bytes, not a path. Same text, same name."""
+    path = SAMPLE_CVS / name
+
+    from_disk = read_cv(path)
+    uploaded = read_cv(CVFile(name, path.read_bytes()))
+
+    assert uploaded.text == from_disk.text
+    assert uploaded.pages == from_disk.pages
+    assert uploaded.kind == from_disk.kind
+    assert uploaded.path.stem == "lisa_de_vries"  # what labels and runs call it
+
+
+def test_an_uploaded_file_name_is_never_a_place_on_disk():
+    """Only the last part of the name counts, and it is read for its suffix."""
+    with pytest.raises(UnreadableCVError, match="no extension"):
+        read_cv(CVFile("../../.env", b"GEMINI_API_KEY=secret"))
+
+    document = read_cv(CVFile("../../../etc/cv.md", b"# Jan\n" + b"Python. " * 40))
+    assert str(document.path) == "cv.md"
+
+
+def test_an_upload_keeps_line_ends_the_way_a_file_read_did():
+    """Path.read_text turned Windows line ends into newlines; bytes do not."""
+    windows = read_cv(CVFile("cv.txt", b"Jan\r\nPython\r\n"))
+
+    assert "\r" not in windows.text
+
+
+def test_text_that_is_not_utf8_is_refused_with_a_way_out():
+    with pytest.raises(UnreadableCVError, match="not UTF-8"):
+        read_cv(CVFile("cv.txt", "Curriculum vitae: café".encode("cp1252")))
 
 
 def test_the_pdf_and_the_markdown_say_the_same_things():

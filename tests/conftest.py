@@ -59,6 +59,9 @@ class FakeClient:
             latency_s=0.5,
         )
 
+    def close(self):
+        """The service closes every client it opens; a fake has nothing to close."""
+
 
 # A CV damaged the way a real one was in 3.6.1: the PDF's own font maps some
 # characters into the private use area, so the file does not contain what it

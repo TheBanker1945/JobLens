@@ -50,6 +50,12 @@ conceptually, not just have working code.
   src/joblens/storage/ (file-backed today). A run is addressed by an id, never by
   a path. Labels for a real CV live in data/raw/cv-labels/ and are private by
   default; only the four invented CVs' labels are committed, as evidence.
+- Matching a CV is a call, not a script: src/joblens/service/ (`rank`, then
+  `judge`; 7.1). Scripts and the coming API are its callers. A service takes
+  settings (`Models`), data (a path or a `CVFile` upload) and a store, and
+  raises only `ServiceError`s; it never reads .env and never prints, because a
+  user's own key arrives as settings. Phase 7 (the web app) is planned and its
+  decisions recorded in docs/web-app-phase-7.md.
 - A mark in the viewer requires a reason and is stored verbatim with what the
   judge said at the time. Never infer a rule from a pattern of answers and write
   it down as if the user had stated it.

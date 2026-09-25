@@ -2792,3 +2792,56 @@ CV's shortlist does not, so no labelled vacancy moves.
 And the re-run showed why the quote check is not loosened: of three claims it
 dropped for one CV, two stitched non-adjacent lines of a skills table together
 and one — "PostgreSQL 3 Jaar" — is on no line of that CV at all.
+
+## 7.1 — Matching as a call, so something other than a terminal can ask for it
+
+Phase 7's first step (docs/web-app-phase-7.md), and like 4.2 it changes nothing
+you can see: the same CV gives the same ranking, the same verdicts and the same
+stored run. What changed is who can ask. Until now the whole match -- read the CV,
+rank the corpus, judge the head, add it up, store it -- was `main()` in
+`scripts/match_cv.py`, woven between the prints. A web request cannot call a
+`main()`: it cannot hand it an upload, cannot read its progress, and could only
+learn what went wrong by parsing what was printed.
+
+**`joblens.service` is that sequence with the prints taken out.** Two calls,
+because the two halves cost different things. `rank` reads the CV and orders
+every vacancy: one profile and one wishlist advert (both cached) and arithmetic
+over stored vectors -- free the second time, a few seconds. `judge` sends the
+shortlist to a model: 0.36 cent and about two seconds a vacancy, 20 to 60 seconds
+a run. A page can show the ranking at once and fill in verdicts as they arrive,
+and the tester freemium in 7.6 can give the first away and meter the second.
+
+**Settings in, never read inside.** `Models(cv=..., embed=...)` arrives from the
+caller; nothing in the service reads `.env`. That is the whole of what "bring your
+own AI" asks of this layer: the API will build `Models` from a user's stored key
+instead of from the environment. `embed` stays the operator's even then, because
+a CV is only comparable with vacancies embedded by the same model.
+
+**An upload is a name and bytes.** `CVFile(name, data)` goes wherever a path went.
+`read_cv` now reads bytes for both, so a CV reads the same however it arrived; the
+name is used for its suffix and its stem and never as a place on disk, so
+`../../.env` is a CV called `.env`, refused for having no CV suffix.
+
+**Errors say whose fault they are.** The service raises `CVUnreadable` (a scan, a
+broken font: a different file helps), `ProviderUnreachable` (wrong URL, Ollama not
+running) or `ProviderRefused` with `.busy` for 429/503 (waiting helps) -- each
+carrying the sentence the script used to print. A web request will add a status
+code; it will never need to import openai or httpx to know what happened.
+
+**How it was checked that nothing moved:**
+
+| check | result |
+|---|---|
+| all 32 CV files on disk (samples, the real CV, ten strangers'), read from a path and as an upload | byte-identical to before, readers and damage counts included |
+| full ranking of Lisa's CV over 1,166 open vacancies, old code vs `service.rank` with an upload | identical keys, scores, shortlist and capped rows |
+| `match_cv.py --no-explain --top 30`, before and after | identical output |
+| one paid run through the new path (Lisa, top 10) | 3 strong, 4 possible, 3 weak; 73 quotes, 100% found; $0.040; stored and readable |
+
+Twelve service tests on a fake model and a fake embedder (the whole flow, the
+per-employer cap passing through, progress, a run stored or not, one failed
+judgement as a line not an error, each error class) and five reading tests for
+uploads. 774 in all.
+
+Not moved to the service yet: `eval_judge.py`, `eval_cv_matching.py` and
+`label_cv_matches.py` still assemble their own pieces. They measure parts of the
+pipeline on purpose, and each can move when it next changes.

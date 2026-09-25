@@ -17,7 +17,8 @@ you at all (cv/outcome.py, counted off the verdicts because 3.5 measured that th
 cosine cannot tell), and what keeps coming up that you do not have (cv/gaps.py,
 counted off the gap lists and the extracted skills, with no extra model call).
 The run is stored through joblens.storage so scripts/compare_runs.py can put two
-of them side by side, or refuse to.
+of them side by side, or refuse to. The work itself is joblens.service (7.1);
+this script reads the flags, calls it, and prints.
 
 Costs about 0.35 cent and a couple of seconds per vacancy judged. --no-explain
 skips that entirely and gives the retrieval order alone.
@@ -28,38 +29,26 @@ import sys
 import textwrap
 from pathlib import Path
 
-import httpx
-import openai
 from dotenv import load_dotenv
 
 from joblens.config import load_llm_settings
 from joblens.corpus import NAMES, load_corpus
 from joblens.cv.documents import CV_STYLES
-from joblens.cv.gaps import GapSummary, summarise_gaps
-from joblens.cv.judge import PROMPT_VERSION, Judged, Verdict, judge_matches
-from joblens.cv.match import (
-    DEFAULT_STYLE,
-    PER_EMPLOYER,
-    prepare_cv,
-    rank_cv,
-    shortlist,
-    styles_of,
+from joblens.cv.gaps import GapSummary
+from joblens.cv.judge import Judged, Verdict
+from joblens.cv.match import DEFAULT_STYLE, PER_EMPLOYER, styles_of
+from joblens.cv.outcome import Fit, Outcome
+from joblens.llm.pricing import format_cost
+from joblens.service import (
+    MatchRequest,
+    MatchRun,
+    Models,
+    Ranked,
+    ServiceError,
+    judge,
+    judge_version,
+    rank,
 )
-from joblens.cv.outcome import Fit, Outcome, assess
-from joblens.cv.read import UnreadableCVError
-from joblens.cv.requirements import (
-    REQUIREMENTS_VERSION,
-    RequirementBook,
-    judge_by_requirements,
-)
-from joblens.cv.runs import RunStamp, build_record, corpus_digest, digest
-from joblens.cv.store import CVCache
-from joblens.embeddings.client import EmbeddingClient
-from joblens.embeddings.index import VacancyIndex
-from joblens.embeddings.store import CachedEmbedder, cache_path
-from joblens.llm.client import LLMClient
-from joblens.llm.pricing import cost_usd, format_cost
-from joblens.llm.structured import StructuredError, default_mode
 from joblens.storage import FileStore
 
 ROOT = Path(__file__).parent.parent
@@ -118,151 +107,65 @@ def main() -> int:
         print(f"No extracted vacancies in the {args.corpus} corpus. Index some first.")
         return 1
 
-    cv_settings = load_llm_settings(prefix="CV")
-    embed_settings = load_llm_settings(prefix="EMBED")
-    cache = CVCache(CACHE_DIR / "cv-profiles.json")
+    models = Models(
+        cv=load_llm_settings(prefix="CV"), embed=load_llm_settings(prefix="EMBED")
+    )
     try:
-        with LLMClient(cv_settings) as client:
-            prepared = prepare_cv(
-                args.cv,
-                client,
-                name=args.strip_name,
-                model=cv_settings.model,
-                mode=default_mode(cv_settings),
-                cache=cache,
+        request = MatchRequest(
+            cv=args.cv,
+            strip_name=args.strip_name,
+            style=args.style,
+            top=args.top,
+            per_employer=args.per_employer,
+            judge=args.judge,
+        )
+    except ValueError as err:
+        parser.error(str(err))
+    store = FileStore(ROOT)
+    try:
+        ranked = rank(request, corpus, models, cache_dir=CACHE_DIR)
+        header(ranked, args, corpus, models)
+        report_cv_problems(ranked.prepared)
+        if args.show_sent:
+            print("\n--- text that was sent " + "-" * 55)
+            print(ranked.prepared.text)
+            print("-" * 78 + "\n")
+        matches = ranked.chosen.matches
+        if args.no_explain:
+            for position, match in enumerate(matches, 1):
+                shown = score(match.score, args.style)
+                print(f"{position:>2}. {shown}  {match.vacancy.title}")
+            print(
+                f"\nno explanations asked for: nothing was judged, and "
+                f"nothing was stored.\nthe other {len(ranked.ranking) - len(matches)} "
+                f"ranked vacancies are only kept by a run that judges."
             )
-            with EmbeddingClient(embed_settings) as embedder:
-                index = VacancyIndex.build(
-                    corpus.vacancies,
-                    corpus.details,
-                    CachedEmbedder(
-                        embedder, cache_path(CACHE_DIR, embed_settings.model)
-                    ),
-                )
-                # The whole corpus, not the shortlist: judging reads the head
-                # of this list and the rest is stored, so a rejection by
-                # retrieval has a position and a score you can go and look at.
-                ranking = rank_cv(
-                    index,
-                    prepared,
-                    args.style,
-                    client=client,
-                    model=cv_settings.model,
-                    cache=cache,
-                )
-                chosen = shortlist(
-                    ranking,
-                    args.top,
-                    per_employer=args.per_employer,
-                    details=corpus.details,
-                )
-                matches = chosen.matches
+            return 0
 
-            header(
-                prepared,
-                args,
-                corpus,
-                len(index),
-                embed_settings,
-                cv_settings,
-            )
-            report_cv_problems(prepared)
-            if args.show_sent:
-                print("\n--- text that was sent " + "-" * 55)
-                print(prepared.text)
-                print("-" * 78 + "\n")
-            if args.no_explain:
-                for position, match in enumerate(matches, 1):
-                    shown = score(match.score, args.style)
-                    print(f"{position:>2}. {shown}  {match.vacancy.title}")
-                print(
-                    f"\nno explanations asked for: nothing was judged, and "
-                    f"nothing was stored.\nthe other {len(ranking) - len(matches)} "
-                    f"ranked vacancies are only kept by a run that judges."
-                )
-                return 0
-
-            print(f"judging {len(matches)} vacancies ...", flush=True)
-            judged, failures = judge_matches(
-                prepared.text,
-                matches,
-                client,
-                mode=default_mode(cv_settings),
-                judge=requirement_judge(client, cv_settings)
-                if args.judge == "requirements"
-                else None,
-            )
-    except UnreadableCVError as err:
+        print(f"judging {len(matches)} vacancies ...", flush=True)
+        run = judge(ranked, corpus, models, cache_dir=CACHE_DIR, store=store)
+    except ServiceError as err:
         print(err)
         return 1
-    except StructuredError as err:
-        print(f"Could not read this CV into a profile:\n{err}")
-        return 1
-    except (httpx.ConnectError, openai.APIConnectionError) as err:
-        print(f"Cannot reach a server: {err}")
-        return 1
-    except openai.APIStatusError as err:
-        # Reached and refused: a 503 "high demand" from Gemini ended seven of
-        # ten runs on 2026-09-24 as a traceback, before a single line of output.
-        # The SDK has already retried it twice. One judge call failing this way
-        # is collected as that vacancy's failure; this is reading the CV or
-        # embedding the query, without which there is no run at all.
-        print(
-            f"The model provider refused the request ({err.status_code}), after "
-            "retrying. Nothing was judged and nothing was stored.\n"
-            + (
-                "503 and 429 are the provider being busy: try again in a few minutes."
-                if err.status_code in (429, 503)
-                else f"{err.message[:300]}"
-            )
-        )
-        return 1
 
-    outcome = assess(judged, corpus=len(corpus), corpus_name=args.corpus)
-    summary = summarise_gaps(
-        judged, prepared.profile, corpus.details, cv_text=prepared.text
-    )
-
-    banner(outcome)
-    for position, one in enumerate(judged, 1):
+    banner(run.outcome)
+    for position, one in enumerate(run.judged, 1):
         show(position, one)
-    for failure in failures:
+    for failure in run.failures:
         print(f"\n  could not be judged: {failure}")
-    show_gaps(summary, outcome)
-    stamp = RunStamp(
-        cv_name=prepared.name,
-        cv_digest=digest(prepared.text),
-        corpus=corpus.name,
-        corpus_size=len(corpus),
-        corpus_digest=corpus_digest(corpus.vacancies),
-        embed_model=embed_settings.model,
-        judge_model=cv_settings.model,
-        cv_style=args.style,
-        prompt_version=judge_version(args.judge),
-        top=args.top,
-        per_employer=args.per_employer,
-    )
-    footer(
-        judged,
-        prepared,
-        stamp,
-        summary,
-        failures,
-        cv_settings,
-        ranking=ranking,
-        chosen=chosen,
-        funnel=corpus.funnel,
-    )
+    show_gaps(run.summary, run.outcome)
+    footer(run, store)
     return 0
 
 
-def header(prepared, args, corpus, indexed, embed_settings, cv_settings) -> None:
+def header(ranked: Ranked, args, corpus, models: Models) -> None:
+    prepared = ranked.prepared
     counts = prepared.redacted.counts()
     removed = ", ".join(f"{n}x {kind}" for kind, n in counts.items()) or "nothing"
     print(f"{prepared.name}: {prepared.profile.headline}  |  removed: {removed}")
     print(
-        f"{indexed} vacancies from the {args.corpus} corpus, embedded by "
-        f"{embed_settings.model}; shortlist of {args.top} as {args.style}"
+        f"{ranked.indexed} vacancies from the {args.corpus} corpus, embedded by "
+        f"{models.embed.model}; shortlist of {args.top} as {args.style}"
         + (f", at most {args.per_employer} per employer" if args.per_employer else "")
         + (
             " (fused by rank: scores are rank points, not cosines)"
@@ -274,32 +177,7 @@ def header(prepared, args, corpus, indexed, embed_settings, cv_settings) -> None
     # dropped here is rejected before it can be given so much as a score.
     if line := corpus.funnel.line():
         print(line)
-    print(f"judged by {cv_settings.model}, {judge_version(args.judge)}\n")
-
-
-def judge_version(judge: str) -> str:
-    """What a run's judgements are comparable with. compare_runs.py refuses two
-    runs whose versions differ, and two judges are two scales."""
-    if judge == "requirements":
-        return f"requirements {REQUIREMENTS_VERSION}"
-    return PROMPT_VERSION
-
-
-def requirement_judge(client, settings):
-    """The 6.3 judge, with every vacancy's requirements kept between runs."""
-    book = RequirementBook(
-        CVCache(CACHE_DIR / "requirements.json"),
-        client,
-        model=settings.model,
-        mode=default_mode(settings),
-    )
-
-    def judge(cv_text, match):
-        return judge_by_requirements(
-            cv_text, match, client, book=book, mode=default_mode(settings)
-        )
-
-    return judge
+    print(f"judged by {models.cv.model}, {judge_version(args.judge)}\n")
 
 
 def cv_style(value: str) -> str:
@@ -428,20 +306,8 @@ def show_gaps(summary: GapSummary, outcome: Outcome) -> None:
         print("\n  " + outcome.headline())
 
 
-def footer(
-    judged,
-    prepared,
-    stamp,
-    summary,
-    failures,
-    cv_settings,
-    *,
-    ranking=None,
-    chosen=None,
-    funnel=None,
-) -> None:
-    tokens_in = sum(one.prompt_tokens for one in judged)
-    tokens_out = sum(one.output_tokens for one in judged)
+def footer(run: MatchRun, store: FileStore) -> None:
+    judged, prepared = run.judged, run.ranked.prepared
     seconds = sum(one.latency_s for one in judged)
     quotes = sum(one.quotes for one in judged)
     dropped = sum(len(one.dropped) for one in judged)
@@ -466,33 +332,16 @@ def footer(
             "This CV has unreadable characters in it, which is the likeliest "
             "reason: a\nquote of a damaged line cannot match the damaged line."
         )
-    cost = cost_usd(cv_settings, tokens_in, tokens_out)
     print(
-        f"{tokens_in} tokens in, {tokens_out} out  |  {format_cost(cost)}  |  "
-        f"{seconds:.0f}s of model time"
+        f"{run.prompt_tokens} tokens in, {run.output_tokens} out  |  "
+        f"{format_cost(run.cost_usd)}  |  {seconds:.0f}s of model time"
     )
-    outcome = assess(judged, corpus=stamp.corpus_size, corpus_name=stamp.corpus)
-    record = build_record(
-        stamp,
-        judged,
-        outcome,
-        summary,
-        ranking=ranking,
-        sent={match.vacancy.key for match in chosen.matches} if chosen else None,
-        capped={match.vacancy.key for match in chosen.capped} if chosen else None,
-        funnel=funnel,
-        failures=failures,
-        cost_usd=cost,
-    )
-    # Every write of a run goes through the store (4.2), which also decides
-    # that two runs in the same minute are two runs and not one overwritten.
-    store = FileStore(ROOT)
-    run_id = store.save_run(record)
+    record, stamp = run.record, run.record.stamp
     show_boundary(record)
     print(f"run: {stamp.line()}")
     print(
-        f"saved as {run_id}\n"
-        f"  {store.path_of(run_id).relative_to(ROOT)}  "
+        f"saved as {run.run_id}\n"
+        f"  {store.path_of(run.run_id).relative_to(ROOT)}  "
         f"(compare_runs.py and serve.py read these)"
     )
     print(
