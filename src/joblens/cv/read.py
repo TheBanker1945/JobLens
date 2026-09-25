@@ -41,8 +41,13 @@ CV -- years, brackets, a "+" in front of a phone number. A model handed
 plausible pair of dates. So the unreadable characters are never silently dropped:
 they are counted, reported, and replaced with `?`, which is a hole the next step
 can see and refuse to fill.
+
+**A path or an upload (7.1).** A script names a file on disk; a browser hands
+over a file name and its bytes. Everything below reads bytes, so the two are one
+code path and a CV reads the same whichever way it arrived.
 """
 
+import io
 import logging
 import re
 from collections.abc import Iterator
@@ -113,6 +118,20 @@ class UnreadableCVError(Exception):
 
 
 @dataclass(frozen=True)
+class CVFile:
+    """A CV as an upload hands it over: a file name and its bytes.
+
+    The name is only ever read for its suffix, which picks the reader, and its
+    stem, which names the CV. It is never a place on disk: a browser that sends
+    "../../.env" as a file name gets a CV called ".env", refused for having no
+    suffix a CV can have, and nothing is opened.
+    """
+
+    name: str
+    data: bytes = field(repr=False)  # a CV is personal data; keep it out of logs
+
+
+@dataclass(frozen=True)
 class Damage:
     """What a file displays but does not contain, counted before it is marked."""
 
@@ -154,7 +173,7 @@ class Damage:
 
 @dataclass(frozen=True)
 class CVDocument:
-    path: Path
+    path: Path  # where it was read from, or just the file name for an upload
     text: str
     pages: int  # 1 for a text file: it has no pages, and it is all one document
     damage: Damage = field(default_factory=Damage)
@@ -175,22 +194,41 @@ class CVDocument:
         return "pdf" if self.path.suffix.lower() == PDF_SUFFIX else "text"
 
 
-def read_cv(path: Path) -> CVDocument:
+def read_cv(source: Path | CVFile) -> CVDocument:
+    if isinstance(source, CVFile):
+        # The last part only: whatever directories a browser put in front of
+        # the name, this reads from memory and names the CV after the file.
+        path = Path(Path(source.name).name)
+    else:
+        path = source
+        if not path.exists():
+            raise UnreadableCVError(f"No such file: {path}")
     suffix = path.suffix.lower()
-    if not path.exists():
-        raise UnreadableCVError(f"No such file: {path}")
+    if suffix not in TEXT_SUFFIXES | {PDF_SUFFIX}:
+        supported = ", ".join(sorted(TEXT_SUFFIXES | {PDF_SUFFIX}))
+        named = suffix or "a file with no extension"
+        raise UnreadableCVError(f"Cannot read {named}: CVs are read from {supported}.")
+    data = source.data if isinstance(source, CVFile) else path.read_bytes()
     if suffix == PDF_SUFFIX:
-        return _read_pdf(path)
-    if suffix in TEXT_SUFFIXES:
-        return _document(path, path.read_text(encoding="utf-8"), pages=1)
-    supported = ", ".join(sorted(TEXT_SUFFIXES | {PDF_SUFFIX}))
-    named = suffix or "a file with no extension"
-    raise UnreadableCVError(f"Cannot read {named}: CVs are read from {supported}.")
+        return _read_pdf(path, data)
+    return _document(path, _decode(path, data), pages=1)
 
 
-def _read_pdf(path: Path) -> CVDocument:
+def _decode(path: Path, data: bytes) -> str:
+    """A text file's bytes as `Path.read_text` would have read them."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as err:
+        raise UnreadableCVError(
+            f"{path.name} is not UTF-8 text. Save it as UTF-8, or export a PDF."
+        ) from err
+    # Text mode turns Windows and old Mac line ends into "\n"; bytes do not.
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _read_pdf(path: Path, data: bytes) -> CVDocument:
     with _collect_warnings("pypdf") as warnings:
-        reader = PdfReader(path)
+        reader = PdfReader(io.BytesIO(data))
         if reader.is_encrypted:
             # An empty password covers the common "protected from editing" case.
             try:
@@ -204,7 +242,7 @@ def _read_pdf(path: Path) -> CVDocument:
     text = _tidy("\n\n".join(pages))
     glued, reader = glued_share(text), "pypdf"
     if glued > GLUED_ABOVE:
-        second = _read_with_pdfminer(path)
+        second = _read_with_pdfminer(data)
         if _better_reading(text, second):
             text, reader = second, "pdfminer.six"
     # Counted without the glyphs: a page of characters that carry no meaning is
@@ -237,14 +275,14 @@ def _better_reading(first: str, second: str) -> bool:
     return before > 0 and glued_share(second) <= before / 2
 
 
-def _read_with_pdfminer(path: Path) -> str:
+def _read_with_pdfminer(data: bytes) -> str:
     """pdfminer.six's reading, with its unmapped glyphs made private-use.
 
     `boxes_flow=None` turns off its column detection, which otherwise moves a
     job's dates away from its title; lines are then read top to bottom.
     """
     with _collect_warnings("pdfminer"):
-        raw = extract_text(path, laparams=LAParams(boxes_flow=None))
+        raw = extract_text(io.BytesIO(data), laparams=LAParams(boxes_flow=None))
     return _tidy(CID.sub("\ue000", raw))
 
 

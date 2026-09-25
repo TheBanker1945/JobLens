@@ -19,7 +19,7 @@ from pathlib import Path
 from joblens.cv.clean import Redacted, redact_cv
 from joblens.cv.documents import CV_STYLES, CVStyle, QueryPart, build_queries
 from joblens.cv.extract import DroppedDate, extract_cv, verify_dates
-from joblens.cv.read import CVDocument, read_cv
+from joblens.cv.read import CVDocument, CVFile, read_cv
 from joblens.cv.schema import CVProfile
 from joblens.cv.store import CVCache
 from joblens.cv.wishlist import write_ideal_vacancy
@@ -74,7 +74,7 @@ class CVMatch:
 
 
 def prepare_cv(
-    path: Path,
+    source: Path | CVFile,
     client: ChatClient,
     *,
     name: str | None = None,
@@ -82,8 +82,12 @@ def prepare_cv(
     mode: Mode | None = None,
     cache: CVCache | None = None,
 ) -> PreparedCV:
-    """Read, redact and extract. `cache` makes the second run free."""
-    document = read_cv(path)
+    """Read, redact and extract. `cache` makes the second run free.
+
+    `source` is a file on disk or an upload; either way the CV is named after
+    the file, which is what the labels and the stored runs call it.
+    """
+    document = read_cv(source)
     redacted = redact_cv(document.text, name=name)
     # What the model answered is what gets cached, exactly as 3.6 stores the
     # judge's raw answer: the check is cheap and re-running it over an old entry
@@ -91,7 +95,7 @@ def prepare_cv(
     if cache and (hit := cache.get("profile", model, redacted.text)):
         checked = verify_dates(CVProfile.model_validate(hit), redacted.text)
         return PreparedCV(
-            name=path.stem,
+            name=document.path.stem,
             document=document,
             redacted=redacted,
             profile=checked.profile,
@@ -105,7 +109,7 @@ def prepare_cv(
         )
     checked = verify_dates(result.details, redacted.text)
     return PreparedCV(
-        name=path.stem,
+        name=document.path.stem,
         document=document,
         redacted=redacted,
         profile=checked.profile,
