@@ -49,6 +49,11 @@ from joblens.extraction.schema import VacancyDetails
 MIN_TERM_CHARS = 3
 SYMBOL = re.compile(r"[#+]")
 
+# What joins alternatives: "Airflow of Dagster", "AWS, GCP or Azure",
+# "Airflow/Dagster". Only looked for *between* two named skills, so "knowledge
+# of Python" -- English "of" in front of the list -- is not an alternative.
+ALTERNATIVE = re.compile(r"\b(?:or|of|ofwel|and/or|en/of)\b|/")
+
 
 @dataclass(frozen=True)
 class Occurrence:
@@ -283,8 +288,34 @@ def _term_for(occurrence: Occurrence, vocabulary: dict[str, str]) -> str | None:
         haystack = searchable(text)
         found = [term for term in vocabulary if _names(haystack, term)]
         if found:
-            return max(found, key=len)
+            return None if _alternatives(haystack, found) else max(found, key=len)
     return None
+
+
+def _alternatives(haystack: str, found: list[str]) -> bool:
+    """Whether the gap names several skills as a choice between them.
+
+    "Fabric, Synapse, Databricks or Snowflake" asks for any one of four, so
+    filing it under the longest name told a person that Databricks keeps
+    coming up when no vacancy required it -- 153 of the 943 gaps stored by
+    2026-09-24 (16%) read that way. Such a gap cannot be counted under one skill,
+    so it is not: it goes to `ungrouped`, where it is still shown, as this
+    module does with every gap it cannot attribute safely.
+
+    Only what stands between the skills is read, with the skills themselves
+    masked, so the "/" inside "CI/CD" is not a choice. A list joined by "and"
+    keeps the old behaviour.
+    """
+    # A term inside a longer one it was found with is one skill, not two:
+    # "azure" in "azure devops".
+    distinct = [t for t in found if not any(t != o and t in o for o in found)]
+    if len(distinct) < 2:
+        return False
+    masked = haystack
+    for term in sorted(distinct, key=len, reverse=True):
+        masked = re.sub(rf"(?<![\w+#]){re.escape(term)}(?![\w+#])", "\0", masked)
+    between = masked[masked.find("\0") : masked.rfind("\0")]
+    return ALTERNATIVE.search(between) is not None
 
 
 def _names(haystack: str, term: str) -> bool:
