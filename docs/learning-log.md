@@ -2845,3 +2845,66 @@ uploads. 774 in all.
 Not moved to the service yet: `eval_judge.py`, `eval_cv_matching.py` and
 `label_cv_matches.py` still assemble their own pieces. They measure parts of the
 pipeline on purpose, and each can move when it next changes.
+
+## 7.2 — A database, and the seam from 4.2 turning out to be one
+
+4.2 said the swap to a database would be "a day of implementing eight methods,
+rather than a week of finding every `Path` in the repo". It was: `PostgresStore`
+implements the same `Store` protocol, and the viewer, unchanged, shows all 32 of
+this laptop's runs out of Postgres (`serve.py --db EMAIL`), its API answering
+field for field what it answers over the files.
+
+**Why Postgres, and why Neon.** Supabase was ruled out; of the free tiers checked
+on 2026-09-25, Neon (Postgres, Frankfurt) fits best: 0.5 GB and no card, and
+the whole app is an estimated 150 MB. The data is relational where it matters
+(a person has CVs, runs, labels) and a document where it is one (a run, a label
+file, a profile: JSONB, read back through the pydantic model that wrote it).
+Firebase lost on three counts that were all about this app: vector fields stop
+at 2,048 dimensions and ours have 3,072, Firebase Auth processes data only in
+the US, and file storage now needs the paid plan. Locally it is the same Postgres
+in Docker (`compose.yaml`), so a fork runs the web app without any account.
+
+**Plain SQL, a migration runner by hand.** No ORM: each store method is the
+query it sends, and every value travels as a parameter, never pasted into the
+string. The schema is `src/joblens/storage/schema/0001_people_cvs_runs.sql`, and
+`migrate.py` (about 60 lines) is what Alembic does at its core: apply the
+numbered files a database has not seen, one transaction each, and remember them.
+Three rules on top, each for a failure this repo can actually have: an advisory
+lock (several sessions share one database), a checksum per applied file (edit
+0001 after it ran and a fresh database silently differs from yours), and code
+older than its database stops.
+
+**The database keeps the rules the code would otherwise only hope for.**
+
+| rule | how |
+|---|---|
+| one active CV per person | a unique index on `user_id` over active rows only: a second active row is refused, whoever writes it |
+| "delete my data" removes everything | every table with a person's data references `users` with ON DELETE CASCADE: one DELETE, nothing left for a forgotten table |
+| one person cannot read another's data | every `PostgresStore` query says `user_id = %s`; a run id or CV id from someone else is a KeyError, the same as one that does not exist |
+| two runs in one minute are two runs | the primary key refuses the duplicate and the next `-2` is tried, which two racing writers cannot both win |
+| an uploaded file is kept 30 days | a `cv_files` row with an expiry, purged by `db.py purge-files`; the redacted text and history stay |
+
+**Two things that would have been wrong without a test against both stores.**
+Postgres's default text ordering skips punctuation, so `..._lisa-2` and
+`..._lisa` could come back in a different order than Python sorts them; the id
+column is `COLLATE "C"`, byte order, like Python. And a run's timestamp has no
+time zone in the files, so its column has none either: a `timestamptz` would have
+handed back a different value than the one written. Both were fixed before the
+first run; `test_store_contract.py` runs every promise on both stores so that
+they stay fixed -- three runs in one minute come back in the same order, and a
+timestamp to the microsecond comes back unchanged, whichever store holds them.
+
+**Checked on real data.** `db.py import` copied this laptop's 32 runs, the real
+CV's labels and the real CV itself (profile from the cache, so free) into a local
+account. All 32 run records and the labels read back equal to the files; the
+stored CV's digest equals the one on its latest run, so the account holds exactly
+the text the matcher saw; a second import copied nothing. The four invented CVs'
+labels are the repo's evidence and stayed out of the account.
+
+One change to the plan: the uploaded files sit in Postgres (`bytea`, with an
+expiry) rather than in a Cloud Storage bucket. At tester scale that is a few MB,
+and it is one service fewer to set up and secure.
+
+One new dependency: `psycopg[binary]`, the Postgres driver (asyncpg rejected: the
+code is synchronous). 27 new tests; the database ones skip without Docker, so a
+clone still runs everything else. 801 in all.

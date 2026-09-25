@@ -79,9 +79,13 @@ numbers are the providers' own pages on that date and change often):
   Postgres (trial / evaluation only), Aiven (no region guarantee), PocketBase
   (needs a disk Cloud Run does not have), Cloudflare D1 (built for Workers).
 
-The recommendation is Neon, with CV files in an EU Cloud Storage bucket that
-deletes them after 30 days, and login decided in 7.5. **Not decided yet: that is
-Mahdi's call before 7.2 starts.**
+The recommendation was Neon, with CV files in an EU Cloud Storage bucket that
+deletes them after 30 days. **Decided 2026-09-25: Mahdi went with the
+recommendations.** One change made while building 7.2: the uploaded files sit in
+a Postgres table (`cv_files`) with an expiry instead of a bucket. At tester
+scale (a few MB) they fit Neon's 0.5 GB easily, and it is one service fewer to
+set up, pay for and secure; a bucket stays possible in 7.8 if volume ever asks
+for it.
 
 ## Milestones
 

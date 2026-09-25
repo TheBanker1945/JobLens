@@ -47,9 +47,21 @@ conceptually, not just have working code.
 - Reasoning/"thinking" must be switchable per model, via verified profiles in
   src/joblens/llm/providers.py. Use exact model IDs, never "-latest" aliases.
 - Runs, labels and preferences are read and written only through
-  src/joblens/storage/ (file-backed today). A run is addressed by an id, never by
-  a path. Labels for a real CV live in data/raw/cv-labels/ and are private by
-  default; only the four invented CVs' labels are committed, as evidence.
+  src/joblens/storage/: FileStore (data/raw/) for the scripts and evals, and
+  PostgresStore, one per user, for the web app (7.2). A run is addressed by an
+  id, never by a path. Labels for a real CV live in data/raw/cv-labels/ and are
+  private by default; only the four invented CVs' labels are committed, as
+  evidence, and they are never imported into anybody's account.
+- The database is Postgres (decided 2026-09-25, Supabase ruled out): Docker
+  locally (compose.yaml, 127.0.0.1:54320, container and volume `joblens-db`
+  shared by every worktree), Neon Frankfurt when hosted. Plain SQL through
+  psycopg, no ORM. A schema change is a new numbered file in
+  src/joblens/storage/schema/, never an edit to an applied one (the runner
+  refuses). Every table holding a person's data references users ON DELETE
+  CASCADE, so deleting a user deletes everything. Every PostgresStore query is
+  scoped by user_id. Uploaded CV files live in cv_files and expire after 30
+  days (KEEP_ORIGINAL); the redacted text stays. Tests use the joblens_test
+  database and skip without Docker.
 - Matching a CV is a call, not a script: src/joblens/service/ (`rank`, then
   `judge`; 7.1). Scripts and the coming API are its callers. A service takes
   settings (`Models`), data (a path or a `CVFile` upload) and a store, and
@@ -232,6 +244,7 @@ conceptually, not just have working code.
 
 - uv run pytest
 - uv run ruff check . && uv run ruff format .
+- docker compose up -d db && uv run python scripts/db.py migrate   # the web app's database
 - uv run --group scrape python scripts/fetch_vacancies.py   # fetch new vacancies
 - uv run python scripts/discover_boards.py [--accept]       # find employer boards
 - uv run python scripts/index_vacancies.py                  # extract, then embed
