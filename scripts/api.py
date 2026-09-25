@@ -7,9 +7,11 @@
 It serves JSON to the page that 7.7 builds; until then /api/docs is an
 interactive page of every route, where a CV can be uploaded and a match started
 by hand: click "Authorize" and enter 1 first, which sends the X-JobLens header
-that every changing request needs. Needs DATABASE_URL, the CV_* and EMBED_* settings (.env.example), and
-an account: JOBLENS_DEV_USER in .env, or --user. There is no login until 7.5,
-so it binds to 127.0.0.1 and nothing else.
+that every changing request needs.
+
+Needs DATABASE_URL, the CV_* and EMBED_* settings (.env.example), and an
+account: JOBLENS_DEV_USER in .env, or --user. There is no login until 7.5, so
+it binds to 127.0.0.1 and nothing else.
 
 The database is migrated on start (safe to repeat: scripts/db.py), and the
 open, extracted vacancies are loaded once; restart it after the nightly fetch.
