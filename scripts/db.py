@@ -7,6 +7,7 @@
     uv run python scripts/db.py invite tester@example.com       # account + login link
     uv run python scripts/db.py login-link tester@example.com   # a new link
     uv run python scripts/db.py set-role you@example.com owner
+    uv run python scripts/db.py new-secret           # for JOBLENS_SECRET_KEY (own keys)
     uv run python scripts/db.py import you@example.com          # runs and labels
     uv run python scripts/db.py import you@example.com --cv data/raw/cv/you.pdf \\
         --strip-name "Your Name"                                 # and your CV
@@ -33,6 +34,7 @@ import os
 import sys
 from pathlib import Path
 
+from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
 from joblens.config import load_llm_settings
@@ -69,6 +71,7 @@ def main() -> int:
     invite.add_argument("--owner", action="store_true")
     link = commands.add_parser("login-link", help="a new login link")
     link.add_argument("email")
+    commands.add_parser("new-secret", help="a key to encrypt own API keys with")
     role = commands.add_parser("set-role", help="make someone owner or tester")
     role.add_argument("email")
     role.add_argument("role", choices=["owner", "tester"])
@@ -85,6 +88,8 @@ def main() -> int:
     args = parser.parse_args()
 
     load_dotenv()
+    if args.command == "new-secret":
+        return new_secret(None, args)  # needs no database
     try:
         database = Database.from_env()
         return COMMANDS[args.command](database, args)
@@ -135,6 +140,13 @@ def login_link(database: Database, args) -> int:
         print(f"No account for {args.email}: invite them first.")
         return 1
     return print_link(database, user)
+
+
+def new_secret(database: Database | None, args) -> int:
+    """A fresh JOBLENS_SECRET_KEY. Keep it out of git, and keep it: every stored
+    own key is encrypted with it, and a new one means entering them again."""
+    print(f"JOBLENS_SECRET_KEY={Fernet.generate_key().decode()}")
+    return 0
 
 
 def set_role(database: Database, args) -> int:
@@ -246,6 +258,7 @@ COMMANDS = {
     "invite": invite,
     "login-link": login_link,
     "set-role": set_role,
+    "new-secret": new_secret,
     "import": import_data,
     "purge-files": purge_files,
     "delete-user": delete_user,

@@ -16,6 +16,7 @@ What is kept, and for how long (docs/web-app-phase-7.md):
 Only the redacted text is ever sent to a model, here as in the CLI.
 """
 
+from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
 
@@ -43,12 +44,14 @@ def add_cv(
     cache_dir: Path,
     strip_name: str | None = None,
     chat: ChatFactory = LLMClient,
+    meter: Callable[[int, int], None] | None = None,
 ) -> CVRecord:
     """Read, redact and profile an upload, and keep it as the active CV.
 
     Costs one model call (about half a cent), or none when the same text was
     profiled before by the same model: the profile cache is keyed by the exact
-    redacted text.
+    redacted text. `meter` is told the tokens of a call that was made
+    (7.6: what it cost, and whose key paid, is recorded by the caller).
     """
     if len(upload.data) > MAX_UPLOAD_BYTES:
         raise CVUnreadable(
@@ -64,6 +67,8 @@ def add_cv(
             mode=default_mode(models.cv),
             cache=CVCache(cache_dir / PROFILES),
         )
+    if meter and (prepared.prompt_tokens or prepared.output_tokens):
+        meter(prepared.prompt_tokens, prepared.output_tokens)
     return store.add_cv(
         upload.name,
         prepared.text,

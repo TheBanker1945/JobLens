@@ -46,8 +46,13 @@ def run_match_job(
     cache_dir: Path,
     chat: ChatFactory = LLMClient,
     embed: EmbedFactory = EmbeddingClient,
+    paid_by: str = "operator",
 ) -> None:
-    """Match the account's active CV, with its preferences, and store the run."""
+    """Match the account's active CV, with its preferences, and store the run.
+
+    `models` are this person's (service/ai.py models_for), and `paid_by` says
+    whose key they spend: the judged tokens are recorded against it (7.6).
+    """
     store = database.store_for(user_id)
     try:
         job = store.job(job_id)
@@ -84,6 +89,15 @@ def run_match_job(
             store=store,
             progress=progress,
             chat=chat,
+        )
+        database.record_usage(
+            user_id,
+            kind="match",
+            model=models.cv.model,
+            prompt_tokens=run.prompt_tokens,
+            output_tokens=run.output_tokens,
+            cost_usd=run.cost_usd,
+            paid_by=paid_by,
         )
         database.update_job(job_id, status="done", run_id=run.run_id)
     except ServiceError as err:

@@ -203,3 +203,15 @@ class JobStore(Protocol):
     def jobs(self, limit: int = 20) -> list[Job]:
         """Newest first."""
         ...
+
+
+class ProviderKey(BaseModel):
+    """A person's own model (7.6). `key_secret` is ciphertext (joblens/vault.py);
+    only the service that makes a model call ever decrypts it."""
+
+    provider: str  # one of llm/presets.py PRESETS
+    model: str
+    thinking: bool = False
+    key_secret: bytes
+    key_hint: str  # the last four characters, to say which key without showing it
+    verified_at: datetime
