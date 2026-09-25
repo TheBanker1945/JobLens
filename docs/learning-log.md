@@ -2982,3 +2982,62 @@ needs his own answers (`scripts/preferences.py ask`) and then
 read against the 0.09 noise measured in 6.2.
 
 30 new tests; 831 in all. No new dependency.
+
+## 7.4 — An API a page can call, and a match that runs while you wait
+
+The first time JobLens answers over HTTP to something that is not the developer
+viewer: upload a CV, answer the preferences, start a match, watch it, read the
+run. `uv run python scripts/api.py` and `/api/docs` is an interactive page of
+all of it, generated from the code.
+
+**FastAPI now, because the by-hand version exists.** 4.3 wrote routing, JSON and
+status codes out of `http.server`, and that was CLAUDE.md's "build it once".
+What FastAPI adds is what the viewer never needed: bodies checked against the
+pydantic models the store already uses (a preferences form with `hours_min`
+above `hours_max` is refused with the field named, before a line of ours
+runs), file uploads (python-multipart), a `Depends` that says who is asking --
+7.5 replaces one function and no route -- and the generated docs. Routes are
+plain `def`: they wait on Postgres and model providers with blocking clients,
+and FastAPI runs such a function in a thread. Each is a few lines around a
+service call; `ServiceError`s become status codes (the CV's fault 422, a busy
+provider 503 with Retry-After, a refusing one 502).
+
+**A match is a job.** 20 to 60 seconds is too long for a request, so
+`POST /api/matches` queues a row in a new `jobs` table (migration 0002) and
+returns at once; a worker thread (`api/runner.py`, two at a time) runs
+`service/jobs.py`, which writes its stage and "judging 4 of 10" to the row as
+it goes. Three rules, each for a failure that would otherwise happen:
+
+| rule | why |
+|---|---|
+| one open job per person, as a unique index | a second click would pay for the same run twice |
+| a job always ends: done with a run, or failed with a sentence | a stuck "running" blocks the next match for ever |
+| a server start marks open jobs interrupted | a thread does not survive its process; the row should say so |
+
+**Upload once, match from what was kept.** `service/cvs.py` reads, redacts and
+profiles an upload (the same `prepare_cv` as the CLI) and stores the redacted
+text, the profile and *counts* of what was removed (never the values). A match
+reads the stored text and profile, so it costs no extra call and works after
+the file expires. The size limit was going to be 5 MB; measuring first showed
+the real CV is 1.2 MB and two of the ten strangers' are 12.5 MB and read fine,
+so it is 20 MB.
+
+**No login yet, so three guards** (the viewer's two, and one for uploads): bound
+to 127.0.0.1; a Host other than this machine refused; and **every request that
+changes something must carry `X-JobLens: 1`**. Another site open in the same
+browser can make it POST a form -- even a file upload -- to 127.0.0.1, but it
+cannot add a header without a CORS preflight, which this server never allows.
+The guard stays when login arrives, as the CSRF protection for a cookie session.
+
+**Checked through the real server** (uvicorn, the local database, a separate
+account for Lisa's sample CV): an upload without the header was refused (403);
+with it, the PDF was stored with its profile, seven kinds of detail removed, and
+neither her e-mail nor her name left in the text; preferences were saved; the
+match returned `queued` at once and finished as a stored run stamped with the
+preferences ($0.010, top 3). It also showed the cost of hard lines again: with
+40 km from Utrecht and permanent only, retrieval's #2 and #4 moved back, and the
+three judged were all weak. 16 new tests; 847 in all.
+
+New dependencies: fastapi (and starlette under it), uvicorn to serve it,
+python-multipart for uploads, psycopg-pool so a request does not open a new TLS
+connection to Neon.

@@ -267,6 +267,22 @@ to compare two runs whose stamps disagree, naming what moved. A corpus that has
 merely gained vacancies is the one difference it will compare across, because it
 changes by itself — it reports what entered and left the shortlist instead.
 
+## The web API
+
+```bash
+uv run python scripts/api.py          # http://127.0.0.1:8001/api/docs
+```
+
+What the web app's page will call: upload a CV (read, redacted and profiled
+once, then kept), answer the preferences, start a match, follow it, read the
+runs. A match runs as a background job (20-60 s) whose progress is kept in the
+database, and one person can have one match running at a time. `/api/docs` is
+an interactive page of every route, generated from the code, where all of it
+can be tried by hand. Built on FastAPI; it needs the database above and an
+account in `JOBLENS_DEV_USER`, because login arrives in 7.5 -- until then it
+binds to 127.0.0.1 only, and every request that changes something must carry
+the header `X-JobLens: 1`, which another website cannot make your browser send.
+
 ## The viewer: reviewing a run, and marking what it got wrong
 
 ```bash

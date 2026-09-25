@@ -79,6 +79,16 @@ conceptually, not just have working code.
   raises only `ServiceError`s; it never reads .env and never prints, because a
   user's own key arrives as settings. Phase 7 (the web app) is planned and its
   decisions recorded in docs/web-app-phase-7.md.
+- The web API (7.4, src/joblens/api/, scripts/api.py) is FastAPI around
+  service calls; routes are plain `def` (blocking clients) and hold no logic.
+  Until 7.5 it acts for JOBLENS_DEV_USER, binds to 127.0.0.1, refuses a foreign
+  Host, and refuses every non-GET without `X-JobLens: 1` (a CSRF guard: keep it
+  when login arrives). A match is a job (jobs table, one open per person,
+  enforced by a unique index), run in a thread (api/runner.py) by
+  service/jobs.py, which always ends done or failed with a sentence; a restart
+  marks open jobs interrupted. An upload is read, redacted and profiled once
+  (service/cvs.py, 20 MB limit: real CVs reach 12.5 MB) and later matches use
+  the stored text and profile, never the file.
 - A mark in the viewer requires a reason and is stored verbatim with what the
   judge said at the time. Never infer a rule from a pattern of answers and write
   it down as if the user had stated it.
@@ -256,6 +266,7 @@ conceptually, not just have working code.
 - uv run pytest
 - uv run ruff check . && uv run ruff format .
 - docker compose up -d db && uv run python scripts/db.py migrate   # the web app's database
+- uv run python scripts/api.py                              # the web API, /api/docs
 - uv run --group scrape python scripts/fetch_vacancies.py   # fetch new vacancies
 - uv run python scripts/discover_boards.py [--accept]       # find employer boards
 - uv run python scripts/index_vacancies.py                  # extract, then embed
