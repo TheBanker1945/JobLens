@@ -45,7 +45,7 @@ from dotenv import load_dotenv
 from joblens.config import load_llm_settings
 from joblens.cv.clean import redact_cv
 from joblens.cv.documents import QueryPart
-from joblens.cv.judge import PROMPT_VERSION, Verdict
+from joblens.cv.judge import Verdict
 from joblens.cv.match import CVMatch
 from joblens.cv.store import CVCache
 from joblens.evals.judging import JudgeVariant, concordance
@@ -62,6 +62,9 @@ CACHE = ROOT / "data" / "cache" / "talentclef-judgements.json"
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--judge", choices=["holistic", "requirements"], default="holistic"
+    )
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--thinking", choices=["on", "off"])
     parser.add_argument("--sample", type=int, default=1)
@@ -79,11 +82,10 @@ def main() -> int:
     settings = load_llm_settings(prefix="CV")
     if args.thinking:
         settings = settings.model_copy(update={"thinking": args.thinking == "on"})
-    variant = JudgeVariant(args.temperature, settings.thinking, args.sample)
+    variant = JudgeVariant(args.temperature, settings.thinking, args.sample, args.judge)
     print(
         f"{len(rows)} TalentCLEF pairs over {len({r['jd_id'] for r in rows})} job "
-        f"descriptions, judged by {settings.model}, prompt {PROMPT_VERSION}, "
-        f"{variant.describe()}"
+        f"descriptions, judged by {settings.model}, {variant.describe()}"
     )
 
     pairs, labels = [], {}
@@ -108,6 +110,7 @@ def main() -> int:
                 model=settings.model,
                 mode=default_mode(settings),
                 fresh=args.fresh,
+                requirements=CVCache(ROOT / "data" / "cache" / "requirements.json"),
             )
     except (httpx.ConnectError, openai.APIConnectionError) as err:
         print(f"Cannot reach a server: {err}")

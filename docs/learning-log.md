@@ -2518,6 +2518,145 @@ there (`--thinking on`) for when a variant earns the money.
 **What it cost.** About $4 of judge calls over two days, most of it the three
 runs of each prompt that the noise made necessary.
 
+## 6.3 — A judge that adds up in code, and why it is not the default either
+
+6.2 left two findings next to each other. The model reads fit well -- against
+human experts it orders candidates at 0.86 or better in every one of ten jobs.
+And the number it writes is the noisy part: two identical runs on the real CV
+differ by 0.09, because the fit inside `weak` wobbles by five points. The
+research the phase started from says the same thing from outside: checklists
+of small questions, added up in code, agree with each other far more than one
+holistic score (CheckEval: +0.45 agreement between judge models), and LinkedIn's
+production judge scores each qualification before it labels anything.
+
+### Two questions, and a sum
+
+`src/joblens/cv/requirements.py`, behind `--judge requirements`:
+
+1. **What does the vacancy ask for?** Once per vacancy, before any CV is read,
+   stored by the vacancy's text and reused for every CV and every run. Each line
+   carries the advert's own words (checked like every quote), a kind (skill,
+   experience, education, language, eligibility), must or nice, and whether it
+   is a knockout. How much a requirement matters is decided before the CV is
+   seen, so it cannot depend on who is reading.
+2. **Does this CV meet each one?** met, partly, missing -- each met or partly
+   with a CV quote, and **a quote that is not in the CV makes the answer
+   missing**. In 3.6 a verdict survived losing the quote it rested on; here the
+   check moves the number.
+
+Then `score()`: must-haves count 1, years and degrees ½, nice-to-haves ¼,
+eligibility only as a knockout; the share of that which is met is 70% of the
+answer and the kind of work (same, next, different) 30%. The weights were
+written before any run and are not fitted to labels -- a weight fitted to
+Mahdi's answers would be a rule inferred from them. `Weights` is where his own
+stated stretch ("they ask 4 years, I apply anyway", his words in the phase-3
+brief) goes when 4.5 asks for it.
+
+Two things 6.2 taught are fields of their own:
+
+- **A wish the CV states** -- a region, hours, a contract -- that the vacancy
+  contradicts is a *conflict*, quoted from both sides and both checked. It keeps
+  a vacancy from `strong`. This is what 3.7 got wrong on Youssef.
+- The output is a `MatchJudgement`, so the run file, the gap report, the
+  refusal and the viewer do not know which judge wrote it. Gaps are no longer
+  capped at five: every requirement the CV misses is one.
+
+### Three corrections, and what they cost the measurement
+
+The rule from 6.1 was written before this judge existed, so its **first** run
+was blind. Three things changed along the way, and the log keeps all three
+because the last one makes the final numbers not blind:
+
+1. **Silence is not disqualification.** The first live run, on the real CV,
+   answered "missing" to "EU citizenship or a Dutch work permit" -- which no CV
+   states -- and ruled out two Python jobs Mahdi would apply to. A knockout now
+   has a fourth answer, `unknown`, when the CV is silent: shown as a gap ("your
+   CV does not say"), never a rule-out. It is the honesty rule the other way
+   round: not crediting what a CV does not say, and not condemning on it either.
+2. **Eligibility was weighed as well as knocked out**, so a silent permit still
+   cost 35 points. A unit test caught it.
+3. **The first full run failed the rule** (below), and the reason was in the
+   arithmetic, not the model. A blocked vacancy -- different work, a knockout,
+   a contradicted wish -- was clamped to the top of the band below: Lisa's
+   "Account Executive" met half her skills and became weak **39**, above every
+   data job that was only short on requirements; Youssef's part-time job, on a
+   CV asking for full-time, became possible **74**, above jobs he would apply
+   to. Now inside every band the blocked half sorts below the rest (possible
+   40-57 | 58-74, weak 0-19 | 20-39). Arithmetic only: stored answers were
+   re-scored without a call.
+
+The second sample of every question and the TalentCLEF run were not used to
+find any of this.
+
+### The numbers
+
+`eval_judge.py --labelled --judge requirements`, all five CVs, two samples:
+
+| cv | 3.6 (three runs) | requirements, first (blind) | requirements, placed |
+|---|---|---|---|
+| mohammed (real) | 0.75 / 0.84 / 0.82 | 0.87 | 0.85 / 0.82 |
+| lisa_de_vries | 0.97 / 0.98 / 0.98 | 0.88 | **0.88 / 0.83** |
+| sanne_vermeulen | 0.75 / 0.76 / 0.80 | 0.72 | 0.80 / 0.79 |
+| youssef_bakker | 0.90 / 0.90 / 0.91 | 0.84 | 0.91 / 0.91 |
+| ingrid (control) | 0 strong, 0 possible | 0 strong, 0 possible | 0 strong, 0 possible |
+| `weak` on a "would apply", all CVs | 10 | 3 | 3 / 3 |
+
+Human experts, TalentCLEF (200 pairs, concordance per job):
+
+| | 3.6 | requirements |
+|---|---|---|
+| lowest / median | 0.86 / 0.95 | 0.82 / 0.97 |
+| yes to the experts' 1s / 0s | 64/94, 6/105 | 64/94, 5/106 |
+
+How much each judge disagrees with itself over two identical samples -- no
+labels involved:
+
+| cv | verdicts changed, 3.6 / req | mean change in fit, 3.6 / req |
+|---|---|---|
+| mohammed | 2 / 3 | 3.5 / 3.0 |
+| sanne_vermeulen | 2 / 1 | 4.3 / 2.4 |
+| youssef_bakker | 1 / 1 | 2.6 / 1.1 |
+| lisa_de_vries | 0 / 0 | 1.2 / 0.4 |
+
+### Against the rule: not the default
+
+1. Control and refusal: hold. 2. Honesty: one `strong` on a "would not apply"
+(the same Woonmodule vacancy every judge calls strong, and the one no judge
+can fix without a stated preference). 3. The real CV: 0.85 and 0.82 against
+3.6's 0.75-0.84 -- inside the noise, **fails**. 4. Lisa loses 0.09 to 0.15,
+**fails**.
+
+So 3.6 stays the default and the requirement judge is `--judge requirements`,
+in `match_cv.py` and both evals. What it measurably does better: a third of
+the cheap mistake (3 against 10), half the movement in its number between
+runs, Sanne up by 0.04, and an answer a person can check line by line. What it
+measurably does not: order the real CV's vacancies better than the noise can
+show, or agree with Lisa's labels.
+
+**Lisa's labels are the question to settle, and it is not an engineering
+one.** They were written by Claude (3.5) with a rule: "senior roles asking five
+years or an Azure stack she does not have are 'maybe', not 'apply'". That is a
+cap on exactly the stretch this judge relaxes, and rule 4 lets those labels veto
+it. Whether a stated years requirement should cap a vacancy is a preference --
+Mahdi's to state for himself in 4.5, and nobody's to state for Lisa, who does
+not exist.
+
+**What would decide it is more of the real CV's labels.** 24 labelled vacancies
+make 149 pairs, and at that size two identical runs differ by 0.09; no change
+to a judge can show itself through that. Every vacancy marked in the viewer,
+with its reason, adds pairs and narrows it, and every judgement already paid
+for is re-scored against the new labels for nothing.
+
+### What a run costs
+
+`match_cv.py --judge requirements --top 12` on the real CV: $0.10 and 30
+seconds of model time, including reading the requirement lists of the new
+vacancies. A list is read once per vacancy and kept (108 so far), so from the
+second run on the cost is one call per vacancy, as with 3.6. The eval's cost
+line now includes the list calls; the first measurements printed only the
+second call and under-reported the bill. The measurements for this milestone
+cost about $2.
+
 ## Audit — Ten real CVs from strangers, and what they broke
 
 Everything in phase 2 was measured on four CVs we wrote and one real one. This

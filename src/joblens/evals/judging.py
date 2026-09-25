@@ -39,6 +39,14 @@ from joblens.cv.judge import (
     verify,
 )
 from joblens.cv.match import CVMatch
+from joblens.cv.requirements import (
+    ANSWERS_VERSION,
+    REQUIREMENTS_VERSION,
+    RequirementBook,
+    RequirementJudgement,
+    combine,
+    judge_by_requirements,
+)
 from joblens.cv.store import CVCache
 from joblens.llm.structured import Mode
 from joblens.llm.types import ChatClient
@@ -61,9 +69,17 @@ class JudgeVariant:
     temperature: float = 0.0
     thinking: bool = False
     sample: int = 1
+    # "holistic" (judge.py, one verdict in one go) or "requirements"
+    # (requirements.py, one answer per requirement and the sum in code).
+    method: str = "holistic"
 
-    def kind(self, prompt_version: str) -> str:
-        name = f"judgement-{prompt_version}"
+    def kind(self) -> str:
+        if self.method == "requirements":
+            # Not the score's version: the arithmetic runs again on every
+            # read, so a stored answer outlives a change to it.
+            name = f"requirement-judgement-{ANSWERS_VERSION}"
+        else:
+            name = f"judgement-{PROMPT_VERSION}"
         if self.temperature:
             name += f"-t{self.temperature:g}"
         if self.thinking:
@@ -81,21 +97,44 @@ class JudgeVariant:
         model: str,
         mode: Mode,
         fresh: bool = False,
+        requirements: CVCache | None = None,
     ) -> tuple[list[Judged], list[str], int]:
         """Judge what is not stored yet, reuse what is, and store as it arrives.
 
         Returns the judgements best first, the failures, and how many were paid
         for. A stored answer is the model's raw one and is checked again with
-        today's `verify`, so a change to the check is measured for free.
+        today's `verify` -- and, for the requirement judge, added up again with
+        today's weights -- so a change to either is measured for free.
+        `requirements` is where the requirement judge keeps each vacancy's list.
         """
-        kind = self.kind(PROMPT_VERSION)
+        kind = self.kind()
+        ask, reread = None, rebuild
+        if self.method == "requirements":
+            book = RequirementBook(
+                requirements or cache, client, model=model, mode=mode
+            )
+
+            def ask(cv_text: str, match: CVMatch) -> Judged:
+                return judge_by_requirements(
+                    cv_text,
+                    match,
+                    client,
+                    book=book,
+                    mode=mode,
+                    temperature=self.temperature,
+                )
+
+            def reread(payload: dict, match: CVMatch, cv_text: str) -> Judged:
+                answer = RequirementJudgement.model_validate(payload)
+                return combine(answer, book.of(match), cv_text, match)
+
         stored, todo = [], []
         for cv_text, match in pairs:
             hit = None if fresh else cache.get(kind, model, pair_key(cv_text, match))
             if hit is None:
                 todo.append((cv_text, match))
             else:
-                stored.append(rebuild(hit, match, cv_text))
+                stored.append(reread(hit, match, cv_text))
 
         # A judgement knows its vacancy and not its CV, and one CV can be in
         # many pairs, so the key is found through the match it was asked with.
@@ -106,15 +145,25 @@ class JudgeVariant:
             cache.put(kind, model, keys[id(one.match)], payload)
 
         fresh_ones, failures = judge_pairs(
-            todo, client, mode=mode, temperature=self.temperature, on_judged=keep
+            todo,
+            client,
+            mode=mode,
+            temperature=self.temperature,
+            on_judged=keep,
+            judge=ask,
         )
         judged = sorted(stored + fresh_ones, key=lambda j: j.rank_key, reverse=True)
         return judged, failures, len(fresh_ones)
 
     def describe(self) -> str:
+        judge = (
+            f"requirement judge {REQUIREMENTS_VERSION}"
+            if self.method == "requirements"
+            else f"prompt {PROMPT_VERSION}"
+        )
         thinking = "thinking on" if self.thinking else "thinking off"
         sample = f", sample {self.sample}" if self.sample > 1 else ""
-        return f"temperature {self.temperature:g}, {thinking}{sample}"
+        return f"{judge}, temperature {self.temperature:g}, {thinking}{sample}"
 
 
 def pair_key(cv_text: str, match: CVMatch) -> str:

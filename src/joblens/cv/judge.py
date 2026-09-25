@@ -290,8 +290,9 @@ class Judged:
     # What the model actually answered, before anything was taken out of it. Kept
     # because it is the thing worth storing: re-checking a saved answer costs
     # nothing, so a change to `verify` can be measured against old runs instead
-    # of paying for new ones.
-    raw: MatchJudgement | None = None
+    # of paying for new ones. A `MatchJudgement` from the holistic judge, a
+    # `RequirementJudgement` from the requirement judge.
+    raw: BaseModel | None = None
     prompt_tokens: int = 0
     output_tokens: int = 0
     latency_s: float = 0.0
@@ -325,6 +326,7 @@ def judge_matches(
     workers: int = WORKERS,
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
+    judge: Callable[[str, CVMatch], "Judged"] | None = None,
 ) -> tuple[list[Judged], list[str]]:
     """Judge a shortlist, best first. Returns what came back and what failed.
 
@@ -344,6 +346,7 @@ def judge_matches(
         workers=workers,
         on_done=on_done,
         on_judged=on_judged,
+        judge=judge,
     )
 
 
@@ -356,17 +359,23 @@ def judge_pairs(
     workers: int = WORKERS,
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
+    judge: Callable[[str, CVMatch], "Judged"] | None = None,
 ) -> tuple[list[Judged], list[str]]:
     """`judge_matches` for pairs that do not share a CV.
 
     A person's shortlist is one CV against many vacancies; an external benchmark
     is two hundred CVs against ten job descriptions. The call is the same.
+
+    `judge` replaces the holistic judge with another one that takes a CV text
+    and a match -- the requirement judge (6.3) -- keeping everything else here.
     """
     judged: list[Judged] = []
     failures: list[str] = []
 
     def one(pair: tuple[str, CVMatch]):
         cv_text, match = pair
+        if judge is not None:
+            return match, judge(cv_text, match)
         return match, judge_match(
             cv_text, match, client, mode=mode, temperature=temperature
         )
