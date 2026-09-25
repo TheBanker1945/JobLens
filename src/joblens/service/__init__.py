@@ -7,12 +7,14 @@ results, and raises only `ServiceError`s -- it never reads .env, prints, or
 knows which of its callers it is talking to.
 """
 
+from joblens.service.cvs import MAX_UPLOAD_BYTES, add_cv
 from joblens.service.errors import (
     CVUnreadable,
     ProviderRefused,
     ProviderUnreachable,
     ServiceError,
 )
+from joblens.service.jobs import run_match_job
 from joblens.service.matching import (
     MatchRequest,
     MatchRun,
@@ -25,6 +27,7 @@ from joblens.service.matching import (
 )
 
 __all__ = [
+    "MAX_UPLOAD_BYTES",
     "CVUnreadable",
     "MatchRequest",
     "MatchRun",
@@ -34,7 +37,9 @@ __all__ = [
     "ProviderUnreachable",
     "Ranked",
     "ServiceError",
+    "add_cv",
     "judge",
     "judge_version",
     "rank",
+    "run_match_job",
 ]

@@ -37,6 +37,7 @@ import openai
 
 from joblens.config import LLMSettings
 from joblens.corpus import Corpus
+from joblens.cv.clean import Redacted
 from joblens.cv.gaps import GapSummary, summarise_gaps
 from joblens.cv.judge import PROMPT_VERSION, Judged, judge_matches
 from joblens.cv.match import (
@@ -51,7 +52,7 @@ from joblens.cv.match import (
     styles_of,
 )
 from joblens.cv.outcome import Outcome, assess
-from joblens.cv.read import CVFile, UnreadableCVError
+from joblens.cv.read import CVDocument, CVFile, UnreadableCVError
 from joblens.cv.requirements import (
     REQUIREMENTS_VERSION,
     RequirementBook,
@@ -68,7 +69,7 @@ from joblens.llm.structured import StructuredError, default_mode
 from joblens.llm.types import ChatClient
 from joblens.preferences import Conflict, Preferences, for_judge, rerank
 from joblens.service.errors import CVUnreadable, ProviderRefused, ProviderUnreachable
-from joblens.storage import Store
+from joblens.storage import CVRecord, Store
 
 JudgeKind = Literal["holistic", "requirements"]
 JUDGES: tuple[JudgeKind, ...] = ("holistic", "requirements")
@@ -94,7 +95,9 @@ class Models:
 class MatchRequest:
     """What a person asks for. The same knobs as match_cv.py's flags."""
 
-    cv: Path | CVFile
+    # A file on disk, an upload, or a CV an account already keeps (7.4): the
+    # last is read from its stored text and profile, with no model call.
+    cv: Path | CVFile | CVRecord
     strip_name: str | None = None  # the name to remove, exactly as the CV has it
     style: str = DEFAULT_STYLE
     top: int = 10  # how many to judge
@@ -177,17 +180,20 @@ def rank(
     """
     report = progress or _silent
     cache = CVCache(cache_dir / PROFILES)
-    with _translated(), ExitStack() as stack:
+    with provider_errors(), ExitStack() as stack:
         client = stack.enter_context(closing(chat(models.cv)))
         report(Progress("reading"))
-        prepared = prepare_cv(
-            request.cv,
-            client,
-            name=request.strip_name,
-            model=models.cv.model,
-            mode=default_mode(models.cv),
-            cache=cache,
-        )
+        if isinstance(request.cv, CVRecord):
+            prepared = stored_cv(request.cv)
+        else:
+            prepared = prepare_cv(
+                request.cv,
+                client,
+                name=request.strip_name,
+                model=models.cv.model,
+                mode=default_mode(models.cv),
+                cache=cache,
+            )
         report(Progress("ranking"))
         embedder = stack.enter_context(closing(embed(models.embed)))
         vectors = stack.enter_context(
@@ -246,7 +252,7 @@ def judge(
     report = progress or _silent
     request, prepared = ranked.request, ranked.prepared
     matches = ranked.chosen.matches
-    with _translated(), closing(chat(models.cv)) as client:
+    with provider_errors(), closing(chat(models.cv)) as client:
         report(Progress("judging", 0, len(matches)))
         judged, failures = judge_matches(
             prepared.text,
@@ -314,6 +320,28 @@ def judge(
     )
 
 
+def stored_cv(record: CVRecord) -> PreparedCV:
+    """A CV an account keeps, as the pipeline wants it, without reading again.
+
+    What is kept is the redacted text and the profile a model made of it
+    (service/cvs.py); the unredacted text was never stored outside the file,
+    which expires. So the "document" here is the redacted text too: everything
+    downstream only ever reads `prepared.text` and `prepared.profile`, and the
+    digest a run is stamped with comes out the same as the upload's.
+    """
+    if record.profile is None:
+        raise CVUnreadable(
+            f"{record.filename} was stored without a profile. Upload it again."
+        )
+    return PreparedCV(
+        name=record.name,
+        document=CVDocument(Path(record.filename), record.text, pages=0),
+        redacted=Redacted(record.text, []),
+        profile=record.profile,
+        from_cache=True,
+    )
+
+
 def judge_version(kind: JudgeKind) -> str:
     """What a run's judgements are comparable with. compare_runs.py refuses two
     runs whose versions differ, and two judges are two scales."""
@@ -336,8 +364,13 @@ def _requirement_judge(client: ChatClient, settings: LLMSettings, cache_dir: Pat
 
 
 @contextmanager
-def _translated() -> Iterator[None]:
-    """The reader's, the SDK's and httpx's exceptions, as ours (errors.py)."""
+def provider_errors() -> Iterator[None]:
+    """The reader's, the SDK's and httpx's exceptions, as ours (errors.py).
+
+    Wrapped around every call that reads a CV or talks to a model, here and in
+    service/cvs.py, so nothing above the service layer imports openai or httpx
+    to find out what went wrong.
+    """
     try:
         yield
     except UnreadableCVError as err:
