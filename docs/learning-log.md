@@ -2383,3 +2383,139 @@ in `eval_judge.py --labelled` on all five CVs:
    written by Claude with the same "a hard requirement caps it" rule the judge
    follows, so a small drop there can be the point; a large one is a broken
    judge.
+
+## Audit — Ten real CVs from strangers, and what they broke
+
+Everything in phase 2 was measured on four CVs we wrote and one real one. This
+audit pointed the app at ten more: public CVs that software people in the
+Netherlands keep on their own GitHub pages, junior to senior, across backend,
+mobile, functional programming, DevOps and data science, in Dutch and English. They live in `data/raw/` like any real CV, were
+matched with their names stripped, and nothing identifying from them is in this
+repository: every example below is invented, with the real damage copied.
+
+**The first finding was the corpus, not a CV.** 767 of the 1,171 open vacancies
+from phase 5 had never been indexed, so matching read 404. Indexing them then
+crashed after 11 minutes on one Gemini 503 ("high demand"): the loop caught
+only `ExtractionError`, and the error left through the top of the script,
+taking the remaining sources, the embedding step and up to nine paid,
+unflushed extractions with it. An API error is now one vacancy's failure, ten
+in a row stop the run cleanly with a non-zero exit, and extraction runs six at
+a time — the backlog was a 42-minute job one call after the other.
+
+### Redaction, read before anything was sent
+
+Nine of the ten were made by LaTeX and one by a browser, and that alone found
+what three invented CVs and one real one had not:
+
+| what left the machine | why the rule missed it |
+|---|---|
+| two phone numbers, profile links | an icon font extracts as letters glued to what follows (`ne+31 6 …`, `/mobile_phone06-…`), so no word boundary exists |
+| personal domains and handles | built from the name (`janbakker.nl`, `LinkedIn:// janbakker`), which a word match cannot see |
+| a street and number | no Dutch street suffix, on the line above a postcode — also in a committed sample CV |
+
+And one removal in the other direction: the date-of-birth rule deleted its
+whole line, taking the city written after the date — the one thing on it that
+matching needs. The honest part: the `/mobile_phone06-…` number was found only
+*after* it had been sent, because the first review read the top of each
+redacted CV and the number was at the bottom. The review that caught it read
+every line for anything phone-, mail- or link-shaped. The real CV redacts byte
+for byte as before, so its caches and run history stay valid.
+
+### The quote check, on text a PDF made
+
+On these CVs the judge was faithful — 1,124 quotes, and every dropped one was
+the PDF's doing. The biggest cause was LaTeX hyphenation: the text says
+`organi-` and `zations` on two lines, the judge quotes "organizations", and the
+check refused it. A hyphen at a line end means one of two things and the page
+does not say which ("Cool-⏎blue" is Coolblue, "One-⏎Class" is One-Class), so
+`quoted()` now reads it three ways — as extracted, as a split word, as a real
+hyphen — and the quote must match one of them exactly. Nothing about the words
+may differ, a hyphen inside a line is untouched, and the regression check that
+decided it ran over every judgement on record, the sample and real CVs' stored
+eval answers included:
+
+| | quotes | found |
+|---|---|---|
+| before | 1,925 | 98.4% |
+| after | 1,925 | **99.1%**, and none found before is dropped now |
+
+What was deliberately *not* made to pass: text glued across two columns
+(`…aardighedenAutomatisering`). Accepting a quote that starts inside a word is
+the exact hole the whole-word rule closed ("Java" in "JavaScript").
+
+### What the provider's bad hour measured
+
+Gemini answered 503 for most of an hour. The SDK retried each call twice; a
+batch run that way lost 26% of its judge calls, and seven of ten runs died on
+their first call with a traceback. With five retries in the same hour, 18 of
+94 calls succeeded only on the third to fifth, and the loss fell to 6%. Five is
+now the default for the LLM client (our own paid API; the scraping gate still
+never retries a refusal), and `match_cv.py` says the provider is busy instead
+of printing a traceback.
+
+### What the matches looked like
+
+The good news first: the mobile engineer's top match is an Android platform
+role at 91, the functional programmer's a Haskell team lead at 92, and the one
+CV far from the corpus' region and stack came back "nothing is a clear fit".
+About 4 cents and half a minute per CV at `--top 10`.
+
+Measured and left for a decision, not fixed:
+
+- **One CV in ten has no spaces in its PDF text** (`Developmentofcourseson…`)
+  and a second has lines like that. The model reads it and the quotes pass, but
+  they reach the person unreadable, and on the second CV four true claims were
+  lost. pypdf and pdfplumber both fail; pdfminer.six reads it with each job
+  kept together. Detection is trivial: 21.7 characters per word against at most
+  7.6 for every other CV.
+- **"What keeps coming up" picks one skill out of an "or" list**: "Fabric,
+  Synapse, Databricks or Snowflake" counts as missing Databricks. 18% of the
+  417 stored gaps read as alternatives.
+- **Duplicates that escape**: 22 of 1,166 (1.9%) — a copy without a city (the
+  fingerprint turns a missing city into "", while `same_place` calls it
+  compatible) or a company spelled two ways. EURES, whose duplicate risk phase
+  5 left unmeasured: 2 of 208, using the employer extraction already recovers
+  from the text for 83% of them.
+- **Half a shortlist from one employer**: five near-identical Sopra Steria jobs
+  took five of nine judge calls for one CV, all two hours' drive from where it
+  lives — and no verdict mentioned the distance. That is the preferences work
+  planned for phase 3 (a CV says where someone lives, not how far they will
+  travel), not a judge bug.
+- **The judge quotes its own prompt header** ("Title (Company · City)"), which
+  is not in the text the quote is checked against; and `match_cv.py` does not
+  store the raw answers, so a run cannot be re-checked later the way the eval
+  can.
+
+### Decided the next day, and built
+
+Mahdi took four of the five: a fallback reader, "or" lists out of the
+headline, the cap per employer, and not loosening the duplicate check.
+
+**A second reader, used only when it is clearly better.** When more than 2% of
+pypdf's words are over 20 characters, the PDF is read again with pdfminer.six,
+and that text is kept only if it at least halves the share. Both conditions
+earned their place: normal CVs sit at 1.6% at most, and on the one real CV that
+always read fine, pdfminer's text is *worse* than pypdf's (2.0% against 0.5%).
+Of eleven real PDFs exactly the two broken ones switch (40.2% → 0.2% and 3.6% →
+1.6%), and re-run end to end the first quotes its CV in ordinary spaced
+sentences where it used to quote runs of glued words, while the second's lost
+claim now passes the check. The fixture could not copy the real damage this
+time — pypdf's space rule depends on font details a hand-written PDF does not
+reproduce — so the tests glue pypdf's output themselves and run pdfminer for
+real.
+
+**A choice is not a gap in any one skill.** A gap naming two or more skills with
+"or", "of", "en/of" or "/" *between* them goes to "could not be grouped". The
+skills are masked before looking, so the "/" in CI/CD is no choice and "knowledge
+of Python and SQL" is no "of". 153 of the 943 stored gaps (16%) move, and read by
+hand they are choices; "and" lists are grouped as before.
+
+**Two per employer.** The five-Sopra-Steria shortlist now judges two, prints the
+three it skipped, and spends those calls on five other employers. The ranking
+does not move; the run stores which rows were capped, and the cut is drawn below
+the last one judged. On the stored runs, 2 of 10 web CVs change and the real
+CV's shortlist does not, so no labelled vacancy moves.
+
+And the re-run showed why the quote check is not loosened: of three claims it
+dropped for one CV, two stitched non-adjacent lines of a skills table together
+and one — "PostgreSQL 3 Jaar" — is on no line of that CV at all.

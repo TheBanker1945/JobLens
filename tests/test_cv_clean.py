@@ -217,3 +217,113 @@ def test_a_long_run_of_digits_goes_whatever_it_is():
 
     assert "123456789" not in redacted.text
     assert "88001234567" not in redacted.text
+
+
+# ---------------------------------------------------------------------------
+# Shapes from ten real CVs (2026-09-24). Invented people, real damage: the
+# contact line set in an icon font, a personal domain, a name run together into
+# a handle, a street with no street suffix.
+
+ICON_FONT_CONTACT_LINE = (
+    "/ne+31 6 12 345 678 /♀nednlinkedin.com/in/jan-bakker-1234567\n"
+    "/mobile_phone06-98 76 54 32 • ✉ jan@example.com\n"
+    "/g♀bebakkerjb.com /gtbgithub.com/jbakker-dev\n"
+    "Amsterdam, Nederland"
+)
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "12 345 678",
+        "98 76 54 32",
+        "linkedin.com",
+        "1234567",
+        "bakkerjb.com",
+        "jbakker-dev",
+    ],
+)
+def test_contact_details_glued_to_icon_glyphs_do_not_survive(secret):
+    """An icon font extracts as letters glued to what follows it, so neither a
+    word boundary nor "no letter in front" exists where the rules looked."""
+    assert secret not in redact_cv(ICON_FONT_CONTACT_LINE, name="Jan Bakker").text
+
+
+def test_the_city_on_an_icon_font_contact_line_stays():
+    assert "Amsterdam" in redact_cv(ICON_FONT_CONTACT_LINE, name="Jan Bakker").text
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Website: janbakker.nl",
+        "LinkedIn:// janbakker",
+        "twitter: @jan_bakker",
+        "Mail naar jan.bakker@example.com",
+    ],
+)
+def test_a_name_run_together_into_a_handle_or_a_domain_goes(line):
+    assert "bakker" not in redact_cv(line, name="Jan Bakker").text.casefold()
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Werkte bij Vanderlande in Veghel",  # "van der" alone is not the name
+        # A surname under four letters is not looked for inside a domain.
+        "Boodschappen via Colruyt.be en Coolblue.nl",
+    ],
+)
+def test_employers_that_share_letters_with_the_name_are_kept(line):
+    for name in ("Jan van der Berg", "Piet Col"):
+        assert redact_cv(line, name=name).text == line
+
+
+def test_a_site_and_a_handle_written_like_a_link_go():
+    redacted = redact_cv("Github:// jbakker\nMaven:// nl.jbakker", name="Jan Bakker")
+
+    assert "jbakker" not in redacted.text
+    assert redacted.counts()["url"] == 2
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        "De Drie Linden 14\n2345 XY Voorschoten",  # no street suffix at all
+        "Molenakkers 5B\n8888ZX Zuidlaren",
+        "Ringbaan-Oost 88, 5013 AB Tilburg",  # a suffix, then more name
+        "Jan Steenstraat 1, 3500 XY, Utrecht",  # two words before the suffix
+    ],
+)
+def test_a_street_over_or_before_a_postcode_goes_and_the_city_stays(address):
+    redacted = redact_cv(address).text
+
+    assert not any(character.isdigit() for character in redacted)
+    assert address.split()[-1] in redacted  # the city
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Angular 15\n2021 AB testing opgezet",  # not capitals and a city after it
+        "Python 3\n2019 IT Consultant bij Capgemini",  # a year and an acronym
+    ],
+)
+def test_a_line_ending_in_a_number_is_not_an_address(text):
+    assert text.split("\n")[0] in redact_cv(text).text
+
+
+def test_a_birth_date_goes_and_the_rest_of_its_line_stays():
+    """Deleting the line took the city that was written after the date."""
+    redacted = redact_cv("Geboren 3 maart 1995 – woonachtig in Woerden")
+
+    assert "1995" not in redacted.text
+    assert "maart" not in redacted.text
+    assert "woonachtig in Woerden" in redacted.text
+
+
+@pytest.mark.parametrize(
+    "line", ["Date of birth: 1995-03-14", "Geboortedatum: 14-03-1995", "DOB 14/3/1995"]
+)
+def test_a_birth_date_goes_in_every_order_it_is_written(line):
+    assert not any(character.isdigit() for character in redact_cv(line).text)
