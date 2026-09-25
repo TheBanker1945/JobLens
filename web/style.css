@@ -86,6 +86,7 @@ h2 { font-size: 1rem; margin: 1.5rem 0 .25rem; }
 .call.maybe:hover { border-color: var(--possible); color: var(--possible); }
 .call.no:hover { border-color: var(--warn); color: var(--warn); }
 .badge.mine { border-style: dashed; }
+.badge.moved { color: var(--warn); border-style: dotted; }
 .badge.mine.apply { color: var(--strong); }
 .badge.mine.maybe { color: var(--possible); }
 .badge.mine.no { color: var(--warn); }

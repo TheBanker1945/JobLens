@@ -26,6 +26,7 @@ Neither is averaged across CVs, for the reason `evals/matching.py` gives: a CV
 is a person, and there are five of them.
 """
 
+import hashlib
 import math
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -72,6 +73,10 @@ class JudgeVariant:
     # "holistic" (judge.py, one verdict in one go) or "requirements"
     # (requirements.py, one answer per requirement and the sum in code).
     method: str = "holistic"
+    # The person's own rules, as the holistic judge is shown them
+    # (preferences/prompt.py, 7.3). A different block is a different question,
+    # so its digest is part of the name the answers are stored under.
+    told: str | None = None
 
     def kind(self) -> str:
         if self.method == "requirements":
@@ -84,6 +89,8 @@ class JudgeVariant:
             name += f"-t{self.temperature:g}"
         if self.thinking:
             name += "-thinking"
+        if self.told and self.method != "requirements":
+            name += f"-told-{hashlib.sha256(self.told.encode()).hexdigest()[:8]}"
         if self.sample > 1:
             name += f"#{self.sample}"
         return name
@@ -151,6 +158,7 @@ class JudgeVariant:
             temperature=self.temperature,
             on_judged=keep,
             judge=ask,
+            told=self.told,
         )
         judged = sorted(stored + fresh_ones, key=lambda j: j.rank_key, reverse=True)
         return judged, failures, len(fresh_ones)
@@ -163,7 +171,12 @@ class JudgeVariant:
         )
         thinking = "thinking on" if self.thinking else "thinking off"
         sample = f", sample {self.sample}" if self.sample > 1 else ""
-        return f"{judge}, temperature {self.temperature:g}, {thinking}{sample}"
+        told = (
+            ", told the person's own rules"
+            if self.told and self.method != "requirements"
+            else ""
+        )
+        return f"{judge}, temperature {self.temperature:g}, {thinking}{sample}{told}"
 
 
 def pair_key(cv_text: str, match: CVMatch) -> str:

@@ -77,6 +77,7 @@ from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd, format_cost
 from joblens.llm.structured import default_mode
+from joblens.preferences import Preferences, for_judge
 from joblens.storage import FileStore, Store
 
 ROOT = Path(__file__).parent.parent
@@ -137,6 +138,12 @@ def main() -> int:
         "--cv-dir", type=Path, help="look here first (default: samples, then raw)"
     )
     parser.add_argument(
+        "--preferences",
+        action="store_true",
+        help="tell the holistic judge the rules stored by scripts/preferences.py "
+        "(years, degree, sectors: 7.3). Stored apart from the answers without",
+    )
+    parser.add_argument(
         "--strip-name",
         metavar="NAME",
         help="remove this name, as the labelling run did: the CV a variant reads "
@@ -155,8 +162,21 @@ def main() -> int:
     cv_settings = load_llm_settings(prefix="CV")
     if args.thinking:
         cv_settings = cv_settings.model_copy(update={"thinking": args.thinking == "on"})
+    told = None
+    if args.preferences:
+        stored = store.load_preferences()
+        if stored is None:
+            print("No preferences stored yet: scripts/preferences.py ask")
+            return 1
+        told = for_judge(Preferences.model_validate(stored))
+        if told is None:
+            print(
+                "The stored preferences answer none of years, degree or sectors, "
+                "so the judge would be told nothing: this would be the plain run."
+            )
+            return 1
     args.variant = JudgeVariant(
-        args.temperature, cv_settings.thinking, args.sample, args.judge
+        args.temperature, cv_settings.thinking, args.sample, args.judge, told
     )
     embed_settings = load_llm_settings(prefix="EMBED")
     cache = CVCache(CACHE_DIR / "cv-profiles.json")

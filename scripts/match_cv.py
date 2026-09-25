@@ -39,6 +39,7 @@ from joblens.cv.judge import Judged, Verdict
 from joblens.cv.match import DEFAULT_STYLE, PER_EMPLOYER, styles_of
 from joblens.cv.outcome import Fit, Outcome
 from joblens.llm.pricing import format_cost
+from joblens.preferences import Preferences
 from joblens.service import (
     MatchRequest,
     MatchRun,
@@ -92,6 +93,12 @@ def main() -> int:
         "--no-explain", action="store_true", help="retrieval only: no model calls"
     )
     parser.add_argument(
+        "--preferences",
+        action="store_true",
+        help="use what you want from a job (scripts/preferences.py): vacancies "
+        "that contradict it move back, and the judge hears your own rules",
+    )
+    parser.add_argument(
         "--judge",
         choices=["holistic", "requirements"],
         default="holistic",
@@ -110,6 +117,14 @@ def main() -> int:
     models = Models(
         cv=load_llm_settings(prefix="CV"), embed=load_llm_settings(prefix="EMBED")
     )
+    store = FileStore(ROOT)
+    preferences = None
+    if args.preferences:
+        stored = store.load_preferences()
+        if not stored:
+            print("No preferences stored yet: scripts/preferences.py ask")
+            return 1
+        preferences = Preferences.model_validate(stored)
     try:
         request = MatchRequest(
             cv=args.cv,
@@ -118,14 +133,15 @@ def main() -> int:
             top=args.top,
             per_employer=args.per_employer,
             judge=args.judge,
+            preferences=preferences,
         )
     except ValueError as err:
         parser.error(str(err))
-    store = FileStore(ROOT)
     try:
         ranked = rank(request, corpus, models, cache_dir=CACHE_DIR)
         header(ranked, args, corpus, models)
         report_cv_problems(ranked.prepared)
+        show_moves(ranked)
         if args.show_sent:
             print("\n--- text that was sent " + "-" * 55)
             print(ranked.prepared.text)
@@ -178,6 +194,35 @@ def header(ranked: Ranked, args, corpus, models: Models) -> None:
     if line := corpus.funnel.line():
         print(line)
     print(f"judged by {models.cv.model}, {judge_version(args.judge)}\n")
+
+
+def show_moves(ranked: Ranked) -> None:
+    """What the preferences moved, above the list: a move you cannot see is a
+    rejection you cannot argue with."""
+    if ranked.before is None:
+        return
+    preferences = ranked.request.preferences
+    print(f"preferences {preferences.stamp()}: ", end="")
+    if not ranked.conflicts:
+        print("no vacancy states anything you said you do not want.\n")
+        return
+    now = {m.vacancy.key: i for i, m in enumerate(ranked.ranking, 1)}
+    top = ranked.request.top
+    lost = sorted(
+        (key for key in ranked.conflicts if ranked.before[key] <= top),
+        key=lambda key: ranked.before[key],
+    )
+    print(
+        f"{len(ranked.conflicts)} of {len(ranked.ranking)} vacancies moved back "
+        f"for contradicting them; {len(lost)} of those were in retrieval's top "
+        f"{top}."
+    )
+    titles = {m.vacancy.key: m.vacancy.title for m in ranked.ranking}
+    for key in lost:
+        reasons = "; ".join(one.line() for one in ranked.conflicts[key])
+        print(f"  #{ranked.before[key]} -> #{now[key]}  {shorten(titles[key], 50)}")
+        print(f"      {reasons}")
+    print()
 
 
 def cv_style(value: str) -> str:

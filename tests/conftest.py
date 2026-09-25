@@ -132,7 +132,7 @@ NOT_STATED = dict.fromkeys(
 def details(title: str, **stated) -> VacancyDetails:
     """Details with `title` and whatever else is given; the rest is null."""
     return VacancyDetails(
-        title=title, skills=[], languages_required=[], **NOT_STATED | stated
+        **{"title": title, "skills": [], "languages_required": []} | NOT_STATED | stated
     )
 
 

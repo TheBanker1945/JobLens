@@ -184,12 +184,21 @@ def judge_match(
     *,
     mode: Mode = "schema",
     temperature: float = 0.0,
+    told: str | None = None,
 ) -> "Judged":
-    """One vacancy, one call, and the quotes checked before it comes back."""
+    """One vacancy, one call, and the quotes checked before it comes back.
+
+    `told` is what the person said about their own rules (preferences/prompt.py,
+    7.3). It goes between the CV and the vacancy, so the part every call of a
+    run shares still comes first; without it the prompt is 3.6's to the byte.
+    """
     vacancy = match.vacancy
     where = _where(match)
     prompt = USER_TEMPLATE.format(
-        cv=cv_text, title=vacancy.title, where=where, vacancy=vacancy.text
+        cv=cv_text if told is None else f"{cv_text}\n\n{told}",
+        title=vacancy.title,
+        where=where,
+        vacancy=vacancy.text,
     )
     result = extract_structured(
         prompt,
@@ -327,6 +336,7 @@ def judge_matches(
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
     judge: Callable[[str, CVMatch], "Judged"] | None = None,
+    told: str | None = None,
 ) -> tuple[list[Judged], list[str]]:
     """Judge a shortlist, best first. Returns what came back and what failed.
 
@@ -347,6 +357,7 @@ def judge_matches(
         on_done=on_done,
         on_judged=on_judged,
         judge=judge,
+        told=told,
     )
 
 
@@ -360,6 +371,7 @@ def judge_pairs(
     on_done=None,
     on_judged: Callable[[Judged], None] | None = None,
     judge: Callable[[str, CVMatch], "Judged"] | None = None,
+    told: str | None = None,
 ) -> tuple[list[Judged], list[str]]:
     """`judge_matches` for pairs that do not share a CV.
 
@@ -368,6 +380,8 @@ def judge_pairs(
 
     `judge` replaces the holistic judge with another one that takes a CV text
     and a match -- the requirement judge (6.3) -- keeping everything else here.
+    `told` reaches the holistic judge only; the requirement judge adds up its
+    own weights and is not told preferences (7.3).
     """
     judged: list[Judged] = []
     failures: list[str] = []
@@ -377,7 +391,7 @@ def judge_pairs(
         if judge is not None:
             return match, judge(cv_text, match)
         return match, judge_match(
-            cv_text, match, client, mode=mode, temperature=temperature
+            cv_text, match, client, mode=mode, temperature=temperature, told=told
         )
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
