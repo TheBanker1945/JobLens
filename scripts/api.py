@@ -1,25 +1,25 @@
 """Run the web app's API on this machine.
 
     docker compose up -d db
-    uv run python scripts/api.py                      # http://127.0.0.1:8001/api/docs
-    uv run python scripts/api.py --port 8002 --user you@example.com
+    uv run python scripts/db.py invite you@example.com --owner   # once
+    uv run python scripts/api.py                                  # port 8001
+    uv run python scripts/api.py --link you@example.com           # a fresh login link
 
-It serves JSON to the page that 7.7 builds; until then /api/docs is an
+Open the login link it (or `db.py invite`) printed, press "Sign in", and the
+browser holds a 30-day session. Then http://127.0.0.1:8001/api/docs is an
 interactive page of every route, where a CV can be uploaded and a match started
-by hand: click "Authorize" and enter 1 first, which sends the X-JobLens header
-that every changing request needs.
+by hand: click "Authorize" and enter 1 there first, which sends the X-JobLens
+header every changing request needs. 7.7 builds the real page.
 
-Needs DATABASE_URL, the CV_* and EMBED_* settings (.env.example), and an
-account: JOBLENS_DEV_USER in .env, or --user. There is no login until 7.5, so
-it binds to 127.0.0.1 and nothing else.
-
-The database is migrated on start (safe to repeat: scripts/db.py), and the
-open, extracted vacancies are loaded once; restart it after the nightly fetch.
+Needs DATABASE_URL and the CV_* and EMBED_* settings (.env.example). The
+database is migrated on start (safe to repeat), and the open, extracted
+vacancies are loaded once: restart it after the nightly fetch. It binds to
+127.0.0.1, over plain http, so its cookies are not marked Secure; hosting (7.8)
+serves it over https, where they are.
 """
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -39,8 +39,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--corpus", choices=NAMES, default="raw")
-    parser.add_argument("--user", help="the account to act as (JOBLENS_DEV_USER)")
+    parser.add_argument("--link", metavar="EMAIL", help="print a login link for them")
     args = parser.parse_args()
+    # A line at a time, even into a file or a process manager: the login link
+    # printed below is no use sitting in a buffer until the server stops.
+    sys.stdout.reconfigure(line_buffering=True)
 
     load_dotenv()
     logging.basicConfig(
@@ -51,20 +54,20 @@ def main() -> int:
     except ValueError as err:
         print(err)
         return 1
-    applied = database.migrate()
-    for one in applied:
+    for one in database.migrate():
         print(f"applied {one.name}")
+
+    base = f"http://127.0.0.1:{args.port}"
+    if args.link:
+        user = database.user_by_email(args.link)
+        if user is None:
+            print(f"No account for {args.link}: scripts/db.py invite {args.link}")
+            return 1
+        token = database.create_login_link(user.id)
+        print(f"login link for {user.email}:\n  {base}/login#{token}")
 
     # Open vacancies only, as match_cv.py: a job taken down is not a match.
     corpus = load_corpus(args.corpus, open_only=True).extracted()
-    user = args.user or os.environ.get("JOBLENS_DEV_USER")
-    if not user or database.user_by_email(user) is None:
-        print(
-            f"No account for {user!r}. Make one with scripts/db.py create-user and "
-            "set JOBLENS_DEV_USER (or pass --user)."
-        )
-        return 1
-
     app = create_app(
         AppConfig(
             database=database,
@@ -74,14 +77,10 @@ def main() -> int:
                 embed=load_llm_settings(prefix="EMBED"),
             ),
             cache_dir=ROOT / "data" / "cache",
-            dev_user=user,
+            secure_cookies=False,  # plain http on this machine only
         )
     )
-    print(
-        f"{len(corpus)} open vacancies; acting as {user}\n"
-        f"API docs: http://127.0.0.1:{args.port}/api/docs"
-    )
-    # 127.0.0.1 only: there is no login until 7.5.
+    print(f"{len(corpus)} open vacancies\nAPI docs: {base}/api/docs")
     uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="info")
     database.close()
     return 0

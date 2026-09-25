@@ -107,7 +107,12 @@ class User(BaseModel):
     email: str | None = None  # null until 7.5 signs people in
     display_name: str | None = None
     locale: str | None = None  # en, nl, de, fr or es; None until chosen
+    role: str = "tester"  # "owner" (unlimited) or "tester" (7.5, budget in 7.6)
     created_at: datetime
+
+    @property
+    def is_owner(self) -> bool:
+        return self.role == "owner"
 
 
 class CVRecord(BaseModel):

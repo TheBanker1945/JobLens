@@ -4,15 +4,23 @@
     uv run python scripts/db.py migrate              # create or update its tables
     uv run python scripts/db.py status               # which migrations it has
     uv run python scripts/db.py create-user you@example.com --name "You" --locale nl
+    uv run python scripts/db.py invite tester@example.com       # account + login link
+    uv run python scripts/db.py login-link tester@example.com   # a new link
+    uv run python scripts/db.py set-role you@example.com owner
     uv run python scripts/db.py import you@example.com          # runs and labels
     uv run python scripts/db.py import you@example.com --cv data/raw/cv/you.pdf \\
         --strip-name "Your Name"                                 # and your CV
-    uv run python scripts/db.py purge-files          # uploaded files past 30 days
+    uv run python scripts/db.py purge-files          # old files, links, sessions
     uv run python scripts/db.py delete-user you@example.com --yes
 
 Which database: DATABASE_URL in .env (the local one in .env.example; Neon's
 connection string when hosted). The scripts, the evals and the viewer keep
 using the files in data/raw/; `serve.py --db EMAIL` shows an account's runs.
+
+**Signing in is invite-only (7.5).** `invite` makes an account (a tester,
+unless --owner) and prints a login link; send it to them however you like. The
+link works once, within 7 days, and gives a 30-day session; `login-link` makes a
+new one. The links point at JOBLENS_BASE_URL (default http://127.0.0.1:8001).
 
 `import` copies this laptop's runs (data/raw/cv-runs/) and a real CV's labels
 (data/raw/cv-labels/) into one account, and can be run again: what is already
@@ -21,6 +29,7 @@ repo's evidence, not anybody's data, and are never imported.
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -36,6 +45,8 @@ from joblens.storage import Database, FileStore
 from joblens.storage.migrate import MigrationError, status
 
 ROOT = Path(__file__).parent.parent
+LOCALES = ["en", "nl", "de", "fr", "es"]
+DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 CACHE_DIR = ROOT / "data" / "cache"
 
 
@@ -47,12 +58,27 @@ def main() -> int:
     make = commands.add_parser("create-user", help="make an account")
     make.add_argument("email")
     make.add_argument("--name")
-    make.add_argument("--locale", choices=["en", "nl", "de", "fr", "es"])
+    make.add_argument("--locale", choices=LOCALES)
+    make.add_argument(
+        "--owner", action="store_true", help="unlimited; the rest are testers"
+    )
+    invite = commands.add_parser("invite", help="an account and a login link")
+    invite.add_argument("email")
+    invite.add_argument("--name")
+    invite.add_argument("--locale", choices=LOCALES)
+    invite.add_argument("--owner", action="store_true")
+    link = commands.add_parser("login-link", help="a new login link")
+    link.add_argument("email")
+    role = commands.add_parser("set-role", help="make someone owner or tester")
+    role.add_argument("email")
+    role.add_argument("role", choices=["owner", "tester"])
     bring = commands.add_parser("import", help="copy this laptop's data in")
     bring.add_argument("email")
     bring.add_argument("--cv", type=Path, help="also store this CV as the active one")
     bring.add_argument("--strip-name", metavar="NAME")
-    commands.add_parser("purge-files", help="delete uploaded files past 30 days")
+    commands.add_parser(
+        "purge-files", help="delete uploaded files past 30 days, old links and sessions"
+    )
     gone = commands.add_parser("delete-user", help="an account and all its data")
     gone.add_argument("email")
     gone.add_argument("--yes", action="store_true", help="really delete it")
@@ -85,9 +111,49 @@ def show_status(database: Database, args) -> int:
 
 def create_user(database: Database, args) -> int:
     user = database.create_user(
-        email=args.email, display_name=args.name, locale=args.locale
+        email=args.email,
+        display_name=args.name,
+        locale=args.locale,
+        role="owner" if args.owner else "tester",
     )
-    print(f"created {user.email}  ({user.id})")
+    print(f"created {user.email} as {user.role}  ({user.id})")
+    return 0
+
+
+def invite(database: Database, args) -> int:
+    """An account if there is none, and a login link either way."""
+    user = database.user_by_email(args.email)
+    if user is None:
+        create_user(database, args)
+        user = database.user_by_email(args.email)
+    return print_link(database, user)
+
+
+def login_link(database: Database, args) -> int:
+    user = database.user_by_email(args.email)
+    if user is None:
+        print(f"No account for {args.email}: invite them first.")
+        return 1
+    return print_link(database, user)
+
+
+def set_role(database: Database, args) -> int:
+    user = database.user_by_email(args.email)
+    if user is None:
+        print(f"No account for {args.email}.")
+        return 1
+    print(f"{database.set_role(user.id, args.role).email} is now {args.role}")
+    return 0
+
+
+def print_link(database: Database, user) -> int:
+    base = os.environ.get("JOBLENS_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    token = database.create_login_link(user.id)
+    print(
+        f"login link for {user.email} (works once, for 7 days):\n"
+        f"  {base}/login#{token}\n"
+        "Send it to them yourself; JobLens keeps only a hash of it."
+    )
     return 0
 
 
@@ -153,6 +219,7 @@ def import_cv(store, args) -> int:
 
 def purge_files(database: Database, args) -> int:
     print(f"{database.purge_expired_files()} expired file(s) deleted")
+    print(f"{database.purge_expired_logins()} expired link(s) and session(s) deleted")
     return 0
 
 
@@ -176,6 +243,9 @@ COMMANDS = {
     "migrate": migrate,
     "status": show_status,
     "create-user": create_user,
+    "invite": invite,
+    "login-link": login_link,
+    "set-role": set_role,
     "import": import_data,
     "purge-files": purge_files,
     "delete-user": delete_user,
