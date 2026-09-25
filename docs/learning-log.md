@@ -3041,3 +3041,53 @@ three judged were all weak. 16 new tests; 847 in all.
 New dependencies: fastapi (and starlette under it), uvicorn to serve it,
 python-multipart for uploads, psycopg-pool so a request does not open a new TLS
 connection to Neon.
+
+## 7.5 — Signing in, and one person's ids opening nothing of another's
+
+Until now the API acted for one account named in `.env`. That shortcut is gone:
+every route but `/api/health` and the login answers 401 without a session.
+
+**Invite-only login links, no passwords.** For Mahdi and a handful of testers
+the smallest safe thing is a link: `scripts/db.py invite tester@example.com`
+makes the account and prints `http://127.0.0.1:8001/login#<token>`, the owner
+sends it however he likes, and the link, used once within 7 days, starts a
+30-day session in an HttpOnly cookie. No password is ever stored, there is no
+mail service to set up, and nobody can sign themselves up. Rejected for now:
+Google sign-in (needs an OAuth client in Google Cloud; it can arrive in 7.8 as
+a second door to the same sessions) and passwords (hashing, resets, and the
+mail service resets need, for five people).
+
+**Four details that are each a known way this goes wrong.**
+
+| detail | the failure it prevents |
+|---|---|
+| only a SHA-256 of each link and session is stored | a leaked backup or a curious admin gets no working link and no session |
+| the token sits after `#` | browsers never send it, so it cannot land in an access log (checked in the real server's log) |
+| opening a link shows a button; the sign-in is its POST | chat apps open links for a preview, and would use a one-time link up |
+| marking the link used and starting the session is one UPDATE ... WHERE unused | two tabs on one link get one session, never two |
+
+The cookie is SameSite=Lax and HttpOnly, and Secure wherever the server is not
+127.0.0.1 -- `create_app` refuses to start otherwise. The 7.4 header rule stays
+as the CSRF protection: a page elsewhere can make your browser send a form with
+your cookie, but not a header of its own.
+
+**Keeping people apart is tested through HTTP, not assumed.** Lisa uploads a CV
+and runs a match; Sanne, signed in, sees no CVs, runs or matches, and Lisa's run
+id, job id and CV id each answer 404 to her. That holds because every query goes
+through the store of the person the session belongs to (7.2), which puts
+`user_id` in every WHERE.
+
+**Leaving.** `GET /api/me/export` returns everything kept (account, every CV
+with its text and profile, preferences, labels, runs, matches) as one JSON
+file; `POST /api/me/delete` with `{"confirm": "delete everything"}` removes the
+account and, through the cascades, every row that was theirs, sessions and
+links included.
+
+**Checked on the real server:** the login page came back without the token in
+it, 401 before signing in, 200 and the cookie after, Lisa's run from 7.4 listed,
+the same link refused the second time, 401 again after signing out, and the
+access log shows `GET /login` with nothing after it. It also found a bug no test
+had: `print` output to a file is buffered, so `scripts/api.py --link` under a
+process manager would have held the login link until the server stopped. Its
+output is now line-buffered. 11 new tests; 858 in all. No new dependency.
+
