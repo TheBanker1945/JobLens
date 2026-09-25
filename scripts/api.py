@@ -6,7 +6,8 @@
 
 It serves JSON to the page that 7.7 builds; until then /api/docs is an
 interactive page of every route, where a CV can be uploaded and a match started
-by hand. Needs DATABASE_URL, the CV_* and EMBED_* settings (.env.example), and
+by hand: click "Authorize" and enter 1 first, which sends the X-JobLens header
+that every changing request needs. Needs DATABASE_URL, the CV_* and EMBED_* settings (.env.example), and
 an account: JOBLENS_DEV_USER in .env, or --user. There is no login until 7.5,
 so it binds to 127.0.0.1 and nothing else.
 

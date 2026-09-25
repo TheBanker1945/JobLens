@@ -211,3 +211,14 @@ def test_a_restart_closes_the_jobs_it_cut_off(database, lisa, tmp_path):
 
         assert job["status"] == "failed"
         assert "restarted" in job["error"]
+
+
+def test_the_docs_page_can_send_the_header(database, lisa, tmp_path):
+    """/api/docs offers "Authorize" for X-JobLens, or it could change nothing."""
+    with app_for(database, tmp_path, lambda s: FakeClient()) as http:
+        spec = http.get("/api/openapi.json").json()
+
+    schemes = spec["components"]["securitySchemes"].values()
+    assert {"type": "apiKey", "in": "header", "name": "X-JobLens"}.items() <= next(
+        iter(schemes)
+    ).items()

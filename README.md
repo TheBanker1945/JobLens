@@ -278,7 +278,7 @@ once, then kept), answer the preferences, start a match, follow it, read the
 runs. A match runs as a background job (20-60 s) whose progress is kept in the
 database, and one person can have one match running at a time. `/api/docs` is
 an interactive page of every route, generated from the code, where all of it
-can be tried by hand. Built on FastAPI; it needs the database above and an
+can be tried by hand (click "Authorize" and enter `1` first). Built on FastAPI; it needs the database above and an
 account in `JOBLENS_DEV_USER`, because login arrives in 7.5 -- until then it
 binds to 127.0.0.1 only, and every request that changes something must carry
 the header `X-JobLens: 1`, which another website cannot make your browser send.

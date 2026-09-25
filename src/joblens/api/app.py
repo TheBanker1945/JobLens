@@ -40,6 +40,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from joblens.api.runner import Runner, ThreadRunner
@@ -66,6 +67,11 @@ logger = logging.getLogger(__name__)
 
 # The header every changing request must carry (module docstring).
 HEADER = "X-JobLens"
+OUR_PAGE = APIKeyHeader(
+    name=HEADER,
+    auto_error=False,
+    description="Set to 1. Every request that changes something needs it.",
+)
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
@@ -138,6 +144,10 @@ def create_app(config: AppConfig) -> FastAPI:
         docs_url="/api/docs",
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        # Declared so /api/docs shows an "Authorize" button: type 1 there once
+        # and the page sends the header with every request. It checks nothing
+        # itself (auto_error=False); the middleware below does.
+        dependencies=[Depends(OUR_PAGE)],
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(config.allowed_hosts))
 
