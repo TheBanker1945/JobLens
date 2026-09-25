@@ -75,6 +75,14 @@ conceptually, not just have working code.
   differ by 0.09 concordance on the real CV (6.2), so read every number there
   as a range and beat the noise before believing a change. Prompt 3.7 (lenient
   on years and degrees) did not pass its rule and is not the judge.
+- A second judge, `--judge requirements` (src/joblens/cv/requirements.py, 6.3):
+  a vacancy's requirements are read once and stored, the CV answers each one
+  with a quote, and `score()` adds it up with weights written before the eval
+  (years and degrees half, nice-to-haves a quarter). Not the default: it did
+  not beat 3.6 on the real CV beyond the noise, and lost on Lisa's
+  Claude-written labels. A knockout the CV is silent about is `unknown`, never a
+  rule-out; a wish the CV states that the vacancy contradicts is a conflict.
+  Changing the weights re-scores stored answers for free (SCORE_VERSION).
 - A PDF can carry characters it does not contain: a subset font whose ToUnicode
   map points into the private use area (measured on a real CV, 2026-09-22 — 114
   glyphs, every year in the work history). src/joblens/cv/read.py marks each one
