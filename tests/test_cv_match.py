@@ -8,11 +8,13 @@ from conftest import details as make_details
 
 from joblens.cv.documents import QueryPart
 from joblens.cv.match import (
+    CVMatch,
     prepare_cv,
     queries_for,
     rank_cv,
     rank_with_cv,
     search_with_cv,
+    shortlist,
     styles_of,
 )
 from joblens.cv.store import CVCache
@@ -223,3 +225,82 @@ def test_fused_styles_rank_by_position_and_keep_the_part_that_placed_it(tmp_path
     assert fused[1].part.label == "the job you would be hired for next"
     assert fused[0].score == pytest.approx(1 / 61 + 1 / 62)  # rank points
     assert fused[0].score == fused[1].score
+
+
+# ---------------------------------------------------------------------------
+# The shortlist: the head of the ranking, at most `per_employer` per employer.
+# On a real CV five near-identical jobs at one employer took five of nine
+# judge calls (2026-09-24).
+
+
+def ranked(*companies: str | None) -> list[CVMatch]:
+    return [
+        CVMatch(
+            Vacancy(
+                source="test",
+                source_id=str(i),
+                url="",
+                title=f"Java Developer {i}",
+                company=company,
+                text="Java.",
+            ),
+            1.0 - i / 100,
+            "document",
+            QueryPart("the whole CV", "cv"),
+        )
+        for i, company in enumerate(companies, 1)
+    ]
+
+
+def keys(matches: list[CVMatch]) -> list[str]:
+    return [match.vacancy.source_id for match in matches]
+
+
+def test_one_employer_cannot_fill_the_shortlist():
+    ranking = ranked("Sopra", "Sopra", "Sopra", "Sopra", "Acme", "Globex")
+
+    chosen = shortlist(ranking, 4, per_employer=2)
+
+    assert keys(chosen.matches) == ["1", "2", "5", "6"]
+    assert keys(chosen.capped) == ["3", "4"]
+
+
+@pytest.mark.parametrize(
+    "names",
+    [
+        ("Deloitte Nederland", "Deloitte Netherlands", "Deloitte"),
+        (
+            "Redwood Software Inc.",
+            "Redwood Software Nederland B.V.",
+            "Redwood Software",
+        ),
+    ],
+)
+def test_one_employer_written_three_ways_is_one_employer(names):
+    ranking = ranked(*names, "Acme")
+
+    assert keys(shortlist(ranking, 3, per_employer=2).matches) == ["1", "2", "4"]
+
+
+def test_an_employer_nobody_names_is_never_capped():
+    ranking = ranked(None, None, None, "Acme")
+
+    assert keys(shortlist(ranking, 3, per_employer=1).matches) == ["1", "2", "3"]
+
+
+def test_the_extracted_employer_counts_when_the_source_names_none():
+    """EURES records name no employer; extraction finds it in most texts."""
+    ranking = ranked(None, None, "Acme")
+    details = {
+        m.vacancy.key: make_details("Java", company="Sopra") for m in ranking[:2]
+    }
+
+    chosen = shortlist(ranking, 2, per_employer=1, details=details)
+
+    assert keys(chosen.matches) == ["1", "3"]
+
+
+def test_no_cap_is_the_head_of_the_ranking():
+    ranking = ranked("Sopra", "Sopra", "Sopra")
+
+    assert shortlist(ranking, 2, per_employer=0).matches == ranking[:2]

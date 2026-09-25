@@ -68,6 +68,9 @@ class RunStamp(BaseModel):
     cv_style: str
     prompt_version: str
     top: int
+    # At most this many judged per employer (cv/match.py); 0 is no cap, which
+    # is also what every run from before the cap existed loads as.
+    per_employer: int = 0
     at: datetime = Field(default_factory=datetime.now)
 
     def line(self) -> str:
@@ -136,6 +139,9 @@ class RankedRow(BaseModel):
     score: float  # the cosine it was ranked on
     part: str = ""  # which piece of the CV matched it best
     judged: bool = False  # was it sent to the judge? a failed call is still True
+    # Ranked high enough to be judged, and skipped because its employer already
+    # had `per_employer` on the shortlist. Not judged, and not "below the cut".
+    capped: bool = False
 
 
 class GroupRow(BaseModel):
@@ -178,7 +184,9 @@ class RunRecord(BaseModel):
         vacancies on either side of it. None when nothing was cut off.
         """
         last = next((row for row in reversed(self.ranking) if row.judged), None)
-        first = next((row for row in self.ranking if not row.judged), None)
+        first = next(
+            (row for row in self.ranking if not row.judged and not row.capped), None
+        )
         return (last, first) if last and first else None
 
 
@@ -203,6 +211,8 @@ def build_record(
     *,
     ranking: list[CVMatch] | None = None,
     shortlisted: int = 0,
+    sent: set[str] | None = None,
+    capped: set[str] | None = None,
     funnel: Funnel | None = None,
     failures: list[str] | None = None,
     cost_usd: float | None = None,
@@ -237,7 +247,9 @@ def build_record(
     ]
     # `shortlisted` and not "whichever ones came back": a vacancy whose judge
     # call failed was read, and lumping it in with the 267 that were never sent
-    # would hide the failure behind the number it is least like.
+    # would hide the failure behind the number it is least like. With a cap per
+    # employer the ones sent are no longer the head of the ranking, so `sent`
+    # names them by key; `shortlisted` counts the head, for callers without one.
     ranked = [
         RankedRow(
             rank=position,
@@ -248,7 +260,10 @@ def build_record(
             url=match.vacancy.url,
             score=match.score,
             part=match.part.label,
-            judged=position <= shortlisted,
+            judged=match.vacancy.key in sent
+            if sent is not None
+            else position <= shortlisted,
+            capped=match.vacancy.key in (capped or set()),
         )
         for position, match in enumerate(ranking or [], 1)
     ]
@@ -320,6 +335,12 @@ def compare(before: RunRecord, after: RunRecord) -> Comparison:
             f"a different shortlist size: --top {before.stamp.top} -> "
             f"{after.stamp.top}, so a vacancy can leave the list without "
             f"anything about it changing"
+        )
+    if before.stamp.per_employer != after.stamp.per_employer:
+        notes.append(
+            f"a different cap per employer: {before.stamp.per_employer or 'none'} "
+            f"-> {after.stamp.per_employer or 'none'}, so a vacancy can leave the "
+            f"list because of whom else it was ranked with"
         )
     if blockers:
         return Comparison(blockers=blockers, notes=notes)
