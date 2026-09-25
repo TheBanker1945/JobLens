@@ -228,6 +228,23 @@ run this can group is printed next to it. Three further checks — education lev
 required languages, years — come straight from extracted fields and involve no
 judge at all.
 
+### What you want: preferences
+
+```bash
+uv run python scripts/preferences.py ask                  # eleven questions, all optional
+uv run python scripts/match_cv.py data/raw/cv/you.pdf --preferences
+```
+
+A CV says what you have done; preferences say what you want next, and the two
+are kept apart. Contract, hours, work mode, distance from home (as the crow
+flies), salary, languages, level and employers to avoid are checked against
+what each advert states: a vacancy that contradicts one moves back, behind the
+ones that do not. **Nothing is ever removed**, a vacancy that does not state
+something is never moved for it, and the run keeps where each one was and why
+(the viewer marks it "moved from #3"). Whether you apply when a vacancy asks
+more years or a higher degree than your CV shows, and sectors to avoid, are
+told to the judge instead, because they need reading rather than a field.
+
 ### When your CV fits nothing
 
 It says so, in the first line, and then still shows the closest few with the

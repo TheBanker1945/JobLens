@@ -2908,3 +2908,77 @@ and it is one service fewer to set up and secure.
 One new dependency: `psycopg[binary]`, the Postgres driver (asyncpg rejected: the
 code is synchronous). 27 new tests; the database ones skip without Docker, so a
 clone still runs everything else. 801 in all.
+
+## 7.3 — What you want, as a second input next to the CV
+
+A CV is facts about someone's past; preferences are constraints on their
+future. Until now JobLens had only the first, which is why "4 years required"
+kept misfiring: the judge called three vacancies weak that Mahdi would apply to,
+each on years or an hbo/wo degree, and nothing in a CV could have told it he
+applies anyway. `joblens.preferences` is the second input: the eleven questions
+agreed on 2026-09-25, each allowed to stay blank, and blank means no preference.
+
+**Two places, split by what each question needs.**
+
+| question | applied | why there |
+|---|---|---|
+| contract, hours, work mode, distance, salary, languages, level, employers | in code, before the shortlist is cut (`rerank.py`) | extraction already filled the field; code is exact, free and explainable |
+| more years than the CV shows, a degree it does not show, sectors | told to the judge, in a block after the CV (`prompt.py`) | they need reading: whether "3-5 jaar" is a knockout, or whether an advert is in gambling |
+
+**Moved, never removed.** A vacancy that contradicts a stated preference goes
+behind every vacancy that contradicts fewer, keeping retrieval's order among
+equals. It stays in the stored ranking with where retrieval had it (`before`)
+and what it contradicted (`conflicts`), and the viewer badges it "moved from
+#3". **Unknown costs nothing**: a vacancy that does not state a contract type is
+never moved for its contract type.
+
+**Distance as the crow flies.** The CBS place list has no coordinates, so
+`scripts/update_place_coordinates.py` takes each of the 2,503 places' centre
+point from PDOK's Locatieserver (the government's open geocoder, 26 requests).
+Straight-line km is not travel time -- Leiden to Utrecht is 42 km and most of an
+hour by train -- and the question says so. Of 70 place names the country has more
+than once, those within 15 km of each other are one point, the rest give none
+(unknown, no cost). 984 of the 1,166 open vacancies can be placed.
+
+**The judge is told only what the person said, and only then.** Someone who
+answered none of the three reading questions gets no block and the prompt is
+3.6's to the byte (a test holds it there), so their runs stay comparable with
+every run before. The block says whose words these are, that they are not
+evidence, and that where they contradict a general rule, theirs wins. This is
+not prompt 3.7 again: 3.7 was lenient for everybody and failed its rule; this
+changes nothing unless a person asks, and only as far as they asked. Runs
+record `p1:<digest>` of the answers; `compare_runs.py` notes a change of
+preferences rather than refusing it, because "what did my preferences change"
+is the comparison someone setting them wants. The judge eval stores answers
+given with a block under a name that includes its digest, so a 3.6 answer is
+never reused for a told one.
+
+**What it does on the real corpus** (Lisa's sample CV, preferences invented for
+her: permanent, hybrid or onsite, 40 km from Utrecht, at least €3,500, junior or
+medior, Dutch and English -- a demonstration, not a measurement):
+
+| | |
+|---|---|
+| vacancies moved back | 694 of 1,166 (60%) |
+| by distance / contract / level / salary / work mode / language | 313 / 276 / 265 / 50 / 20 / 8 |
+| her shortlist of ten | 4 left, 4 entered |
+
+Two things this shows that are Mahdi's to decide, not the code's:
+
+- **A hard line is harsh.** An Analytics Engineer 46 km away now sits behind
+  every vacancy that contradicts nothing, for being 6 km over. A margin, or a
+  "must / nice to have" per question, would soften it.
+- **"Temporary" is often the way to permanent.** Extraction marks 249 vacancies
+  temporary against 181 permanent; many Dutch adverts offer a year's contract
+  "met uitzicht op vast". Someone answering "permanent only" may not mean those.
+
+A paid check (Lisa, top 5, with and without invented rules for years and degree;
+4 cents, nothing stored) shows a real model takes the block: valid answers, 37
+quotes checked and none dropped. On those five, no verdict changed -- the years
+gaps stayed listed as required, as asked, and the two weak ones have other gaps
+too. **Whether it fixes Mahdi's three disagreements is not measured yet**: that
+needs his own answers (`scripts/preferences.py ask`) and then
+`eval_judge.py --labelled --cv mohammed --preferences` against the plain run,
+read against the 0.09 noise measured in 6.2.
+
+30 new tests; 831 in all. No new dependency.
