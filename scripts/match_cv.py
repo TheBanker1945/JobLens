@@ -248,6 +248,8 @@ def cv_style(value: str) -> str:
 def report_cv_problems(prepared) -> None:
     """Whatever is wrong with the CV itself, before any vacancy is discussed."""
     damage = prepared.document.damage
+    if note := prepared.document.reading_note():
+        print(note)
     if damage.reader_warnings:
         print(
             f"note: pypdf reported {damage.reader_warnings} warnings about broken "
