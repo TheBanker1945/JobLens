@@ -34,8 +34,8 @@ def test_opening_a_login_link_shows_a_button_and_signs_nobody_in(
         page = http.get("/login")
 
         assert page.status_code == 200
-        assert "Sign in" in page.text
-        assert "script-src 'sha256-" in page.headers["Content-Security-Policy"]
+        assert 'id="go"' in page.text  # the button; its script signs in
+        assert "script-src 'self'" in page.headers["Content-Security-Policy"]
         assert page.headers["Referrer-Policy"] == "no-referrer"
         assert "joblens_session" not in page.headers.get("set-cookie", "")
         assert http.get("/api/me").status_code == 401

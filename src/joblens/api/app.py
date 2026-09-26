@@ -41,7 +41,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import (
     Depends,
@@ -53,17 +53,17 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, APIKeyHeader
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, SecretStr
 
-from joblens.api.login_page import login_page
+from joblens.api import language, views
 from joblens.api.runner import Runner, ThreadRunner
 from joblens.config import LLMSettings
 from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord
-from joblens.cv.schema import CVProfile
 from joblens.embeddings.client import EmbeddingClient
 from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
@@ -84,7 +84,7 @@ from joblens.service import (
 from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.matching import ChatFactory, EmbedFactory
-from joblens.storage import CVRecord, Database, Job, PostgresStore, RunSummary, User
+from joblens.storage import Database, Job, PostgresStore, RunSummary, User
 from joblens.storage.postgres import SESSION_VALID
 from joblens.vault import Vault, VaultError
 from joblens.web import api as viewer
@@ -119,44 +119,12 @@ class AppConfig:
     # Secure cookies travel over HTTPS only. Off is allowed on this machine
     # alone (plain http://127.0.0.1); create_app refuses it anywhere else.
     secure_cookies: bool = True
-    after_sign_in: str = "/api/docs"  # the page 7.7 builds, once there is one
+    after_sign_in: str = "/"  # the dashboard (7.7)
     # Own keys (7.6): encrypted with this; None switches them off.
     vault: Vault | None = None
     budgets: Budgets = field(default_factory=Budgets)
     allow_local_providers: bool = False  # Ollama/LM Studio: this machine only
     check_provider: Callable[[LLMSettings], None] = check_provider
-
-
-class CVSummary(BaseModel):
-    """A CV in a list: enough to choose one, without its text."""
-
-    id: str
-    name: str
-    filename: str
-    uploaded_at: datetime
-    active: bool
-    removed: dict[str, int]  # what redaction took out, counted
-    characters: int
-    has_profile: bool
-
-    @classmethod
-    def of(cls, cv: CVRecord) -> "CVSummary":
-        return cls(
-            **cv.model_dump(include=set(cls.model_fields) & set(CVRecord.model_fields)),
-            characters=len(cv.text),
-            has_profile=cv.profile is not None,
-        )
-
-
-class CVDetail(CVSummary):
-    """One CV, with exactly the text that is sent to a model."""
-
-    text: str
-    profile: CVProfile | None
-
-    @classmethod
-    def of(cls, cv: CVRecord) -> "CVDetail":
-        return cls(**CVSummary.of(cv).model_dump(), text=cv.text, profile=cv.profile)
 
 
 class MatchAsk(BaseModel):
@@ -174,6 +142,13 @@ class SignIn(BaseModel):
     token: str = Field(description="the code after # in a login link")
 
 
+class AboutMe(BaseModel):
+    """What a person may change about their account from the page."""
+
+    locale: Literal["en", "nl", "de", "fr", "es"] | None = None
+    display_name: str | None = Field(None, min_length=1, max_length=80)
+
+
 class Goodbye(BaseModel):
     confirm: str = Field(description='exactly "delete everything"')
 
@@ -183,7 +158,7 @@ class Everything(BaseModel):
 
     exported_at: datetime
     user: User
-    cvs: list[CVDetail]
+    cvs: list[views.CVDetail]
     preferences: Preferences
     labels: list[CVLabels]
     runs: list[RunRecord]
@@ -191,6 +166,35 @@ class Everything(BaseModel):
 
 
 LOCAL = {"127.0.0.1", "localhost", "testserver"}
+
+# The pages (7.7): plain HTML, CSS and JavaScript, no build step (ui/).
+UI = Path(__file__).parent / "ui"
+# Only this server's own files may run, style or load on a page: no inline
+# script or style, nothing from another site, not even the font.
+PAGE_POLICY = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; "
+    "img-src 'self' data:; connect-src 'self'; base-uri 'none'; "
+    "form-action 'self'; frame-ancestors 'none'"
+)
+
+
+def page(name: str, lang: str, *, referrer: str = "same-origin") -> HTMLResponse:
+    """A page from ui/, in the chosen language (api/language.py)."""
+    html = (
+        (UI / name)
+        .read_text(encoding="utf-8")
+        .replace("%LANG%", lang)
+        .replace("%LANGUAGES%", ",".join(language.available()))
+    )
+    return HTMLResponse(
+        html,
+        headers={
+            "Content-Security-Policy": PAGE_POLICY,
+            "Referrer-Policy": referrer,
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 def create_app(config: AppConfig) -> FastAPI:
@@ -208,7 +212,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(
         title="JobLens",
         summary="Match a CV and what someone wants against Dutch vacancies.",
-        version="7.6",
+        version="7.7",
         lifespan=lifespan,
         docs_url="/api/docs",
         redoc_url=None,
@@ -274,18 +278,28 @@ def create_app(config: AppConfig) -> FastAPI:
     def health() -> dict:
         return {"ok": True, "vacancies": len(config.corpus)}
 
+    # -- the pages (7.7) ------------------------------------------------------
+
+    @app.get("/", include_in_schema=False)
+    def home(
+        request: Request,
+        session: Annotated[str | None, Depends(SESSION_COOKIE)],
+    ) -> Response:
+        """The dashboard; without a session, the way in."""
+        user = config.database.session_user(session) if session else None
+        if user is None:
+            return RedirectResponse("/login", status_code=303)
+        chosen = language.pick(request.headers.get("accept-language"), user.locale)
+        return page("index.html", chosen)
+
     @app.get("/login", include_in_schema=False)
-    def login_page_route() -> HTMLResponse:
-        """What a login link opens (login_page.py): a button, not a sign-in."""
-        page, policy = login_page(config.after_sign_in)
-        return HTMLResponse(
-            page,
-            headers={
-                "Content-Security-Policy": policy,
-                "Referrer-Policy": "no-referrer",
-                "Cache-Control": "no-store",
-            },
-        )
+    def login(request: Request) -> HTMLResponse:
+        """What a login link opens (ui/login.html): a button, not a sign-in.
+        No referrer, so the page's address never travels to another site."""
+        chosen = language.pick(request.headers.get("accept-language"))
+        return page("login.html", chosen, referrer="no-referrer")
+
+    app.mount("/assets", StaticFiles(directory=UI / "assets"), name="assets")
 
     @app.post("/api/login")
     def sign_in(given: SignIn, response: Response) -> User:
@@ -320,13 +334,33 @@ def create_app(config: AppConfig) -> FastAPI:
     def me(user: Me) -> User:
         return user
 
+    @app.patch("/api/me")
+    def update_me(user: Me, change: AboutMe) -> User:
+        """Change your language or the name the page greets you with."""
+        return config.database.update_user(
+            user.id, **change.model_dump(exclude_none=True)
+        )
+
+    @app.get("/api/dashboard")
+    def my_dashboard(user: Me, store: Mine) -> views.Dashboard:
+        """Everything the dashboard shows, in one answer."""
+        return views.dashboard(
+            user,
+            store,
+            corpus=config.corpus,
+            models=config.models,
+            database=config.database,
+            vault=config.vault,
+            budgets=config.budgets,
+        )
+
     @app.get("/api/me/export")
     def export(user: Me, store: Mine) -> JSONResponse:
         """Everything JobLens keeps about you, as one JSON file to save."""
         everything = Everything(
             exported_at=datetime.now(UTC),
             user=user,
-            cvs=[CVDetail.of(one) for one in store.cvs()],
+            cvs=[views.CVDetail.of(one) for one in store.cvs()],
             preferences=Preferences.model_validate(store.load_preferences() or {}),
             labels=store.labels(),
             runs=[store.load_run(one.id) for one in store.runs()],
@@ -349,15 +383,15 @@ def create_app(config: AppConfig) -> FastAPI:
         return {"deleted": True}
 
     @app.get("/api/cvs")
-    def cvs(store: Mine) -> list[CVSummary]:
-        return [CVSummary.of(one) for one in store.cvs()]
+    def cvs(store: Mine) -> list[views.CVSummary]:
+        return [views.CVSummary.of(one) for one in store.cvs()]
 
     @app.get("/api/cvs/active")
-    def active_cv(store: Mine) -> CVDetail:
+    def active_cv(store: Mine) -> views.CVDetail:
         cv = store.active_cv()
         if cv is None:
             raise HTTPException(404, "No CV yet: upload one.")
-        return CVDetail.of(cv)
+        return views.CVDetail.of(cv)
 
     @app.post("/api/cvs", status_code=201)
     def upload_cv(
@@ -365,7 +399,7 @@ def create_app(config: AppConfig) -> FastAPI:
         store: Mine,
         file: UploadFile,
         strip_name: Annotated[str | None, Form()] = None,
-    ) -> CVDetail:
+    ) -> views.CVDetail:
         """Read, redact and profile a CV (about half a cent), and make it the
         active one. `strip_name` is your name exactly as the CV writes it."""
         models, paid_by = paying(user, store, budget.UPLOAD_USD)
@@ -393,12 +427,12 @@ def create_app(config: AppConfig) -> FastAPI:
             chat=config.chat,
             meter=meter,
         )
-        return CVDetail.of(record)
+        return views.CVDetail.of(record)
 
     @app.post("/api/cvs/{cv_id}/activate")
-    def activate_cv(store: Mine, cv_id: str) -> CVDetail:
+    def activate_cv(store: Mine, cv_id: str) -> views.CVDetail:
         try:
-            return CVDetail.of(store.activate_cv(cv_id))
+            return views.CVDetail.of(store.activate_cv(cv_id))
         except KeyError as err:
             raise HTTPException(404, "No such CV.") from err
 

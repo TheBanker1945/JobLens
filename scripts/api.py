@@ -6,10 +6,10 @@
     uv run python scripts/api.py --link you@example.com           # a fresh login link
 
 Open the login link it (or `db.py invite`) printed, press "Sign in", and the
-browser holds a 30-day session. Then http://127.0.0.1:8001/api/docs is an
-interactive page of every route, where a CV can be uploaded and a match started
-by hand: click "Authorize" and enter 1 there first, which sends the X-JobLens
-header every changing request needs. 7.7 builds the real page.
+browser holds a 30-day session and opens JobLens at http://127.0.0.1:8001/
+(7.7). /api/docs is an interactive page of every route underneath it: click
+"Authorize" and enter 1 there first, which sends the X-JobLens header every
+changing request needs.
 
 Needs DATABASE_URL and the CV_* and EMBED_* settings (.env.example). The
 database is migrated on start (safe to repeat), and the open, extracted
@@ -85,7 +85,9 @@ def main() -> int:
             allow_local_providers=True,  # this machine's Ollama is the user's
         )
     )
-    print(f"{len(corpus)} open vacancies\nAPI docs: {base}/api/docs")
+    print(
+        f"{len(corpus)} open vacancies\nJobLens: {base}/   (API docs: {base}/api/docs)"
+    )
     uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="info")
     database.close()
     return 0
