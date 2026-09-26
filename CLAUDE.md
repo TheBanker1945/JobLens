@@ -61,7 +61,8 @@ conceptually, not just have working code.
   CASCADE, so deleting a user deletes everything. Every PostgresStore query is
   scoped by user_id. Uploaded CV files live in cv_files and expire after 30
   days (KEEP_ORIGINAL); the redacted text stays. Tests use the joblens_test
-  database and skip without Docker.
+  database, rebuilt from this checkout's migrations at the start of every run
+  (worktrees on different branches share it), and skip without Docker.
 - Preferences (7.3, src/joblens/preferences/) are stated answers, never
   inferred, and kept apart from the CV. Facts extraction fills (contract,
   hours, work mode, distance, salary, languages, title level, employer) are
@@ -100,7 +101,11 @@ conceptually, not just have working code.
   with identical keys and placeholders in every language (tests enforce it);
   the language is picked server-side (api/language.py: saved choice, then the
   browser's languages, then its country, then English). tests/test_ui.py holds
-  all of this.
+  all of this. Pages and every /api/ answer are `Cache-Control: no-store`
+  (they carry CV text). A new account is sent to /guide until it finishes or
+  skips it (users.onboarded_at) or has a CV. The preferences form checks what
+  it can in the page, in the person's language, but the server's schema
+  decides; keep the form's limits equal to preferences/schema.py.
 - Bring your own AI (7.6): a person may store one key for the `cv` role only
   (embeddings stay the operator's: one vector space). Providers come from the
   fixed list in src/joblens/llm/presets.py -- never a user-typed base URL
