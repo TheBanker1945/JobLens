@@ -30,7 +30,9 @@ from joblens.api import AppConfig, create_app
 from joblens.config import load_llm_settings
 from joblens.corpus import NAMES, load_corpus
 from joblens.service import Models
+from joblens.service.budget import Budgets
 from joblens.storage import Database
+from joblens.vault import Vault
 
 ROOT = Path(__file__).parent.parent
 
@@ -78,6 +80,9 @@ def main() -> int:
             ),
             cache_dir=ROOT / "data" / "cache",
             secure_cookies=False,  # plain http on this machine only
+            vault=Vault.from_env(),  # None: own keys off (JOBLENS_SECRET_KEY)
+            budgets=Budgets.from_env(),
+            allow_local_providers=True,  # this machine's Ollama is the user's
         )
     )
     print(f"{len(corpus)} open vacancies\nAPI docs: {base}/api/docs")

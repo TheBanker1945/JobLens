@@ -36,8 +36,9 @@ Two rules from 7.4 stay, now as the cookie session's protection:
 """
 
 import logging
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -54,10 +55,11 @@ from fastapi import (
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import APIKeyCookie, APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from joblens.api.login_page import login_page
 from joblens.api.runner import Runner, ThreadRunner
+from joblens.config import LLMSettings
 from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord
@@ -65,6 +67,8 @@ from joblens.cv.schema import CVProfile
 from joblens.embeddings.client import EmbeddingClient
 from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
+from joblens.llm.presets import MEASURED, available
+from joblens.llm.pricing import cost_usd
 from joblens.preferences import Preferences
 from joblens.service import (
     MAX_UPLOAD_BYTES,
@@ -73,11 +77,16 @@ from joblens.service import (
     ProviderRefused,
     ServiceError,
     add_cv,
+    ai,
+    budget,
     run_match_job,
 )
+from joblens.service.ai import OwnKeysOff, check_provider
+from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.matching import ChatFactory, EmbedFactory
 from joblens.storage import CVRecord, Database, Job, PostgresStore, RunSummary, User
 from joblens.storage.postgres import SESSION_VALID
+from joblens.vault import Vault, VaultError
 from joblens.web import api as viewer
 
 logger = logging.getLogger(__name__)
@@ -111,6 +120,11 @@ class AppConfig:
     # alone (plain http://127.0.0.1); create_app refuses it anywhere else.
     secure_cookies: bool = True
     after_sign_in: str = "/api/docs"  # the page 7.7 builds, once there is one
+    # Own keys (7.6): encrypted with this; None switches them off.
+    vault: Vault | None = None
+    budgets: Budgets = field(default_factory=Budgets)
+    allow_local_providers: bool = False  # Ollama/LM Studio: this machine only
+    check_provider: Callable[[LLMSettings], None] = check_provider
 
 
 class CVSummary(BaseModel):
@@ -147,6 +161,13 @@ class CVDetail(CVSummary):
 
 class MatchAsk(BaseModel):
     top: int = Field(10, ge=1, le=20, description="how many vacancies to judge")
+
+
+class BringKey(BaseModel):
+    provider: str = Field(description="one of GET /api/ai/providers")
+    model: str = Field(description="the exact model id, from the provider's list")
+    api_key: SecretStr = Field(description="stored encrypted, never shown again")
+    thinking: bool = False
 
 
 class SignIn(BaseModel):
@@ -187,7 +208,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(
         title="JobLens",
         summary="Match a CV and what someone wants against Dutch vacancies.",
-        version="7.5",
+        version="7.6",
         lifespan=lifespan,
         docs_url="/api/docs",
         redoc_url=None,
@@ -217,6 +238,10 @@ def create_app(config: AppConfig) -> FastAPI:
         is busy (503, try later), or one that refused or cannot be reached."""
         if isinstance(err, CVUnreadable):
             return JSONResponse({"detail": str(err)}, status_code=422)
+        if isinstance(err, BudgetSpent):
+            return JSONResponse({"detail": str(err)}, status_code=402)
+        if isinstance(err, OwnKeysOff):
+            return JSONResponse({"detail": str(err)}, status_code=503)
         busy = isinstance(err, ProviderRefused) and err.busy
         return JSONResponse(
             {"detail": str(err)},
@@ -336,22 +361,37 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post("/api/cvs", status_code=201)
     def upload_cv(
+        user: Me,
         store: Mine,
         file: UploadFile,
         strip_name: Annotated[str | None, Form()] = None,
     ) -> CVDetail:
         """Read, redact and profile a CV (about half a cent), and make it the
         active one. `strip_name` is your name exactly as the CV writes it."""
+        models, paid_by = paying(user, store, budget.UPLOAD_USD)
         # One byte over the limit is enough to know it is too big, without
         # reading a whole oversized file into memory.
         data = file.file.read(MAX_UPLOAD_BYTES + 1)
+
+        def meter(prompt_tokens: int, output_tokens: int) -> None:
+            config.database.record_usage(
+                user.id,
+                kind="cv",
+                model=models.cv.model,
+                prompt_tokens=prompt_tokens,
+                output_tokens=output_tokens,
+                cost_usd=cost_usd(models.cv, prompt_tokens, output_tokens),
+                paid_by=paid_by,
+            )
+
         record = add_cv(
             store,
             CVFile(file.filename or "cv", data),
-            config.models,
+            models,
             cache_dir=config.cache_dir,
             strip_name=(strip_name or "").strip() or None,
             chat=config.chat,
+            meter=meter,
         )
         return CVDetail.of(record)
 
@@ -373,13 +413,15 @@ def create_app(config: AppConfig) -> FastAPI:
         return answers
 
     @app.post("/api/matches", status_code=202)
-    def start_match(store: Mine, ask: MatchAsk | None = None) -> Job:
+    def start_match(user: Me, store: Mine, ask: MatchAsk | None = None) -> Job:
         """Start matching the active CV with the saved preferences. Returns at
         once; follow the job at /api/matches/{id}. Costs about 4 cents."""
+        ask = ask or MatchAsk()
         if store.active_cv() is None:
             raise HTTPException(409, "Upload a CV first: there is nothing to match.")
+        models, paid_by = paying(user, store, budget.match_estimate(ask.top))
         try:
-            job = store.start_job("match", (ask or MatchAsk()).model_dump())
+            job = store.start_job("match", ask.model_dump())
         except ValueError as err:
             raise HTTPException(409, str(err)) from err
         config.runner.submit(
@@ -388,10 +430,11 @@ def create_app(config: AppConfig) -> FastAPI:
             str(store.user_id),
             job.id,
             corpus=config.corpus,
-            models=config.models,
+            models=models,
             cache_dir=config.cache_dir,
             chat=config.chat,
             embed=config.embed,
+            paid_by=paid_by,
         )
         return store.job(job.id)
 
@@ -405,6 +448,59 @@ def create_app(config: AppConfig) -> FastAPI:
             return store.job(job_id)
         except KeyError as err:
             raise HTTPException(404, "No such match.") from err
+
+    # -- whose model, and what it costs (7.6) --------------------------------
+
+    def paying(user: User, store: PostgresStore, estimate: float) -> tuple[Models, str]:
+        """This person's models for a paid step, after checking they may."""
+        try:
+            models, paid_by = ai.models_for(store, config.models, config.vault)
+        except VaultError as err:
+            raise HTTPException(409, str(err)) from err
+        budget.check(config.database, user, paid_by, config.budgets, estimate)
+        return models, paid_by
+
+    @app.get("/api/ai")
+    def my_ai(store: Mine) -> ai.AIChoice:
+        """Whose model reads your CV and judges your matches, and which."""
+        return ai.choice(store, config.models)
+
+    @app.get("/api/ai/providers")
+    def providers() -> list[dict]:
+        """The providers you can bring a key for. The address is fixed per
+        provider: that is where your CV text goes when you choose it."""
+        return [
+            asdict(one) | {"measured": MEASURED.get(f"{one.provider}/{one.suggested}")}
+            for one in available(config.allow_local_providers)
+        ]
+
+    @app.put("/api/ai")
+    def bring_key(store: Mine, given: BringKey) -> ai.AIChoice:
+        """Use your own model. One tiny test call is made with it first."""
+        try:
+            return ai.bring_own_key(
+                store,
+                config.vault,
+                provider=given.provider,
+                model=given.model,
+                api_key=given.api_key.get_secret_value(),
+                thinking=given.thinking,
+                allow_local=config.allow_local_providers,
+                check=config.check_provider,
+            )
+        except ValueError as err:
+            raise HTTPException(400, str(err)) from err
+
+    @app.delete("/api/ai", status_code=204)
+    def forget_key(store: Mine) -> None:
+        """Go back to JobLens's model (with a monthly allowance for testers)."""
+        store.delete_provider_key()
+
+    @app.get("/api/usage")
+    def my_usage(user: Me, store: Mine) -> budget.Usage:
+        """What you spent this month, and what is left of a free allowance."""
+        paid_by = "own" if store.provider_key() and config.vault else "operator"
+        return budget.usage(config.database, user, paid_by, config.budgets)
 
     @app.get("/api/runs")
     def runs(store: Mine) -> list[RunSummary]:

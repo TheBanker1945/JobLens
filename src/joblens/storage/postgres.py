@@ -39,7 +39,14 @@ from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord, digest
 from joblens.cv.schema import CVProfile
 from joblens.evals.matching import CVLabels
-from joblens.storage.base import KEEP_ORIGINAL, CVRecord, Job, RunSummary, User
+from joblens.storage.base import (
+    KEEP_ORIGINAL,
+    CVRecord,
+    Job,
+    ProviderKey,
+    RunSummary,
+    User,
+)
 from joblens.storage.migrate import Migration, migrate
 
 # A login link is sent by hand to an invited tester: a week to open it. A
@@ -261,6 +268,56 @@ class Database:
                 "error = 'The server restarted before this finished. Start it again.' "
                 "WHERE status IN ('queued', 'running')"
             ).rowcount
+
+    # -- what paid calls cost (7.6) --------------------------------------------
+
+    def record_usage(
+        self,
+        user_id: str,
+        *,
+        kind: str,
+        model: str,
+        prompt_tokens: int,
+        output_tokens: int,
+        cost_usd: float | None,
+        paid_by: str,
+    ) -> None:
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT INTO usage (user_id, kind, model, prompt_tokens, "
+                "output_tokens, cost_usd, paid_by) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    _id(user_id, "user"),
+                    kind,
+                    model,
+                    prompt_tokens,
+                    output_tokens,
+                    cost_usd,
+                    paid_by,
+                ),
+            )
+
+    def spent_this_month(self, user_id: str | None = None) -> dict[str, float]:
+        """Dollars spent since the first of this month (UTC), by who paid.
+
+        For one person, or, without `user_id`, for everybody: the second is
+        what the cap on JobLens's own key is checked against. A call whose
+        model has no known price counts as nothing -- which is why the budget
+        is only offered on JobLens's key, whose model is priced.
+        """
+        where, values = "at >= date_trunc('month', now() AT TIME ZONE 'UTC')", []
+        if user_id is not None:
+            where += " AND user_id = %s"
+            values.append(_id(user_id, "user"))
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT paid_by, coalesce(sum(cost_usd), 0) AS usd FROM usage "
+                f"WHERE {where} GROUP BY paid_by",
+                values,
+            ).fetchall()
+        spent = {"operator": 0.0, "own": 0.0}
+        spent.update({row["paid_by"]: float(row["usd"]) for row in rows})
+        return spent
 
     def purge_expired_files(self, now: datetime | None = None) -> int:
         """Delete uploaded files past their expiry. Returns how many went.
@@ -487,6 +544,51 @@ class PostgresStore:
                 (self.user_id, _id(cv_id, "CV")),
             ).fetchone()
         return CVFile(row["filename"], bytes(row["data"])) if row else None
+
+    # -- their own model (7.6) ---------------------------------------------
+
+    def provider_key(self) -> ProviderKey | None:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM provider_keys WHERE user_id = %s", (self.user_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return ProviderKey.model_validate(
+            row | {"key_secret": bytes(row["key_secret"])}
+        )
+
+    def save_provider_key(
+        self,
+        *,
+        provider: str,
+        model: str,
+        thinking: bool,
+        key_secret: bytes,
+        key_hint: str,
+    ) -> ProviderKey:
+        """Replace this person's own model. Called after a test call succeeded."""
+        with self.db.connect() as conn:
+            conn.execute(
+                "INSERT INTO provider_keys (user_id, provider, model, thinking, "
+                "key_secret, key_hint, verified_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now()) "
+                "ON CONFLICT (user_id) DO UPDATE SET provider = EXCLUDED.provider, "
+                "model = EXCLUDED.model, thinking = EXCLUDED.thinking, "
+                "key_secret = EXCLUDED.key_secret, key_hint = EXCLUDED.key_hint, "
+                "verified_at = now(), updated_at = now()",
+                (self.user_id, provider, model, thinking, key_secret, key_hint),
+            )
+        return self.provider_key()
+
+    def delete_provider_key(self) -> bool:
+        with self.db.connect() as conn:
+            return (
+                conn.execute(
+                    "DELETE FROM provider_keys WHERE user_id = %s", (self.user_id,)
+                ).rowcount
+                == 1
+            )
 
     # -- jobs ---------------------------------------------------------------
 

@@ -3091,3 +3091,55 @@ had: `print` output to a file is buffered, so `scripts/api.py --link` under a
 process manager would have held the login link until the server stopped. Its
 output is now line-buffered. 11 new tests; 858 in all. No new dependency.
 
+## 7.6 — Your own model, or ours within an allowance
+
+The product decision of 2026-09-22 ("bring your own API key, any provider") and
+the one of 2026-09-25 ("a freemium plan that only the testers get, limited so
+that I don't get a big bill from Google, or their own key for as much as they
+want") are now code.
+
+**Whose model, decided per call.** `service/ai.py models_for` looks at the
+person: an own key means their provider, model and key for the `cv` role (reading
+the CV, the wishlist advert, the judge); none means JobLens's Gemini. The
+embedding model stays JobLens's either way -- the 7.1 fact that a CV is only
+comparable with vacancies embedded by the same model is what makes "bring your
+own embeddings" impossible, not a policy.
+
+**Four decisions, each against a specific failure.**
+
+| decision | the failure it prevents |
+|---|---|
+| a fixed list of providers (llm/presets.py), never a typed address | a hosted server told to call `http://169.254.169.254/...` or a private database: server-side request forgery |
+| one test call before anything is stored | a wrong key or a misspelt model found in the middle of the next paid match |
+| the key encrypted with the server's secret (Fernet), a 4-character hint shown | a database backup that spends someone's money |
+| a model suggested only where measured | JobLens recommending a model id it made up |
+
+Local providers (Ollama, LM Studio) are offered only when the server runs on
+the person's machine: a hosted server's localhost is the server.
+
+**Checked against real Gemini** (a fraction of a cent, nothing stored): the
+working key passes the test call; a wrong one is refused, and the refusal
+taught one thing -- Gemini answers a bad key with **400** "Please pass a valid
+API key", not 401, and an unknown model with 404. The first version turned both
+into a 502 with the match's wording ("nothing was judged"); a settings page
+now gets a 400 with the provider's own sentence and "Nothing was saved", while a
+busy provider (429/503) stays "try again later", because that is not the key's
+fault.
+
+**The allowance.** Every paid call is a row in `usage` (migration 0004) with
+its tokens, its price and whose key paid. Before an upload or a match, the
+estimated cost (0.36 cent a judged vacancy, half a cent to read a CV) is added
+to this month's spending and checked against two limits in .env: $1 a tester
+and $10 for all testers together. Past either, the answer is a 402 that says
+how to go on (add your own key). The owner is never stopped, nor is anyone on
+their own key. One running match per person (7.4) bounds the overshoot to one
+match. Not counted: the wishlist advert's one call per new CV (about 0.1
+cent), whose tokens the code that writes it does not report. And because a
+limit in JobLens's code is only as good as that code, hosting should also cap
+the Gemini key itself in Google Cloud: a budget alert there only warns.
+
+15 new tests (the key never appears in any response or the export; a match on
+an own key calls that provider with the decrypted key and records it as
+theirs; the allowance, the cap, the owner and own keys), 873 in all. New
+dependency: `cryptography`, already installed through pdfminer.six, now named.
+

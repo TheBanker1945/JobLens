@@ -113,6 +113,14 @@ tester phase, and nobody can sign themselves up. Google sign-in stays possible
 in 7.8 as a second way to start the same sessions; it needs an OAuth client
 created in Google Cloud.
 
+## Bring your own AI and the tester allowance (7.6)
+
+Built to answer 2 above: testers get a monthly allowance on the operator key
+($1 each, $10 for all together, both in .env), or bring their own key for
+unlimited use. For hosting (7.8), also cap the Gemini key itself in Google
+Cloud (a requests-per-day quota): a budget alert there warns and never stops
+spending, and JobLens's own limit is only as good as JobLens's code.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
