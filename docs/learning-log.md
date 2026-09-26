@@ -3143,3 +3143,62 @@ an own key calls that provider with the decrypted key and records it as
 theirs; the allowance, the cap, the owner and own keys), 873 in all. New
 dependency: `cryptography`, already installed through pdfminer.six, now named.
 
+## 7.7.1 — The first page a person sees: the frame, the way in, the dashboard
+
+Mahdi picked style A of three mockups. This step builds its frame -- the top
+bar, the language switch, the account menu -- the login page, and the
+dashboard, in Dutch and English, as plain HTML, CSS and JavaScript served by
+the FastAPI app at `/`. No framework and no build step: the viewer (4.3) was
+already built that way, and seven screens do not need React's toolchain and
+its hundreds of packages. Every file in `src/joblens/api/ui/` is readable as it
+is.
+
+**One request for one screen.** `GET /api/dashboard` answers with everything
+the dashboard shows: the person, their active CV (and what redaction took out
+of it), their preferences, their AI and this month's spending, and the newest
+match of *that* CV -- verdict counts, how many vacancies their preferences moved
+back, and the best three with one checked quote and one gap each. "Of that CV"
+matters: an import (7.2) can bring other CVs' runs into an account, and Lisa's
+matches have no place on Mahdi's dashboard.
+
+**Security, because the page shows strangers' text.** Vacancy titles and
+quotes are scraped. Inserted as HTML, a title like `<img src=x onerror=...>`
+would run in the reader's session. So:
+
+| rule | what it stops |
+|---|---|
+| everything goes in as text (`textContent`), never `innerHTML` | scraped text becoming code |
+| only `http(s)://` vacancy links are made clickable | a `javascript:` link running on click |
+| a Content-Security-Policy allowing script, style and font from this server only | anything injected anyway from running, and every outside tracker |
+| the font (Plus Jakarta Sans, OFL) is stored in the repo | Google Fonts seeing every visitor's IP address -- a Munich court (January 2022) ordered a site to pay a visitor damages for exactly that |
+
+`tests/test_ui.py` holds the files to these rules: no page has an inline
+script, a `style=` or an `on...=` handler, and no script contains `innerHTML`.
+
+**The language is chosen on the server** (`api/language.py`), where it can be
+tested: the switcher's saved choice first, then the first of the browser's
+languages that JobLens has texts for, then the country in that list (a browser
+set to Polish in the Netherlands gets Dutch), then English. Someone who set
+their browser to English reads English wherever they are. Every text is a key
+in `ui/assets/i18n/<code>.json`; a test checks that every language has exactly
+the same keys and placeholders, and that every key a page asks for exists.
+Only languages whose file exists are offered, so German, French and Spanish
+appear the day step 4 adds them.
+
+**Checked in a real browser.** Headless Chrome (the Windows one, from WSL)
+photographed the dashboard at desktop size and inside a 390 px frame -- its
+window cannot be narrower than 500 px, which first looked like a layout bug --
+and the login page from the real server. The dashboard was fed the API's own
+summary of a real sample run (3 strong, 4 possible, 3 weak) and shot a second
+time under the real page policy: identical, so nothing the page needs is
+blocked. On the real server, as the test account: `/` without a session
+redirects to `/login`, the login page comes in Dutch, signing in works, the
+dashboard data is right, and switching to English is kept on the account and
+beats the browser.
+
+What this step leaves out on purpose: links to pages that do not exist yet
+(the guide, matches, CV, settings), so nothing in the navigation leads nowhere;
+and translations of the server's own error sentences, which are still English.
+
+23 new tests; 896 in all. No new dependency (the font is a file, not a package).
+

@@ -90,6 +90,17 @@ conceptually, not just have working code.
   in (chat previews would use it up). Cookies must be Secure anywhere but
   127.0.0.1 (create_app refuses otherwise). No dev-user bypass exists; do not
   add one.
+- The user-facing UI (7.7) is style A "Helder" (Mahdi's pick of three
+  mockups, 2026-09-26): plain HTML/CSS/JS in src/joblens/api/ui/, served by
+  the FastAPI app, no build step, no framework. Pages carry a strict CSP
+  (script/style/font from 'self' only): no inline script, no style="",
+  no on*= handlers, no outside CDN or Google Fonts (the font is self-hosted,
+  OFL). Scraped text goes in as text only -- never innerHTML -- and only
+  http(s) links are followed. Every text is a key in ui/assets/i18n/<code>.json
+  with identical keys and placeholders in every language (tests enforce it);
+  the language is picked server-side (api/language.py: saved choice, then the
+  browser's languages, then its country, then English). tests/test_ui.py holds
+  all of this.
 - Bring your own AI (7.6): a person may store one key for the `cv` role only
   (embeddings stay the operator's: one vector space). Providers come from the
   fixed list in src/joblens/llm/presets.py -- never a user-typed base URL

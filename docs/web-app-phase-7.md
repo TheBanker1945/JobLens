@@ -121,6 +121,21 @@ unlimited use. For hosting (7.8), also cap the Gemini key itself in Google
 Cloud (a requests-per-day quota): a budget alert there warns and never stops
 spending, and JobLens's own limit is only as good as JobLens's code.
 
+## The UI (7.7)
+
+Mahdi's style answers (2026-09-26): Indeed, AIApply and LinkedIn as references;
+professional, modern, minimalist; blue gradient and white; minimalist but not
+too empty; a guide people can skip, landing on the dashboard; the preferences
+as one form; desktop first but phone friendly; informal ("je"). Three
+directions were drawn on a canvas; he chose **A "Helder"**: white, a top bar,
+the gradient in one welcome band and on the main buttons, cards with the CV
+quote behind each match, Plus Jakarta Sans.
+
+Built in four steps: (1) the app frame, login page, dashboard, Dutch and
+English; (2) the guide, the preferences form, My CV; (3) the matches page with
+evidence and marking with a reason; (4) settings (own AI, spending, language,
+download and delete my data), German, French and Spanish, phone polish.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
