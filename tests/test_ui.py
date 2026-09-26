@@ -75,9 +75,12 @@ def test_every_text_a_page_asks_for_exists():
             for attr in re.findall(r'data-i18n-attr="([^"]+)"', html)
             for pair in attr.split(";")
         }
+    # Not only t("..."): the form keeps keys in tables ("prefs.years.0") and
+    # hands them over later, so every dotted string in a script counts. A
+    # plural is asked for by its stem ("hero.strong" -> "hero.strong.other").
     for script in (UI / "assets").glob("*.js"):
-        asked |= set(re.findall(r'\bt\("([a-zA-Z.]+)"', script.read_text("utf-8")))
-    missing = asked - keys
+        asked |= set(re.findall(r'"([a-z]+(?:\.\w+)+)"', script.read_text("utf-8")))
+    missing = {key for key in asked - keys if f"{key}.other" not in keys}
     assert not missing, missing
 
 
@@ -155,6 +158,67 @@ def test_the_pages_files_are_served_and_the_api_docs_keep_working(
     assert words.json()["nav.dashboard"] == "Dashboard"
     assert docs.status_code == 200
     assert "Content-Security-Policy" not in docs.headers  # it loads from a CDN
+
+
+def test_a_new_account_starts_in_the_guide_until_it_is_done_or_skipped(
+    database, lisa, tmp_path
+):
+    with app_for(database, tmp_path) as http:
+        first = http.get("/", follow_redirects=False)
+        guide = http.get("/guide")
+        refused = http.patch("/api/me", json={"onboarded": False})
+        done = http.patch("/api/me", json={"onboarded": True})
+        after = http.get("/", follow_redirects=False)
+
+    assert first.status_code == 303 and first.headers["location"] == "/guide"
+    assert guide.status_code == 200 and 'id="step-1"' in guide.text
+    assert refused.status_code == 422  # a guide is not un-done
+    assert done.json()["onboarded_at"] is not None
+    assert after.status_code == 200 and 'id="topbar"' in after.text
+
+
+def test_an_account_that_already_has_a_cv_is_not_sent_to_the_guide(
+    database, lisa, tmp_path
+):
+    """Accounts from before the guide: they have a CV, so they are past step 1."""
+    client = FakeClient(json.dumps(PROFILE))
+    with app_for(database, tmp_path, chat=lambda s: client) as http:
+        upload(http)
+        home = http.get("/", follow_redirects=False)
+
+    assert home.status_code == 200
+    assert database.user(lisa.id).onboarded_at is None  # nothing was marked
+
+
+@pytest.mark.parametrize("path", ["/guide", "/cv", "/preferences"])
+def test_every_page_needs_a_session_and_comes_in_your_language(
+    database, lisa, tmp_path, path
+):
+    with app_for(database, tmp_path, as_=None) as http:
+        outside = http.get(path, follow_redirects=False)
+    with app_for(database, tmp_path) as http:
+        inside = http.get(path, headers={"Accept-Language": "nl-NL"})
+
+    assert outside.status_code == 303 and outside.headers["location"] == "/login"
+    assert inside.status_code == 200 and '<html lang="nl">' in inside.text
+    assert "script-src 'self'" in inside.headers["Content-Security-Policy"]
+
+
+def test_the_home_field_suggests_places_the_map_knows(database, lisa, tmp_path):
+    with app_for(database, tmp_path, as_=None) as http:
+        outside = http.get("/api/places")
+    with app_for(database, tmp_path) as http:
+        answer = http.get("/api/places")
+        spoken = http.put("/api/preferences", json={"home": "Den Haag"})
+
+    places = answer.json()
+    assert outside.status_code == 401
+    # No API answer is kept by a browser (they hold CV text), refused or not.
+    assert answer.headers["Cache-Control"] == outside.headers["Cache-Control"]
+    assert answer.headers["Cache-Control"] == "no-store"
+    assert {"Utrecht", "Den Haag", "'s-Gravenhage"} <= set(places)
+    assert len(places) == len(set(places)) > 2000
+    assert spoken.status_code == 200  # what it suggests, the server accepts
 
 
 def test_the_switcher_keeps_the_language_on_the_account(database, lisa, tmp_path):

@@ -113,6 +113,23 @@ class Geo:
         return self.points.get(normalise(place)) is not None
 
 
+# Written by people, not by PDOK: offered beside the official names.
+SPOKEN_NAMES = ("Den Haag", "Den Bosch")
+
+
+@cache
+def place_names(path: Path = COORDINATES_CSV) -> tuple[str, ...]:
+    """Every place a home can be, as a person would pick it from a list: the
+    official names (with "Hengelo (Gld)" and the like), plus Den Haag and Den
+    Bosch. Only names Geo can place, so every suggestion is a valid answer."""
+    geo = Geo.load(path)
+    with path.open(encoding="utf-8") as handle:
+        lines = (line for line in handle if not line.startswith("#"))
+        names = {row["place"] for row in csv.DictReader(lines)}
+    names |= set(SPOKEN_NAMES)
+    return tuple(sorted((name for name in names if geo.knows(name)), key=str.casefold))
+
+
 @cache
 def _load(path: Path) -> Geo:
     with path.open(encoding="utf-8") as handle:

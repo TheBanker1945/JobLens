@@ -3202,3 +3202,83 @@ and translations of the server's own error sentences, which are still English.
 
 23 new tests; 896 in all. No new dependency (the font is a file, not a package).
 
+## 7.7.2 — The guide, what you want, and your CV
+
+Three pages join the dashboard: `/guide` for a new account, `/preferences`
+("what I'm looking for", the questionnaire as one form) and `/cv`. The top
+bar moved into one shared script (`frame.js`) with a Dashboard / My CV / My
+preferences menu, which becomes a bottom bar on a phone.
+
+**Where the guide starts, and when it stops.** It opens on the first step not
+yet done: no CV, step 1; a CV but no answers, step 2; both, step 3 (a first
+match). Skipping it or finishing it sends `PATCH /api/me {"onboarded": true}`,
+which sets `users.onboarded_at` (migration 0005) once -- a second call keeps the
+first time. The dashboard sends someone to the guide only while that column is
+empty *and* they have no CV, so the accounts that existed before the guide
+(Mahdi's, with a CV) never see it. The rejected alternative was remembering
+"guide done" in the browser (localStorage): it is per device, so the guide
+would come back on a phone, or after clearing the browser. One column on the
+account is the answer in one place.
+
+**One form, two places.** The guide's step 2 and the preferences page use the
+same form (`prefs-form.js`). Every question can stay empty, and empty moves
+nothing (7.3). The two "do you still apply?" questions start on "No answer",
+because that differs from "No": no answer tells the judge nothing, "No" tells
+it zero extra years. The form checks what it can before sending -- whole
+numbers, 0-60 hours, 1-300 km, fewest hours not above most, a distance needs a
+home -- so the problem appears next to the field in the person's language.
+The server checks everything again and decides. Its checks across fields come
+back with `loc: ["body"]` and no field name, so the form recognises them by
+their sentence. On the real server all three were recognised.
+
+**The home field suggests only answers the server accepts.** `GET /api/places`
+lists the 2,390 names the distance code can place, plus "Den Haag" and "Den
+Bosch": what people say, not the official CBS names ('s-Gravenhage,
+'s-Hertogenbosch), which the map already knew. A test saves "Den Haag" to be
+sure.
+
+**My CV shows exactly what leaves.** It shows the redacted text a model is
+sent, what the model read from it (headline, work, education, skills), that
+the file itself is deleted after 30 days, and earlier versions with "Make
+active".
+
+**The key check was too narrow.** It found keys only when written as
+`t("...")`, and the form keeps some in tables (`"prefs.years.0"`), so it missed
+four. It now counts every dotted string in a script; a plural counts by its
+stem.
+
+**Checked on the real server.** A fresh tester account ran in its own
+database, so neither Mahdi's data nor main's migrations were touched:
+- `/` sent it to `/guide`;
+- the PDF of the invented Lisa CV uploaded in 3.6 s, with six kinds of contact
+  details taken out;
+- four wrong answers came back as the 422s the form expects;
+- the answers were saved;
+- the first match of ten took 11 s and cost $0.043: 1 strong, 2 possible, 7
+  weak;
+- after "done", `/` showed the dashboard.
+
+With those answers (permanent, hybrid or remote, 40 km from Den Haag, medior,
+Dutch and English), 966 of the 1,166 open vacancies contradicted at least one
+and moved back. The dashboard shows that number as it is; whether it helps or
+alarms is a question for the matches page (7.7.3).
+
+Screenshots at desktop size and in 390 px frames, fed with the walk's real
+answers, found four things to fix:
+- labels wrapping onto two lines, so the units moved into hints;
+- step lines still showing on a phone, because `.stepper li` outranked
+  `.step-line`;
+- the skip link cut off on a phone, which now reads "Overslaan" there;
+- an empty footer line on step 1.
+
+**Two hardenings found on the way.**
+- **API answers were cacheable.** Pages were already `no-store`, but API
+  answers were not. They carry CV text, so the browser of a shared computer
+  could keep them. Every `/api/` answer is now `no-store`.
+- **The shared test database.** Worktrees on different branches share
+  `joblens_test`, and a branch one migration ahead left it "newer than the
+  code" for all the others. It is now rebuilt from the checkout's own
+  migrations at the start of every run.
+
+7 new tests; 903 in all. No new dependency.
+

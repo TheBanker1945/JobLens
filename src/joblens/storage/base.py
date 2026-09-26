@@ -108,6 +108,7 @@ class User(BaseModel):
     display_name: str | None = None
     locale: str | None = None  # en, nl, de, fr or es; None until chosen
     role: str = "tester"  # "owner" (unlimited) or "tester" (7.5, budget in 7.6)
+    onboarded_at: datetime | None = None  # through the guide, or skipped it (7.7)
     created_at: datetime
 
     @property
