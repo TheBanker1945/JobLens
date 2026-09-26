@@ -10,15 +10,19 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
+    "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "numpy>=2.5.3",
     "openai>=3.14.1",
     "pdfminer-six>=20260107",
     "protego>=0.7.0",
+    "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.2",
     "pydantic>=2.13.5",
     "pypdf>=6.19.0",
     "python-dotenv>=1.2.3",
+    "python-multipart>=0.0.32",
+    "uvicorn>=0.54.0",
 ]
 
 [build-system]

@@ -31,21 +31,41 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+from psycopg_pool import ConnectionPool
 
 from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord, digest
 from joblens.cv.schema import CVProfile
 from joblens.evals.matching import CVLabels
-from joblens.storage.base import KEEP_ORIGINAL, CVRecord, RunSummary, User
+from joblens.storage.base import KEEP_ORIGINAL, CVRecord, Job, RunSummary, User
 from joblens.storage.migrate import Migration, migrate
 
 
 class Database:
-    def __init__(self, url: str):
+    def __init__(self, url: str, *, pool_size: int = 0):
+        """`pool_size` > 0 keeps that many connections open (the web server,
+        7.4): opening one to Neon costs a TLS handshake, every request."""
         self.url = url
+        self._pool = (
+            ConnectionPool(
+                url,
+                min_size=1,
+                max_size=pool_size,
+                kwargs={"autocommit": True, "row_factory": dict_row},
+                open=True,
+            )
+            if pool_size
+            else None
+        )
+
+    def close(self) -> None:
+        if self._pool is not None:
+            self._pool.close()
 
     @classmethod
-    def from_env(cls, env: Mapping[str, str] | None = None) -> "Database":
+    def from_env(
+        cls, env: Mapping[str, str] | None = None, *, pool_size: int = 0
+    ) -> "Database":
         """From DATABASE_URL. Scripts call load_dotenv() before this."""
         url = (env if env is not None else os.environ).get("DATABASE_URL")
         if not url:
@@ -53,12 +73,16 @@ class Database:
                 "DATABASE_URL is not set. For the local database: docker compose "
                 "up -d db, and copy the DATABASE_URL line from .env.example."
             )
-        return cls(url)
+        return cls(url, pool_size=pool_size)
 
     @contextmanager
     def connect(self) -> Iterator[psycopg.Connection]:
         """Autocommit: a statement is its own transaction unless a method opens
         one with `conn.transaction()`, which the multi-statement ones do."""
+        if self._pool is not None:
+            with self._pool.connection() as conn:
+                yield conn
+            return
         with psycopg.connect(self.url, autocommit=True, row_factory=dict_row) as conn:
             yield conn
 
@@ -119,6 +143,37 @@ class Database:
     def store_for(self, user_id: str) -> "PostgresStore":
         """One person's store. Refuses an id that is not a user."""
         return PostgresStore(self, self.user(user_id).id)
+
+    def update_job(self, job_id: str, **fields) -> None:
+        """Write a job's progress or outcome. Called by the worker, which is
+        not a person's store: it holds a job id, handed over by the request
+        that created the job for that person."""
+        allowed = {"status", "stage", "done", "total", "run_id", "error"}
+        unknown = set(fields) - allowed
+        if unknown:
+            raise ValueError(f"not a job field: {', '.join(sorted(unknown))}")
+        # The column names come from the fixed set above, never from input;
+        # the values travel as parameters like everywhere else.
+        columns = ", ".join(f"{name} = %s" for name in fields)
+        with self.connect() as conn:
+            conn.execute(
+                f"UPDATE jobs SET {columns}, updated_at = now() WHERE id = %s",
+                (*fields.values(), _id(job_id, "job")),
+            )
+
+    def fail_interrupted_jobs(self) -> int:
+        """Jobs left open by a server that stopped: say so, and free the slot.
+
+        Run when a server starts. A job cannot survive its process -- it is a
+        thread in it -- so an open one found at start-up was cut off, and
+        leaving it open would block that person's next match for ever.
+        """
+        with self.connect() as conn:
+            return conn.execute(
+                "UPDATE jobs SET status = 'failed', updated_at = now(), "
+                "error = 'The server restarted before this finished. Start it again.' "
+                "WHERE status IN ('queued', 'running')"
+            ).rowcount
 
     def purge_expired_files(self, now: datetime | None = None) -> int:
         """Delete uploaded files past their expiry. Returns how many went.
@@ -254,6 +309,7 @@ class PostgresStore:
         profile: CVProfile | None = None,
         strip_name: str | None = None,
         original: bytes | None = None,
+        removed: dict[str, int] | None = None,
         at: datetime | None = None,
     ) -> CVRecord:
         # The last part of the name only, as read_cv does with an upload.
@@ -266,8 +322,8 @@ class PostgresStore:
             )
             row = conn.execute(
                 "INSERT INTO cvs (user_id, name, filename, strip_name, text, "
-                "digest, profile, uploaded_at, active) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, true) RETURNING *",
+                "digest, profile, removed, uploaded_at, active) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, true) RETURNING *",
                 (
                     self.user_id,
                     name.stem,
@@ -276,6 +332,7 @@ class PostgresStore:
                     text,
                     digest(text),
                     Jsonb(profile.model_dump(mode="json")) if profile else None,
+                    Jsonb(removed or {}),
                     uploaded,
                 ),
             ).fetchone()
@@ -344,6 +401,41 @@ class PostgresStore:
             ).fetchone()
         return CVFile(row["filename"], bytes(row["data"])) if row else None
 
+    # -- jobs ---------------------------------------------------------------
+
+    def start_job(self, kind: str, request: dict) -> Job:
+        try:
+            with self.db.connect() as conn:
+                row = conn.execute(
+                    "INSERT INTO jobs (user_id, kind, request) VALUES (%s, %s, %s) "
+                    "RETURNING *",
+                    (self.user_id, kind, Jsonb(request)),
+                ).fetchone()
+        except psycopg.errors.UniqueViolation as err:
+            raise ValueError(
+                "a match is already running for you: wait for it to finish"
+            ) from err
+        return _job(row)
+
+    def job(self, job_id: str) -> Job:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM jobs WHERE user_id = %s AND id = %s",
+                (self.user_id, _id(job_id, "job")),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"no job {job_id!r}")
+        return _job(row)
+
+    def jobs(self, limit: int = 20) -> list[Job]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM jobs WHERE user_id = %s "
+                "ORDER BY created_at DESC LIMIT %s",
+                (self.user_id, limit),
+            ).fetchall()
+        return [_job(row) for row in rows]
+
 
 def _id(value: str, what: str) -> uuid.UUID:
     """A uuid, or a KeyError: a malformed id names nothing, like a missing one."""
@@ -364,3 +456,7 @@ def _user(row: dict) -> User:
 
 def _cv(row: dict) -> CVRecord:
     return CVRecord.model_validate(row | {"id": str(row["id"])})
+
+
+def _job(row: dict) -> Job:
+    return Job.model_validate(row | {"id": str(row["id"])})

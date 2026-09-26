@@ -120,6 +120,9 @@ class CVRecord(BaseModel):
     digest: str  # of `text`, as a run's stamp has it (cv/runs.py `digest`)
     profile: CVProfile | None = None  # what a model made of it
     strip_name: str | None = None  # the name redaction removed
+    # How many of each kind of detail redaction took out ("email": 1). Counts,
+    # never the values: those are what redaction exists to keep out.
+    removed: dict[str, int] = {}
     uploaded_at: datetime
     active: bool
 
@@ -135,6 +138,7 @@ class CVStore(Protocol):
         profile: CVProfile | None = None,
         strip_name: str | None = None,
         original: bytes | None = None,
+        removed: dict[str, int] | None = None,
         at: datetime | None = None,
     ) -> CVRecord:
         """Store a CV as the active one; the one that was active becomes history.
@@ -159,4 +163,38 @@ class CVStore(Protocol):
 
     def original(self, cv_id: str) -> CVFile | None:
         """The uploaded file, while it is kept; None once it has expired."""
+        ...
+
+
+class Job(BaseModel):
+    """Something slow a request started and a page watches (7.4): a match."""
+
+    id: str
+    kind: str  # "match"
+    status: str  # queued, running, done, failed
+    stage: str | None = None  # reading, ranking, judging
+    done: int = 0  # vacancies judged so far
+    total: int = 0
+    request: dict  # what was asked for
+    run_id: str | None = None  # the stored run, once done
+    error: str | None = None  # the sentence to show, once failed
+    created_at: datetime
+    updated_at: datetime
+
+    @property
+    def open(self) -> bool:
+        return self.status in ("queued", "running")
+
+
+class JobStore(Protocol):
+    """One person's jobs. At most one open at a time: the database says so."""
+
+    def start_job(self, kind: str, request: dict) -> Job:
+        """Queue a job. ValueError when one is already open for this person."""
+        ...
+
+    def job(self, job_id: str) -> Job: ...
+
+    def jobs(self, limit: int = 20) -> list[Job]:
+        """Newest first."""
         ...

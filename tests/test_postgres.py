@@ -233,3 +233,45 @@ def test_deleting_a_person_deletes_everything_they_stored(database):
     assert database.user_by_email("lisa@example.test") is None
     assert len(sanne.runs()) == 1 and sanne.active_cv() is not None
     assert database.delete_user(lisa_user.id) is False  # nothing left to delete
+
+
+# -- jobs (7.4) ---------------------------------------------------------------
+
+
+def test_one_open_job_per_person_and_the_slot_frees_when_it_ends(database):
+    user = database.create_user()
+    store = database.store_for(user.id)
+    job = store.start_job("match", {"top": 10})
+
+    with pytest.raises(ValueError, match="already running"):
+        store.start_job("match", {"top": 10})
+    database.update_job(job.id, status="running", stage="judging", done=3, total=10)
+    assert (store.job(job.id).stage, store.job(job.id).done) == ("judging", 3)
+
+    database.update_job(job.id, status="done", run_id="2026-09-25_1636_x")
+    again = store.start_job("match", {"top": 5})
+    assert [one.id for one in store.jobs()] == [again.id, job.id]
+
+
+def test_a_job_update_only_writes_job_fields(database):
+    job = database.store_for(database.create_user().id).start_job("match", {})
+
+    with pytest.raises(ValueError, match="not a job field"):
+        database.update_job(job.id, user_id="someone else")
+
+
+def test_another_persons_job_is_not_found(database):
+    mine = database.store_for(database.create_user().id)
+    theirs = database.store_for(database.create_user().id)
+    job = theirs.start_job("match", {})
+
+    with pytest.raises(KeyError):
+        mine.job(job.id)
+
+
+def test_what_redaction_removed_is_kept_as_counts(database):
+    store = database.store_for(database.create_user().id)
+
+    cv = store.add_cv("cv.md", "tekst", removed={"email": 1, "phone": 2})
+
+    assert store.load_cv(cv.id).removed == {"email": 1, "phone": 2}
