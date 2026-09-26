@@ -165,6 +165,11 @@ def _test_database():
         if not conn.info.dbname.endswith("_test"):
             pytest.fail(f"refusing to test against {conn.info.dbname!r}: not *_test")
         conn.execute("SELECT pg_advisory_lock(%s)", (TEST_LOCK,))
+        # Built from nothing by this checkout's migrations. Worktrees on
+        # different branches share this database, and one a migration ahead
+        # would otherwise leave it "newer than the code" for all the others.
+        conn.execute("DROP SCHEMA public CASCADE")
+        conn.execute("CREATE SCHEMA public")
         database = Database(TEST_DATABASE_URL)
         database.migrate()
         yield database
