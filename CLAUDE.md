@@ -81,9 +81,15 @@ conceptually, not just have working code.
   decisions recorded in docs/web-app-phase-7.md.
 - The web API (7.4, src/joblens/api/, scripts/api.py) is FastAPI around
   service calls; routes are plain `def` (blocking clients) and hold no logic.
-  Until 7.5 it acts for JOBLENS_DEV_USER, binds to 127.0.0.1, refuses a foreign
-  Host, and refuses every non-GET without `X-JobLens: 1` (a CSRF guard: keep it
-  when login arrives). A match is a job (jobs table, one open per person,
+  It refuses a foreign Host, and every non-GET without `X-JobLens: 1` (the CSRF
+  guard, with SameSite=Lax cookies). Signing in (7.5) is invite-only: owner and
+  tester roles, one-time login links (7 days) made by `scripts/db.py invite`,
+  30-day sessions in an HttpOnly cookie, and only SHA-256 hashes of links and
+  sessions in the database. The token sits after `#` in a link so it never
+  reaches a server log, and opening a link shows a button rather than signing
+  in (chat previews would use it up). Cookies must be Secure anywhere but
+  127.0.0.1 (create_app refuses otherwise). No dev-user bypass exists; do not
+  add one. A match is a job (jobs table, one open per person,
   enforced by a unique index), run in a thread (api/runner.py) by
   service/jobs.py, which always ends done or failed with a sentence; a restart
   marks open jobs interrupted. An upload is read, redacted and profiled once

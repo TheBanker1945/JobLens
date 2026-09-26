@@ -16,38 +16,54 @@ plain `def`, not `async def`: they wait on Postgres and on model providers with
 blocking clients, and FastAPI runs a plain function in a thread for exactly
 that.
 
-**Until 7.5 there is no login.** The "user" is the one account named in
-JOBLENS_DEV_USER, and three rules keep that safe on a laptop:
+**Signing in (7.5).** Invite-only: the owner makes an account and a one-time
+login link (scripts/db.py invite), the link opens a page whose button starts a
+session, and the session is an HttpOnly cookie that lasts 30 days. The
+database keeps a hash of each link and session, never the token. Every route
+but /api/health and the login itself answers 401 without a valid session, and
+every query below runs through that person's store, so one person's ids open
+nothing of another's.
 
-- it binds to 127.0.0.1 (scripts/api.py), and a Host header naming anything
-  else is refused, so a domain pointed at 127.0.0.1 cannot read it (DNS
-  rebinding, the viewer's rule);
-- **every request that changes something must carry `X-JobLens: 1`.** Another
-  web page open in the same browser can make it send a form, even an upload, to
-  127.0.0.1, but it cannot add a header of its own without asking this server
-  first (a CORS preflight), and this server never says yes. So another site
-  cannot upload a CV into your account or start a paid match;
-- nothing here returns a key or a secret; the model settings stay in .env.
+Two rules from 7.4 stay, now as the cookie session's protection:
+
+- a Host header naming a site this server does not serve is refused (DNS
+  rebinding);
+- **every request that changes something must carry `X-JobLens: 1`.** A page
+  on another site can make your browser send a form -- with your cookie -- to
+  this one, but it cannot add a header of its own without a CORS preflight,
+  which this server never allows. That, with SameSite=Lax on the cookie, is the
+  CSRF protection.
 """
 
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import APIKeyHeader
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import APIKeyCookie, APIKeyHeader
 from pydantic import BaseModel, Field
 
+from joblens.api.login_page import login_page
 from joblens.api.runner import Runner, ThreadRunner
 from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
+from joblens.cv.runs import RunRecord
 from joblens.cv.schema import CVProfile
 from joblens.embeddings.client import EmbeddingClient
+from joblens.evals.matching import CVLabels
 from joblens.llm.client import LLMClient
 from joblens.preferences import Preferences
 from joblens.service import (
@@ -61,12 +77,15 @@ from joblens.service import (
 )
 from joblens.service.matching import ChatFactory, EmbedFactory
 from joblens.storage import CVRecord, Database, Job, PostgresStore, RunSummary, User
+from joblens.storage.postgres import SESSION_VALID
 from joblens.web import api as viewer
 
 logger = logging.getLogger(__name__)
 
 # The header every changing request must carry (module docstring).
 HEADER = "X-JobLens"
+COOKIE = "joblens_session"
+SESSION_COOKIE = APIKeyCookie(name=COOKIE, auto_error=False)
 OUR_PAGE = APIKeyHeader(
     name=HEADER,
     auto_error=False,
@@ -84,11 +103,14 @@ class AppConfig:
     corpus: Corpus  # open, extracted vacancies, loaded once at start
     models: Models  # the operator's models; 7.6 lets a user bring their own
     cache_dir: Path
-    dev_user: str | None = None  # the e-mail of the one account, until 7.5
     chat: ChatFactory = LLMClient
     embed: EmbedFactory = EmbeddingClient
     runner: Runner = field(default_factory=ThreadRunner)
     allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")
+    # Secure cookies travel over HTTPS only. Off is allowed on this machine
+    # alone (plain http://127.0.0.1); create_app refuses it anywhere else.
+    secure_cookies: bool = True
+    after_sign_in: str = "/api/docs"  # the page 7.7 builds, once there is one
 
 
 class CVSummary(BaseModel):
@@ -127,7 +149,33 @@ class MatchAsk(BaseModel):
     top: int = Field(10, ge=1, le=20, description="how many vacancies to judge")
 
 
+class SignIn(BaseModel):
+    token: str = Field(description="the code after # in a login link")
+
+
+class Goodbye(BaseModel):
+    confirm: str = Field(description='exactly "delete everything"')
+
+
+class Everything(BaseModel):
+    """All JobLens keeps about a person, for "download my data"."""
+
+    exported_at: datetime
+    user: User
+    cvs: list[CVDetail]
+    preferences: Preferences
+    labels: list[CVLabels]
+    runs: list[RunRecord]
+    matches: list[Job]
+
+
+LOCAL = {"127.0.0.1", "localhost", "testserver"}
+
+
 def create_app(config: AppConfig) -> FastAPI:
+    if not config.secure_cookies and not set(config.allowed_hosts) <= LOCAL:
+        raise ValueError("a session cookie must be Secure on any host but this machine")
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         interrupted = config.database.fail_interrupted_jobs()
@@ -139,7 +187,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(
         title="JobLens",
         summary="Match a CV and what someone wants against Dutch vacancies.",
-        version="7.4",
+        version="7.5",
         lifespan=lifespan,
         docs_url="/api/docs",
         redoc_url=None,
@@ -178,16 +226,14 @@ def create_app(config: AppConfig) -> FastAPI:
 
     # -- who is asking ------------------------------------------------------
 
-    def current_user() -> User:
-        """The account a request acts for. Until 7.5: the configured one."""
-        if not config.dev_user:
-            raise HTTPException(
-                401, "Nobody is signed in. Set JOBLENS_DEV_USER to an account."
-            )
-        user = config.database.user_by_email(config.dev_user)
+    def current_user(
+        session: Annotated[str | None, Depends(SESSION_COOKIE)],
+    ) -> User:
+        """Whoever this request's session belongs to, or 401."""
+        user = config.database.session_user(session) if session else None
         if user is None:
             raise HTTPException(
-                401, f"No account for {config.dev_user}: scripts/db.py create-user"
+                401, "Not signed in. Open the login link you were sent."
             )
         return user
 
@@ -203,9 +249,79 @@ def create_app(config: AppConfig) -> FastAPI:
     def health() -> dict:
         return {"ok": True, "vacancies": len(config.corpus)}
 
+    @app.get("/login", include_in_schema=False)
+    def login_page_route() -> HTMLResponse:
+        """What a login link opens (login_page.py): a button, not a sign-in."""
+        page, policy = login_page(config.after_sign_in)
+        return HTMLResponse(
+            page,
+            headers={
+                "Content-Security-Policy": policy,
+                "Referrer-Policy": "no-referrer",
+                "Cache-Control": "no-store",
+            },
+        )
+
+    @app.post("/api/login")
+    def sign_in(given: SignIn, response: Response) -> User:
+        """Use a login link's code, once, and start a 30-day session."""
+        try:
+            session = config.database.redeem_login_link(given.token)
+        except KeyError as err:
+            raise HTTPException(
+                401, "This link was used already or has expired. Ask for a new one."
+            ) from err
+        response.set_cookie(
+            COOKIE,
+            session,
+            max_age=int(SESSION_VALID.total_seconds()),
+            httponly=True,  # page scripts cannot read it
+            secure=config.secure_cookies,
+            samesite="lax",
+            path="/",
+        )
+        return config.database.session_user(session)
+
+    @app.post("/api/logout", status_code=204)
+    def sign_out(
+        response: Response,
+        session: Annotated[str | None, Depends(SESSION_COOKIE)],
+    ) -> None:
+        if session:
+            config.database.end_session(session)
+        response.delete_cookie(COOKIE, path="/")
+
     @app.get("/api/me")
     def me(user: Me) -> User:
         return user
+
+    @app.get("/api/me/export")
+    def export(user: Me, store: Mine) -> JSONResponse:
+        """Everything JobLens keeps about you, as one JSON file to save."""
+        everything = Everything(
+            exported_at=datetime.now(UTC),
+            user=user,
+            cvs=[CVDetail.of(one) for one in store.cvs()],
+            preferences=Preferences.model_validate(store.load_preferences() or {}),
+            labels=store.labels(),
+            runs=[store.load_run(one.id) for one in store.runs()],
+            matches=store.jobs(limit=1000),
+        )
+        return JSONResponse(
+            everything.model_dump(mode="json"),
+            headers={
+                "Content-Disposition": 'attachment; filename="joblens-my-data.json"'
+            },
+        )
+
+    @app.post("/api/me/delete")
+    def delete_me(user: Me, goodbye: Goodbye, response: Response) -> dict:
+        """Delete your account and everything in it, now. Cannot be undone."""
+        if goodbye.confirm != "delete everything":
+            raise HTTPException(400, 'Send {"confirm": "delete everything"}.')
+        config.database.delete_user(user.id)
+        response.delete_cookie(COOKIE, path="/")
+        return {"deleted": True}
 
     @app.get("/api/cvs")
     def cvs(store: Mine) -> list[CVSummary]:

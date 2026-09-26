@@ -21,11 +21,13 @@ locally and a little more on Neon; the scripts make a handful of calls. The web
 server in 7.4 replaces `connect` with a pool and nothing else changes.
 """
 
+import hashlib
 import os
+import secrets
 import uuid
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import psycopg
@@ -39,6 +41,11 @@ from joblens.cv.schema import CVProfile
 from joblens.evals.matching import CVLabels
 from joblens.storage.base import KEEP_ORIGINAL, CVRecord, Job, RunSummary, User
 from joblens.storage.migrate import Migration, migrate
+
+# A login link is sent by hand to an invited tester: a week to open it. A
+# session lasts a month, then the person asks for a new link.
+LOGIN_LINK_VALID = timedelta(days=7)
+SESSION_VALID = timedelta(days=30)
 
 
 class Database:
@@ -98,13 +105,14 @@ class Database:
         email: str | None = None,
         display_name: str | None = None,
         locale: str | None = None,
+        role: str = "tester",
     ) -> User:
         try:
             with self.connect() as conn:
                 row = conn.execute(
-                    "INSERT INTO users (email, display_name, locale) "
-                    "VALUES (%s, %s, %s) RETURNING *",
-                    (_email(email), display_name, locale),
+                    "INSERT INTO users (email, display_name, locale, role) "
+                    "VALUES (%s, %s, %s, %s) RETURNING *",
+                    (_email(email), display_name, locale, role),
                 ).fetchone()
         except psycopg.errors.UniqueViolation as err:
             raise ValueError(f"there is already an account for {email}") from err
@@ -126,6 +134,17 @@ class Database:
             ).fetchone()
         return _user(row) if row else None
 
+    def set_role(self, user_id: str, role: str) -> User:
+        """Owner or tester; the database refuses anything else."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "UPDATE users SET role = %s WHERE id = %s RETURNING *",
+                (role, _id(user_id, "user")),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"no user {user_id!r}")
+        return _user(row)
+
     def delete_user(self, user_id: str) -> bool:
         """The "delete my data" button: a person and all they stored, at once.
 
@@ -139,6 +158,74 @@ class Database:
                 "DELETE FROM users WHERE id = %s", (_id(user_id, "user"),)
             ).rowcount
         return deleted == 1
+
+    # -- signing in (7.5) ---------------------------------------------------
+
+    def create_login_link(
+        self, user_id: str, valid_for: timedelta = LOGIN_LINK_VALID
+    ) -> str:
+        """A one-time login token for this person. Only its hash is kept, so
+        this return value is the only copy: print it, send it, forget it."""
+        token = secrets.token_urlsafe(32)
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT INTO login_links (token_hash, user_id, expires_at) "
+                "VALUES (%s, %s, now() + %s)",
+                (_hash(token), _id(user_id, "user"), valid_for),
+            )
+        return token
+
+    def redeem_login_link(
+        self, token: str, session_for: timedelta = SESSION_VALID
+    ) -> str:
+        """Use a link, once, and start a session. Returns the session token.
+
+        Marking the link used and starting the session is one transaction, and
+        the UPDATE only matches an unused, unexpired link: two tabs opening the
+        same link at once get one session and one refusal, never two sessions.
+        """
+        with self.connect() as conn, conn.transaction():
+            row = conn.execute(
+                "UPDATE login_links SET used_at = now() WHERE token_hash = %s "
+                "AND used_at IS NULL AND expires_at > now() RETURNING user_id",
+                (_hash(token),),
+            ).fetchone()
+            if row is None:
+                raise KeyError("this link was used already, or has expired")
+            session = secrets.token_urlsafe(32)
+            conn.execute(
+                "INSERT INTO sessions (token_hash, user_id, expires_at) "
+                "VALUES (%s, %s, now() + %s)",
+                (_hash(session), row["user_id"], session_for),
+            )
+        return session
+
+    def session_user(self, session: str) -> User | None:
+        """Who a session belongs to, while it is valid; None otherwise."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id "
+                "WHERE s.token_hash = %s AND s.expires_at > now()",
+                (_hash(session),),
+            ).fetchone()
+        return _user(row) if row else None
+
+    def end_session(self, session: str) -> None:
+        with self.connect() as conn:
+            conn.execute(
+                "DELETE FROM sessions WHERE token_hash = %s", (_hash(session),)
+            )
+
+    def purge_expired_logins(self) -> int:
+        """Sessions and links past their date; `db.py purge-files` runs it."""
+        with self.connect() as conn:
+            sessions = conn.execute(
+                "DELETE FROM sessions WHERE expires_at <= now()"
+            ).rowcount
+            links = conn.execute(
+                "DELETE FROM login_links WHERE expires_at <= now()"
+            ).rowcount
+        return sessions + links
 
     def store_for(self, user_id: str) -> "PostgresStore":
         """One person's store. Refuses an id that is not a user."""
@@ -443,6 +530,11 @@ def _id(value: str, what: str) -> uuid.UUID:
         return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
     except ValueError as err:
         raise KeyError(f"no {what} {value!r}") from err
+
+
+def _hash(token: str) -> str:
+    """What the database keeps of a login link or a session: never the token."""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def _email(email: str | None) -> str | None:

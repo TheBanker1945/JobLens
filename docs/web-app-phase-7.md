@@ -103,6 +103,16 @@ for it.
 From 7.2 on everything is designed as if there is no persistent disk, which
 keeps every host open.
 
+## Login (7.5)
+
+Decided while building, within "go with your recommendations": invite-only
+login links. The owner runs `scripts/db.py invite someone@example.com`, sends
+the printed link however they like, and the link (once, within 7 days) starts a
+30-day session. No passwords, no mail service, no Google project needed for the
+tester phase, and nobody can sign themselves up. Google sign-in stays possible
+in 7.8 as a second way to start the same sessions; it needs an OAuth client
+created in Google Cloud.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

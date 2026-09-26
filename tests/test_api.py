@@ -6,6 +6,7 @@ Skipped without the Docker database, like the other database tests.
 """
 
 import json
+from contextlib import contextmanager
 
 import httpx
 import openai
@@ -31,20 +32,36 @@ class NeverRuns:
         pass
 
 
-def app_for(database, tmp_path, chat, runner=None, **extra) -> TestClient:
-    config = AppConfig(
-        database=database,
-        corpus=CORPUS,
-        models=MODELS,
-        cache_dir=tmp_path,
-        dev_user=EMAIL,
-        chat=chat,
-        embed=CareOrData,
-        runner=runner or InlineRunner(),
-        allowed_hosts=("testserver",),
-        **extra,
-    )
-    return TestClient(create_app(config), headers={"X-JobLens": "1"})
+def config_for(database, tmp_path, chat=None, runner=None, **extra) -> AppConfig:
+    """A test app's settings; any of them can be overridden by name."""
+    defaults = {
+        "database": database,
+        "corpus": CORPUS,
+        "models": MODELS,
+        "cache_dir": tmp_path,
+        "chat": chat or (lambda settings: FakeClient()),
+        "embed": CareOrData,
+        "runner": runner or InlineRunner(),
+        "allowed_hosts": ("testserver",),
+        "secure_cookies": False,  # TestClient speaks plain http
+    }
+    return AppConfig(**(defaults | extra))
+
+
+def sign_in(http: TestClient, database, email: str) -> None:
+    """The way a person does it: a login link, used once, sets the cookie."""
+    token = database.create_login_link(database.user_by_email(email).id)
+    assert http.post("/api/login", json={"token": token}).status_code == 200
+
+
+@contextmanager
+def app_for(database, tmp_path, chat=None, runner=None, as_=EMAIL, **extra):
+    """The app, signed in as `as_` when that account exists."""
+    app = create_app(config_for(database, tmp_path, chat, runner, **extra))
+    with TestClient(app, headers={"X-JobLens": "1"}) as http:
+        if as_ and database.user_by_email(as_):
+            sign_in(http, database, as_)
+        yield http
 
 
 @pytest.fixture
@@ -81,9 +98,11 @@ def test_a_request_for_another_host_is_refused(database, lisa, tmp_path):
         assert http.get("/api/me", headers={"Host": "evil.example"}).status_code == 400
 
 
-def test_nobody_is_signed_in_without_an_account(database, tmp_path):
-    with app_for(database, tmp_path, lambda s: FakeClient()) as http:
-        assert http.get("/api/me").status_code == 401
+def test_without_a_session_nothing_but_health_answers(database, lisa, tmp_path):
+    with app_for(database, tmp_path, as_=None) as http:
+        assert http.get("/api/health").is_success
+        for path in ("/api/me", "/api/cvs", "/api/preferences", "/api/runs"):
+            assert http.get(path).status_code == 401, path
 
 
 def test_an_upload_is_kept_redacted_and_becomes_the_active_cv(database, lisa, tmp_path):
