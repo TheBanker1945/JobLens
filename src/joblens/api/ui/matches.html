@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/matches.js"></script>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="page">
+<div class="page-head results-head">
+<div>
+<h1 data-i18n="results.title">Your matches</h1>
+<p id="summary"></p>
+</div>
+<div class="results-tools">
+<label class="visually-hidden" for="run" data-i18n="results.choose">Which match</label>
+<select id="run" class="language" hidden></select>
+<button type="button" id="start" class="button button-primary" data-i18n="action.startMatch" hidden>Start a new match</button>
+</div>
+</div>
+<div id="notice" class="notice" role="alert" hidden></div>
+<div id="progress" class="progress card" role="status" aria-live="polite" hidden>
+<div id="progress-text"></div>
+<div class="bar"><div class="bar-fill" id="progress-fill"></div></div>
+</div>
+
+<div id="empty" class="card empty-card" hidden></div>
+
+<div id="filters" class="filters" role="group" data-i18n-attr="aria-label:results.filter" hidden></div>
+<div id="results" class="matches"></div>
+
+<section id="pushed" class="pushed" aria-labelledby="pushed-title" hidden>
+<h2 id="pushed-title" data-i18n="results.pushedTitle">Not read because of your answers</h2>
+<p class="muted" data-i18n="results.pushedIntro">Without your answers these would have been read closely.</p>
+<div id="pushed-list" class="matches"></div>
+</section>
+</main>
+<nav class="bottomnav" id="bottomnav"></nav>
+</body>
+</html>

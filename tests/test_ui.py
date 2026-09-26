@@ -190,7 +190,7 @@ def test_an_account_that_already_has_a_cv_is_not_sent_to_the_guide(
     assert database.user(lisa.id).onboarded_at is None  # nothing was marked
 
 
-@pytest.mark.parametrize("path", ["/guide", "/cv", "/preferences"])
+@pytest.mark.parametrize("path", ["/guide", "/matches", "/cv", "/preferences"])
 def test_every_page_needs_a_session_and_comes_in_your_language(
     database, lisa, tmp_path, path
 ):

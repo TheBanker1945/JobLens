@@ -65,7 +65,7 @@ from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord
 from joblens.embeddings.client import EmbeddingClient
-from joblens.evals.matching import CVLabels
+from joblens.evals.matching import Call, CVLabels, Decision
 from joblens.llm.client import LLMClient
 from joblens.llm.presets import MEASURED, available
 from joblens.llm.pricing import cost_usd
@@ -84,6 +84,7 @@ from joblens.service import (
 )
 from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
+from joblens.service.marks import MarkRefused, NotInRun, mark
 from joblens.service.matching import ChatFactory, EmbedFactory
 from joblens.storage import Database, Job, PostgresStore, RunSummary, User
 from joblens.storage.postgres import SESSION_VALID
@@ -130,6 +131,13 @@ class AppConfig:
 
 class MatchAsk(BaseModel):
     top: int = Field(10, ge=1, le=20, description="how many vacancies to judge")
+
+
+class MarkAsk(BaseModel):
+    run: str = Field(description="the match that was on screen")
+    key: str = Field(description="the vacancy")
+    call: Call = Field(description="apply, maybe or no")
+    reason: str = Field(description="why, in your own words; required, kept as typed")
 
 
 class BringKey(BaseModel):
@@ -255,6 +263,10 @@ def create_app(config: AppConfig) -> FastAPI:
             return JSONResponse({"detail": str(err)}, status_code=402)
         if isinstance(err, OwnKeysOff):
             return JSONResponse({"detail": str(err)}, status_code=503)
+        if isinstance(err, NotInRun):
+            return JSONResponse({"detail": str(err)}, status_code=404)
+        if isinstance(err, MarkRefused):
+            return JSONResponse({"detail": str(err)}, status_code=422)
         busy = isinstance(err, ProviderRefused) and err.busy
         return JSONResponse(
             {"detail": str(err)},
@@ -323,6 +335,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     for path, name in (
         ("/guide", "guide.html"),
+        ("/matches", "matches.html"),
         ("/cv", "cv.html"),
         ("/preferences", "preferences.html"),
     ):
@@ -526,6 +539,41 @@ def create_app(config: AppConfig) -> FastAPI:
             return store.job(job_id)
         except KeyError as err:
             raise HTTPException(404, "No such match.") from err
+
+    # -- what a match found, and what you think of it (7.7 step 3) ------------
+
+    @app.get("/api/results")
+    def newest_results(store: Mine) -> views.Results:
+        """The newest match of your active CV, as the matches page shows it."""
+        return results_of(store, None)
+
+    @app.get("/api/results/{run_id}")
+    def some_results(store: Mine, run_id: str) -> views.Results:
+        """An earlier match of your active CV."""
+        return results_of(store, run_id)
+
+    def results_of(store: PostgresStore, run_id: str | None) -> views.Results:
+        cv = store.active_cv()
+        if cv is None:
+            raise HTTPException(404, "No CV yet: upload one.")
+        try:
+            return views.results(store, cv, run_id, config.corpus)
+        except KeyError as err:
+            raise HTTPException(404, "No such match for this CV.") from err
+
+    @app.post("/api/marks")
+    def mark_vacancy(user: Me, store: Mine, given: MarkAsk) -> Decision:
+        """Say what you think of a vacancy in one of your matches, and why.
+        Kept with what the judge said at the time; a new mark never erases
+        an old one, the newest is what the page shows."""
+        return mark(
+            store,
+            given.run,
+            key=given.key,
+            call=given.call,
+            reason=given.reason,
+            judged_by=user.display_name or user.email or user.id,
+        )
 
     # -- whose model, and what it costs (7.6) --------------------------------
 

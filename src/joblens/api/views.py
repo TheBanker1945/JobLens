@@ -7,16 +7,19 @@ their latest match -- rather than seven requests and a page that fills in
 piece by piece.
 """
 
+import re
 from collections import Counter
 from datetime import datetime
 
 from pydantic import BaseModel
 
 from joblens.corpus import Corpus
-from joblens.cv.runs import JudgedRow, RunRecord
+from joblens.cv.runs import ClaimRow, GapRow, JudgedRow, RankedRow, RunRecord
 from joblens.cv.schema import CVProfile
+from joblens.evals.matching import CVLabels, Decision
 from joblens.extraction.schema import VacancyDetails
 from joblens.preferences import Preferences
+from joblens.preferences.schema import Conflict
 from joblens.service import Models, ai, budget
 from joblens.storage import CVRecord, Database, Job, PostgresStore, User
 from joblens.vault import Vault
@@ -25,6 +28,8 @@ from joblens.vault import Vault
 # the matches page (7.7 step 3) shows them all.
 ON_DASHBOARD = 3
 RECOMMENDED = ("strong", "possible")
+# The order the matches page lists verdicts in.
+VERDICT_ORDER = {"strong": 0, "possible": 1, "weak": 2}
 
 
 class CVSummary(BaseModel):
@@ -84,7 +89,10 @@ class LatestRun(BaseModel):
     strong: int
     possible: int
     weak: int
-    moved: int  # moved back by the person's preferences
+    moved: int  # every vacancy the person's preferences moved back
+    # Of those, the ones that would have been read without the preferences:
+    # what the dashboard counts, since "966 moved back" said little.
+    pushed_out: int
     recommended: list[MatchCard]  # the best few, strong or possible
 
 
@@ -146,7 +154,25 @@ def summarise(run_id: str, record: RunRecord, corpus: Corpus) -> LatestRun:
         possible=verdicts["possible"],
         weak=verdicts["weak"],
         moved=sum(1 for row in record.ranking if row.conflicts),
+        pushed_out=len(pushed_out_rows(record)),
         recommended=cards[:ON_DASHBOARD],
+    )
+
+
+def pushed_out_rows(record: RunRecord) -> list[RankedRow]:
+    """What the preferences kept from being read: vacancies retrieval had put
+    inside the shortlist, moved behind it by something the person said."""
+    return sorted(
+        (
+            row
+            for row in record.ranking
+            if row.conflicts
+            and row.before is not None
+            and row.before <= record.stamp.top
+            and not row.judged
+            and not row.capped  # skipped for its employer, not for the answers
+        ),
+        key=lambda row: row.before,
     )
 
 
@@ -169,4 +195,149 @@ def card(row: JudgedRow, details: VacancyDetails | None) -> MatchCard:
         quote=row.claims[0].quote if row.claims else None,
         gap=gap.requirement if gap else None,
         gap_required=gap.required if gap else None,
+    )
+
+
+# -- the matches page (7.7 step 3) ------------------------------------------------
+
+
+class Moved(BaseModel):
+    """One answer a vacancy contradicts, in parts the page can put in any
+    language. rerank.py writes each conflict as an English line; the numbers
+    and names in it are taken out here (tests/test_ui.py pins the formats), and
+    `text` keeps the line for anything not recognised."""
+
+    field: str  # as Conflict.field: contract, work_mode, hours, salary, ...
+    values: list[str] = []  # contract types, modes, levels, languages, or employer
+    low: int | None = None  # hours, euros a month, or km
+    high: int | None = None  # hours
+    place: str | None = None  # distance: measured from here
+    text: str
+
+
+def moved(conflict: Conflict) -> Moved:
+    found = conflict.found
+    view = Moved(field=conflict.field, text=conflict.line())
+    if conflict.field in ("contract", "work_mode", "seniority"):
+        view.values = re.split(r", | or ", found)
+    elif conflict.field == "language":
+        view.values = re.split(r", | and ", found.removeprefix("asks "))
+    elif conflict.field == "employer":
+        view.values = [found]
+    elif hours := re.fullmatch(r"(\d+)(?:-(\d+))? hours a week", found):
+        view.low = int(hours[1])
+        view.high = int(hours[2] or hours[1])
+    elif salary := re.fullmatch(r"at most €([\d,]+) a month", found):
+        view.low = int(salary[1].replace(",", ""))
+    elif far := re.fullmatch(r"(\d+) km from (.+) as the crow flies", found):
+        view.low, view.place = int(far[1]), far[2]
+    return view
+
+
+class MatchDetail(MatchCard):
+    """A judged vacancy with everything behind its verdict, and your mark."""
+
+    summary: str  # the judge's own words
+    claims: list[ClaimRow]  # every line of the CV it used, each found in the CV
+    gaps: list[GapRow]
+    moved: list[Moved]  # what it contradicts of your answers
+    rank: int | None  # where it stood when the shortlist was cut
+    before: int | None  # and where it stood without your answers
+    mark: Decision | None  # the latest thing you said about it
+
+
+class PushedOut(BaseModel):
+    """A vacancy your answers kept from being read: no verdict, only why."""
+
+    key: str
+    title: str
+    company: str | None
+    city: str | None
+    url: str
+    rank: int
+    before: int
+    moved: list[Moved]
+    mark: Decision | None
+
+
+class RunChoice(BaseModel):
+    id: str
+    at: datetime
+    judged: int
+
+
+class Results(BaseModel):
+    id: str
+    at: datetime
+    corpus_size: int  # how many open vacancies were compared
+    top: int  # how many were to be read closely
+    with_preferences: bool
+    strong: int
+    possible: int
+    weak: int
+    matches: list[MatchDetail]  # every judged vacancy: strong, then possible, weak
+    pushed_out: list[PushedOut]
+    runs: list[RunChoice]  # this CV's matches, newest first, to switch between
+
+
+def results(
+    store: PostgresStore, cv: CVRecord, run_id: str | None, corpus: Corpus
+) -> Results:
+    """One match of this CV (the newest when `run_id` is None) as the matches
+    page shows it. KeyError when there is none, or it is another CV's."""
+    mine = [one for one in store.runs() if one.cv == cv.name]
+    if run_id is None:
+        chosen = mine[0] if mine else None
+    else:
+        chosen = next((one for one in mine if one.id == run_id), None)
+    if chosen is None:
+        raise KeyError(run_id or "no match yet")
+    record = store.load_run(chosen.id)
+    ranked = record.ranked_by_key()
+    # Marks belong to the CV, not the run: what you said about a vacancy shows
+    # on every match of this CV that holds it.
+    marks = store.load_labels(cv.name) or CVLabels(cv=cv.name, corpus="", judged_by="")
+
+    def detail(row: JudgedRow) -> MatchDetail:
+        at = ranked.get(row.key)
+        return MatchDetail(
+            **card(row, corpus.details.get(row.key)).model_dump(),
+            summary=row.summary,
+            claims=row.claims,
+            gaps=row.gaps,
+            moved=[moved(one) for one in at.conflicts] if at else [],
+            rank=at.rank if at else None,
+            before=at.before if at else None,
+            mark=marks.decision_for(row.key),
+        )
+
+    verdicts = Counter(str(row.verdict) for row in record.rows)
+    return Results(
+        id=chosen.id,
+        at=record.stamp.at,
+        corpus_size=record.stamp.corpus_size,
+        top=record.stamp.top,
+        with_preferences=bool(record.stamp.preferences),
+        strong=verdicts["strong"],
+        possible=verdicts["possible"],
+        weak=verdicts["weak"],
+        matches=sorted(
+            (detail(row) for row in record.rows),
+            key=lambda one: (VERDICT_ORDER.get(one.verdict, 3), -one.fit),
+        ),
+        pushed_out=[
+            PushedOut(
+                key=row.key,
+                title=row.title,
+                company=row.company,
+                city=row.city,
+                url=row.url,
+                rank=row.rank,
+                before=row.before,
+                moved=[moved(one) for one in row.conflicts],
+                mark=marks.decision_for(row.key),
+            )
+            for row in pushed_out_rows(record)
+        ],
+        runs=[RunChoice(id=one.id, at=one.at, judged=one.judged) for one in mine],
     )
