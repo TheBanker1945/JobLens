@@ -267,7 +267,21 @@ to compare two runs whose stamps disagree, naming what moved. A corpus that has
 merely gained vacancies is the one difference it will compare across, because it
 changes by itself — it reports what entered and left the shortlist instead.
 
-## The web API
+## The web app
+
+```bash
+uv run python scripts/api.py --link you@example.com   # prints a login link
+```
+
+Open the link, press "Sign in", and JobLens opens at http://127.0.0.1:8001/: a
+dashboard with your latest match (verdicts, the CV quote behind each, what is
+missing), your CV and what was taken out of it before sending, what you are
+looking for, and what your AI has cost this month. It speaks Dutch or English
+(German, French and Spanish follow), chosen from your browser's languages and
+switchable in the header. Plain HTML, CSS and JavaScript served by the same
+FastAPI app; no build step, no outside scripts, fonts or trackers.
+
+### The API underneath
 
 ```bash
 uv run python scripts/api.py          # http://127.0.0.1:8001/api/docs

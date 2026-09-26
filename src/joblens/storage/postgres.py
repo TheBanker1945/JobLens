@@ -141,6 +141,24 @@ class Database:
             ).fetchone()
         return _user(row) if row else None
 
+    def update_user(
+        self,
+        user_id: str,
+        *,
+        locale: str | None = None,
+        display_name: str | None = None,
+    ) -> User:
+        """Change what a person may change themselves; None leaves it as is."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "UPDATE users SET locale = coalesce(%s, locale), "
+                "display_name = coalesce(%s, display_name) WHERE id = %s RETURNING *",
+                (locale, display_name, _id(user_id, "user")),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"no user {user_id!r}")
+        return _user(row)
+
     def set_role(self, user_id: str, role: str) -> User:
         """Owner or tester; the database refuses anything else."""
         with self.connect() as conn:
