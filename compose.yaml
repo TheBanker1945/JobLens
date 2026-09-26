@@ -4,7 +4,11 @@
 #     docker compose up -d db        # start it (the data survives restarts)
 #     uv run python scripts/db.py migrate
 #
-# (`docker-compose` with a dash, the older standalone command, reads this too.)
+# Use `docker compose` (the v2 plugin; on Ubuntu: sudo apt install
+# docker-compose-v2). The old standalone `docker-compose` 1.29 can create this
+# container but crashes recreating it on Docker 25+ (KeyError: 'ContainerConfig',
+# seen 2026-09-26); if that happens, `docker rm` the renamed old container --
+# the data is in the volume, not the container -- and run it again.
 # The container and its volume have fixed names, so every checkout and worktree
 # of the repo shares one database instead of each starting an empty one.
 #
@@ -18,6 +22,11 @@ services:
   db:
     image: postgres:17
     container_name: joblens-db
+    # Back up whenever Docker starts -- after a reboot, or WSL shutting down --
+    # unless you stopped it yourself (docker compose stop db). Without this it
+    # stayed down after WSL restarted on 2026-09-26, and every database test
+    # quietly skipped.
+    restart: unless-stopped
     environment:
       POSTGRES_USER: joblens
       POSTGRES_PASSWORD: joblens
