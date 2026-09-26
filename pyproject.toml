@@ -15,6 +15,7 @@ dependencies = [
     "openai>=3.14.1",
     "pdfminer-six>=20260107",
     "protego>=0.7.0",
+    "psycopg[binary]>=3.2",
     "pydantic>=2.13.5",
     "pypdf>=6.19.0",
     "python-dotenv>=1.2.3",

@@ -1,0 +1,186 @@
+"""The database the web app uses: set it up, make accounts, bring your data in.
+
+    docker compose up -d db                          # the local database (compose.yaml)
+    uv run python scripts/db.py migrate              # create or update its tables
+    uv run python scripts/db.py status               # which migrations it has
+    uv run python scripts/db.py create-user you@example.com --name "You" --locale nl
+    uv run python scripts/db.py import you@example.com          # runs and labels
+    uv run python scripts/db.py import you@example.com --cv data/raw/cv/you.pdf \\
+        --strip-name "Your Name"                                 # and your CV
+    uv run python scripts/db.py purge-files          # uploaded files past 30 days
+    uv run python scripts/db.py delete-user you@example.com --yes
+
+Which database: DATABASE_URL in .env (the local one in .env.example; Neon's
+connection string when hosted). The scripts, the evals and the viewer keep
+using the files in data/raw/; `serve.py --db EMAIL` shows an account's runs.
+
+`import` copies this laptop's runs (data/raw/cv-runs/) and a real CV's labels
+(data/raw/cv-labels/) into one account, and can be run again: what is already
+there is skipped. The four invented CVs' labels in evals/cv-matches/ are the
+repo's evidence, not anybody's data, and are never imported.
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from joblens.config import load_llm_settings
+from joblens.cv.match import prepare_cv
+from joblens.cv.runs import digest
+from joblens.cv.store import CVCache
+from joblens.llm.client import LLMClient
+from joblens.llm.structured import default_mode
+from joblens.storage import Database, FileStore
+from joblens.storage.migrate import MigrationError, status
+
+ROOT = Path(__file__).parent.parent
+CACHE_DIR = ROOT / "data" / "cache"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("migrate", help="create or update the tables")
+    commands.add_parser("status", help="which migrations this database has")
+    make = commands.add_parser("create-user", help="make an account")
+    make.add_argument("email")
+    make.add_argument("--name")
+    make.add_argument("--locale", choices=["en", "nl", "de", "fr", "es"])
+    bring = commands.add_parser("import", help="copy this laptop's data in")
+    bring.add_argument("email")
+    bring.add_argument("--cv", type=Path, help="also store this CV as the active one")
+    bring.add_argument("--strip-name", metavar="NAME")
+    commands.add_parser("purge-files", help="delete uploaded files past 30 days")
+    gone = commands.add_parser("delete-user", help="an account and all its data")
+    gone.add_argument("email")
+    gone.add_argument("--yes", action="store_true", help="really delete it")
+    args = parser.parse_args()
+
+    load_dotenv()
+    try:
+        database = Database.from_env()
+        return COMMANDS[args.command](database, args)
+    except (ValueError, MigrationError) as err:
+        print(err)
+        return 1
+
+
+def migrate(database: Database, args) -> int:
+    applied = database.migrate()
+    for one in applied:
+        print(f"applied {one.name}")
+    print("up to date." if not applied else f"{len(applied)} applied.")
+    return 0
+
+
+def show_status(database: Database, args) -> int:
+    with database.connect() as conn:
+        for one in status(conn):
+            when = f"{one.applied_at:%Y-%m-%d %H:%M}" if one.applied_at else "NOT YET"
+            print(f"  {when:<16}  {one.migration.name}")
+    return 0
+
+
+def create_user(database: Database, args) -> int:
+    user = database.create_user(
+        email=args.email, display_name=args.name, locale=args.locale
+    )
+    print(f"created {user.email}  ({user.id})")
+    return 0
+
+
+def import_data(database: Database, args) -> int:
+    user = database.user_by_email(args.email)
+    if user is None:
+        print(f"No account for {args.email}: create-user first.")
+        return 1
+    files, store = FileStore(ROOT), database.store_for(user.id)
+
+    have = {one.id for one in store.runs()}
+    # Oldest first, and by id within a minute, so that two runs of one minute
+    # get the same "-2" in the database as they have on disk.
+    stored = sorted(files.runs(), key=lambda one: (one.at, one.id))
+    copied = 0
+    for summary in stored:
+        if summary.id in have:
+            continue
+        new_id = store.save_run(files.load_run(summary.id))
+        copied += 1
+        if new_id != summary.id:
+            print(f"  note: {summary.id} is {new_id} in the database")
+    print(f"runs: {copied} copied, {len(stored) - copied} already there")
+
+    private = [one for one in files.labels() if not files.is_shared_labels(one.cv)]
+    for labels in private:
+        store.save_labels(labels)
+    print(f"labels: {len(private)} CV(s) -- {', '.join(one.cv for one in private)}")
+
+    if args.cv:
+        return import_cv(store, args)
+    return 0
+
+
+def import_cv(store, args) -> int:
+    """Read, redact and profile the CV exactly as match_cv.py does. The profile
+    comes from the cache when this CV was matched before, so this is free."""
+    settings = load_llm_settings(prefix="CV")
+    with LLMClient(settings) as client:
+        prepared = prepare_cv(
+            args.cv,
+            client,
+            name=args.strip_name,
+            model=settings.model,
+            mode=default_mode(settings),
+            cache=CVCache(CACHE_DIR / "cv-profiles.json"),
+        )
+    active = store.active_cv()
+    if active and active.digest == digest(prepared.text):
+        print(f"cv: {active.filename} is already the active CV")
+        return 0
+    kept = store.add_cv(
+        args.cv.name,
+        prepared.text,
+        profile=prepared.profile,
+        strip_name=args.strip_name,
+        original=args.cv.read_bytes(),
+    )
+    source = "from the cache" if prepared.from_cache else "read by the model"
+    print(f"cv: {kept.filename} stored as the active CV (profile {source})")
+    return 0
+
+
+def purge_files(database: Database, args) -> int:
+    print(f"{database.purge_expired_files()} expired file(s) deleted")
+    return 0
+
+
+def delete_user(database: Database, args) -> int:
+    user = database.user_by_email(args.email)
+    if user is None:
+        print(f"No account for {args.email}.")
+        return 1
+    if not args.yes:
+        print(
+            f"This deletes {args.email} and every CV, file, run, label and "
+            "preference of theirs. Run again with --yes to do it."
+        )
+        return 1
+    database.delete_user(user.id)
+    print(f"deleted {args.email} and everything they stored")
+    return 0
+
+
+COMMANDS = {
+    "migrate": migrate,
+    "status": show_status,
+    "create-user": create_user,
+    "import": import_data,
+    "purge-files": purge_files,
+    "delete-user": delete_user,
+}
+
+
+if __name__ == "__main__":
+    sys.exit(main())

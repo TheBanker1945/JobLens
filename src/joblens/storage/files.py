@@ -5,7 +5,7 @@ Three directories, and the interesting one is the labels:
     data/raw/cv-runs/      runs -- a CV and real vacancy text, so never committed
     data/raw/cv-labels/    labels for a real CV -- ditto
     evals/cv-matches/      labels for the four invented CVs -- committed evidence
-    data/raw/preferences/  whatever 4.5 decides a preference is
+    data/raw/preferences.json  what this person wants (one set: 7.2)
 
 **Labels live in two places because they are two different things.** The sample
 CVs' labels are part of the repo's evidence: someone who clones this can run the
@@ -32,7 +32,7 @@ class FileStore:
         self.runs_dir = root / "data" / "raw" / "cv-runs"
         self.private_labels_dir = root / "data" / "raw" / "cv-labels"
         self.shared_labels_dir = root / "evals" / "cv-matches"
-        self.preferences_dir = root / "data" / "raw" / "preferences"
+        self.preferences_path = root / "data" / "raw" / "preferences.json"
 
     # -- runs ---------------------------------------------------------------
 
@@ -108,17 +108,15 @@ class FileStore:
 
     # -- preferences --------------------------------------------------------
 
-    def load_preferences(self, cv: str) -> dict | None:
-        path = self.preferences_dir / f"{cv}.json"
-        if not path.exists():
+    def load_preferences(self) -> dict | None:
+        if not self.preferences_path.exists():
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(self.preferences_path.read_text(encoding="utf-8"))
 
-    def save_preferences(self, cv: str, values: dict) -> str:
-        self.preferences_dir.mkdir(parents=True, exist_ok=True)
-        path = self.preferences_dir / f"{cv}.json"
-        _write_json(path, values)
-        return str(path)
+    def save_preferences(self, values: dict) -> str:
+        self.preferences_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_json(self.preferences_path, values)
+        return str(self.preferences_path)
 
     # -----------------------------------------------------------------------
 

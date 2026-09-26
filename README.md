@@ -77,6 +77,31 @@ uv run pytest                                  # run the tests
 uv run ruff check . && uv run ruff format .    # lint and format
 ```
 
+The database tests need the local Postgres below; without it they are skipped
+and everything else still runs.
+
+## The database (for the web app)
+
+The web app keeps its users, their CVs, runs, labels and preferences in
+Postgres: in Docker on your own machine, and on [Neon](https://neon.com)
+(Frankfurt, free tier) once it is hosted. The same migrations run on both; only
+`DATABASE_URL` changes. The scripts and evals keep working on the files in
+`data/raw/` and need none of this.
+
+```bash
+docker compose up -d db                        # Postgres 17 on 127.0.0.1:54320
+uv run python scripts/db.py migrate            # create or update the tables
+uv run python scripts/db.py create-user you@example.com --name "You" --locale en
+uv run python scripts/db.py import you@example.com   # copy your runs and labels in
+uv run python scripts/serve.py --db you@example.com  # the viewer, over the database
+```
+
+Copy the `DATABASE_URL` line from `.env.example` into `.env` first. The schema is
+plain SQL in `src/joblens/storage/schema/`, one numbered file per change.
+Deleting an account (`scripts/db.py delete-user`) removes everything it stored
+in one statement, and an uploaded CV file is kept 30 days
+(`scripts/db.py purge-files`); its redacted text stays until the account goes.
+
 ## Where the vacancies come from
 
 Five sources, one interface. Adding another is one adapter file plus a few lines

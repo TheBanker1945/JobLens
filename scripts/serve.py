@@ -22,8 +22,10 @@ import sys
 import webbrowser
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from joblens.corpus import NAMES, load_corpus
-from joblens.storage import FileStore
+from joblens.storage import Database, FileStore
 from joblens.web.server import Viewer, serve
 
 ROOT = Path(__file__).parent.parent
@@ -41,10 +43,18 @@ def main() -> int:
         help="your name, if you are going to mark vacancies. A labels file that "
         "cannot say whose judgement it holds is worth nothing as evidence",
     )
+    parser.add_argument(
+        "--db",
+        metavar="EMAIL",
+        help="read the runs and labels of this account in the database "
+        "(scripts/db.py) instead of the files in data/raw/",
+    )
     args = parser.parse_args()
 
     corpus = load_corpus(args.corpus)
-    store = FileStore(ROOT)
+    store = FileStore(ROOT) if not args.db else account_store(args.db)
+    if store is None:
+        return 1
     runs = store.runs()
     print(f"{len(corpus)} vacancies in the {args.corpus} corpus, {len(runs)} run(s)")
     if not runs:
@@ -62,6 +72,17 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def account_store(email: str):
+    """One account's store: the viewer is the same page over either store."""
+    load_dotenv()
+    database = Database.from_env()
+    user = database.user_by_email(email)
+    if user is None:
+        print(f"No account for {email}. scripts/db.py create-user makes one.")
+        return None
+    return database.store_for(user.id)
 
 
 if __name__ == "__main__":

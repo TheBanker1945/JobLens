@@ -15,11 +15,16 @@ model forgot. That makes one useful in a test verbose to write, so it is built
 here once.
 """
 
+import os
 import sys
 from pathlib import Path
 
+import psycopg
+import pytest
+
 from joblens.extraction.schema import VacancyDetails
 from joblens.llm.types import ChatResult, Usage
+from joblens.storage import Database
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -129,3 +134,45 @@ def details(title: str, **stated) -> VacancyDetails:
     return VacancyDetails(
         title=title, skills=[], languages_required=[], **NOT_STATED | stated
     )
+
+
+# The Postgres the database tests run against: the second database in the
+# Docker container (compose.yaml, docker/initdb/). Without it they skip, so a
+# clone without Docker still runs every other test.
+TEST_DATABASE_URL = os.environ.get(
+    "JOBLENS_TEST_DATABASE_URL",
+    "postgresql://joblens:joblens@127.0.0.1:54320/joblens_test",
+)
+# One test run at a time on that database: several sessions share this repo,
+# and one run's TRUNCATE in the middle of another's test is a failure nobody
+# can reproduce. The second run waits for the first.
+TEST_LOCK = 70_200_002
+
+
+@pytest.fixture(scope="session")
+def _test_database():
+    try:
+        conn = psycopg.connect(TEST_DATABASE_URL, autocommit=True, connect_timeout=3)
+    except psycopg.OperationalError as err:
+        pytest.skip(
+            f"no test database ({err.__class__.__name__}): start it with "
+            "`docker compose up -d db`"
+        )
+    with conn:
+        # Every test empties the tables. A URL that points anywhere but a
+        # database named *_test is refused, so a mistyped variable can never
+        # empty the one with your data in it.
+        if not conn.info.dbname.endswith("_test"):
+            pytest.fail(f"refusing to test against {conn.info.dbname!r}: not *_test")
+        conn.execute("SELECT pg_advisory_lock(%s)", (TEST_LOCK,))
+        database = Database(TEST_DATABASE_URL)
+        database.migrate()
+        yield database
+
+
+@pytest.fixture
+def database(_test_database):
+    """The test database, empty: every person and everything they own gone."""
+    with _test_database.connect() as conn:
+        conn.execute("TRUNCATE users CASCADE")
+    return _test_database

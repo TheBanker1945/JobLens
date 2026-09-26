@@ -1,8 +1,10 @@
-"""The one way in and out for runs, labels and preferences.
+"""FileStore's own behaviour: where it puts things on disk, and why.
 
-What is worth testing here is not that a file can be written. It is the three
-decisions the seam makes: an id is not a path, a run never lands on top of
-another run, and a real person's labels are private unless they already are not.
+What every store promises is in test_store_contract.py, run on this one and on
+Postgres alike.
+
+What is left here is FileStore's own decision: a real person's labels are
+private unless they already are not, and a save that fails leaves the old file.
 """
 
 import json
@@ -60,42 +62,6 @@ def record(cv: str = "mahdi", minute: str = "2026-09-22T14:42:00"):
     return build_record(stamp, runs, assess(runs, corpus=279))
 
 
-def test_a_run_is_addressed_by_an_id_and_listed_newest_first(tmp_path):
-    store = FileStore(tmp_path)
-
-    older = store.save_run(record(minute="2026-09-21T09:00:00"))
-    newer = store.save_run(record(minute="2026-09-22T14:42:00"))
-
-    assert [one.id for one in store.runs()] == [newer, older]
-    assert store.runs()[0].cv == "mahdi"
-    assert store.runs()[0].judged == 1
-    assert store.load_run(older).stamp.cv_digest == "9f1c2b84"
-
-
-def test_two_runs_in_the_same_minute_are_two_runs(tmp_path):
-    """The old name was the minute alone, and a viewer will produce two."""
-    store = FileStore(tmp_path)
-
-    first = store.save_run(record())
-    second = store.save_run(record())
-
-    assert first != second
-    assert {one.id for one in store.runs()} == {first, second}
-    assert store.load_run(first).stamp.at == store.load_run(second).stamp.at
-
-
-@pytest.mark.parametrize("bad", ["../secrets", "a/b", ".hidden", "..\\windows"])
-def test_an_id_is_not_a_path(tmp_path, bad):
-    """The web server in 4.3 will eventually be handed one of these."""
-    with pytest.raises(KeyError):
-        FileStore(tmp_path).load_run(bad)
-
-
-def test_a_missing_run_is_a_key_error_and_not_an_empty_record(tmp_path):
-    with pytest.raises(KeyError):
-        FileStore(tmp_path).load_run("2026-09-22_1442_nobody")
-
-
 def test_labels_for_a_new_cv_are_private(tmp_path):
     """The safe direction: a real person's labels never default into the repo."""
     store = FileStore(tmp_path)
@@ -135,16 +101,6 @@ def test_both_label_directories_are_read_as_one(tmp_path):
 
     assert [one.cv for one in store.labels()] == ["lisa_de_vries", "mahdi"]
     assert store.load_labels("nobody") is None
-
-
-def test_preferences_are_stored_without_a_schema(tmp_path):
-    """4.5 decides what a preference is; the seam only has to keep one."""
-    store = FileStore(tmp_path)
-
-    store.save_preferences("mahdi", {"regio": ["Utrecht"], "minimum": 3500})
-
-    assert store.load_preferences("mahdi") == {"regio": ["Utrecht"], "minimum": 3500}
-    assert store.load_preferences("nobody") is None
 
 
 def test_a_failed_save_leaves_the_labels_that_were_there(tmp_path, monkeypatch):
