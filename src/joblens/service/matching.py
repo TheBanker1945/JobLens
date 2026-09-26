@@ -28,7 +28,7 @@ that hands out the open one.
 
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, closing, contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -66,6 +66,7 @@ from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd
 from joblens.llm.structured import StructuredError, default_mode
 from joblens.llm.types import ChatClient
+from joblens.preferences import Conflict, Preferences, for_judge, rerank
 from joblens.service.errors import CVUnreadable, ProviderRefused, ProviderUnreachable
 from joblens.storage import Store
 
@@ -99,6 +100,9 @@ class MatchRequest:
     top: int = 10  # how many to judge
     per_employer: int = PER_EMPLOYER  # 0 for no cap
     judge: JudgeKind = "holistic"
+    # What the person wants (7.3): moves vacancies before the shortlist is cut,
+    # and tells the holistic judge the rules that need reading.
+    preferences: Preferences | None = None
 
     def __post_init__(self) -> None:
         # Checked here and not only in argparse: a request from a browser gets
@@ -129,6 +133,10 @@ class Ranked:
     ranking: list[CVMatch]  # every vacancy in the index, best first
     chosen: Shortlist  # its head, at most `per_employer` each: what `judge` reads
     indexed: int  # how many vacancies could be ranked at all
+    # With preferences: retrieval's own position of every vacancy, and what
+    # each moved one contradicts. None and empty without.
+    before: dict[str, int] | None = None
+    conflicts: dict[str, list[Conflict]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -197,13 +205,27 @@ def rank(
             model=models.cv.model,
             cache=cache,
         )
+        before, conflicts = None, {}
+        if request.preferences and not request.preferences.is_empty():
+            # Before the cut, so the shortlist is made of what the person
+            # wants; nothing is removed, and each move is kept with its reason.
+            moved = rerank(ranking, corpus.details, request.preferences)
+            ranking, before, conflicts = moved.ranking, moved.before, moved.conflicts
         chosen = shortlist(
             ranking,
             request.top,
             per_employer=request.per_employer,
             details=corpus.details,
         )
-    return Ranked(request, prepared, ranking, chosen, indexed=len(index))
+    return Ranked(
+        request,
+        prepared,
+        ranking,
+        chosen,
+        indexed=len(index),
+        before=before,
+        conflicts=conflicts,
+    )
 
 
 def judge(
@@ -237,6 +259,7 @@ def judge(
             on_done=lambda done, total, _match: report(
                 Progress("judging", done, total)
             ),
+            told=for_judge(request.preferences),
         )
 
     outcome = assess(judged, corpus=len(corpus), corpus_name=corpus.name)
@@ -258,6 +281,7 @@ def judge(
         prompt_version=judge_version(request.judge),
         top=request.top,
         per_employer=request.per_employer,
+        preferences=request.preferences.stamp() if request.preferences else "",
     )
     record = build_record(
         stamp,
@@ -270,6 +294,8 @@ def judge(
         funnel=corpus.funnel,
         failures=failures,
         cost_usd=cost,
+        before=ranked.before,
+        conflicts=ranked.conflicts,
     )
     # Every write of a run goes through the store (4.2), which also decides
     # that two runs in the same minute are two runs and not one overwritten.

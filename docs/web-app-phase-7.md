@@ -102,3 +102,16 @@ for it.
 
 From 7.2 on everything is designed as if there is no persistent disk, which
 keeps every host open.
+
+## Open questions from 7.3 (for Mahdi)
+
+- **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
+  sits behind every vacancy that contradicts nothing. A margin, or marking each
+  answer "must" or "nice to have", would soften that. Decide after using it.
+- **Is a year's contract "met uitzicht op vast" temporary?** Extraction says
+  temporary (249 such vacancies against 181 permanent). A separate answer --
+  "I accept a first-year contract with a view to permanent" -- would say what
+  people mean.
+- **Measuring it.** Answer `scripts/preferences.py ask`, then compare
+  `eval_judge.py --labelled --cv mohammed --preferences` with the plain run.
+

@@ -140,6 +140,10 @@ function renderRows() {
   list.replaceChildren(...rows.map(renderRow));
 }
 
+function conflictLine(conflict) {
+  return `${conflict.field}: ${conflict.found} — you want ${conflict.wanted}`;
+}
+
 function renderRow(row) {
   const open = state.open === row.key;
   const node = el("div", { class: "row", onclick: (event) => {
@@ -153,6 +157,12 @@ function renderRow(row) {
                  : el("span", { class: "badge weak" }, fmtScore(row.score)),
       el("span", { class: "title" }, row.title),
       el("span", { class: "where" }, where(row)),
+      // Moved back by a stated preference (7.3): never out of the list, and
+      // never without saying from where and why.
+      row.conflicts && row.conflicts.length
+        ? el("span", { class: "badge moved", title: row.conflicts.map(conflictLine).join("\n") },
+            `moved from #${row.before}`)
+        : null,
       myCall(row.key) ? el("span", { class: `badge mine ${myCall(row.key).call}` },
         `you: ${myCall(row.key).call}`) : null
     ),
@@ -190,6 +200,12 @@ function renderDetail(row) {
     detail.append(el("div", { class: "meta" },
       `ranked #${row.rank} of ${state.run.counts.ranked} at ${fmtScore(row.score)}, ` +
       `matched by "${row.part}" — below the cut, so no model ever read it`));
+  }
+  if (row.conflicts && row.conflicts.length) {
+    detail.append(el("h4", {}, `moved back from #${row.before} by what you said you want`));
+    for (const conflict of row.conflicts) {
+      detail.append(el("div", { class: "claim" }, conflictLine(conflict)));
+    }
   }
   if (row.url && row.url.startsWith("http")) {
     detail.append(el("p", {}, el("a", { href: row.url, target: "_blank", rel: "noreferrer" }, row.url)));

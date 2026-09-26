@@ -40,6 +40,7 @@ from joblens.cv.gaps import GapSummary
 from joblens.cv.judge import Judged, Verdict
 from joblens.cv.match import CVMatch
 from joblens.cv.outcome import Fit, Outcome
+from joblens.preferences.schema import Conflict
 from joblens.sources.base import Vacancy
 
 # Everything that has to be equal before two runs are two measurements of one
@@ -71,6 +72,10 @@ class RunStamp(BaseModel):
     # At most this many judged per employer (cv/match.py); 0 is no cap, which
     # is also what every run from before the cap existed loads as.
     per_employer: int = 0
+    # The preferences that moved the ranking and told the judge, as their
+    # version and a digest of the answers ("p1:3f9a1c20"). "" for a run with
+    # none, which is also what every run from before 7.3 loads as.
+    preferences: str = ""
     at: datetime = Field(default_factory=datetime.now)
 
     def line(self) -> str:
@@ -145,6 +150,11 @@ class RankedRow(BaseModel):
     # Ranked high enough to be judged, and skipped because its employer already
     # had `per_employer` on the shortlist. Not judged, and not "below the cut".
     capped: bool = False
+    # Where retrieval put it before the person's preferences moved it (7.3),
+    # and what they said that it contradicts. `before` is None on a run without
+    # preferences; `conflicts` is empty for every vacancy that was not moved.
+    before: int | None = None
+    conflicts: list[Conflict] = []
 
 
 class GroupRow(BaseModel):
@@ -219,6 +229,8 @@ def build_record(
     funnel: Funnel | None = None,
     failures: list[str] | None = None,
     cost_usd: float | None = None,
+    before: dict[str, int] | None = None,
+    conflicts: dict[str, list[Conflict]] | None = None,
 ) -> RunRecord:
     rows = [
         JudgedRow(
@@ -268,6 +280,8 @@ def build_record(
             if sent is not None
             else position <= shortlisted,
             capped=match.vacancy.key in (capped or set()),
+            before=before.get(match.vacancy.key) if before else None,
+            conflicts=(conflicts or {}).get(match.vacancy.key, []),
         )
         for position, match in enumerate(ranking or [], 1)
     ]
@@ -345,6 +359,16 @@ def compare(before: RunRecord, after: RunRecord) -> Comparison:
             f"a different cap per employer: {before.stamp.per_employer or 'none'} "
             f"-> {after.stamp.per_employer or 'none'}, so a vacancy can leave the "
             f"list because of whom else it was ranked with"
+        )
+    if before.stamp.preferences != after.stamp.preferences:
+        # A note, not a blocker: "what did my preferences change?" is exactly
+        # the comparison someone setting them wants. The judge was told
+        # something different, so a changed verdict can be the preference
+        # working rather than noise.
+        notes.append(
+            f"different preferences: {before.stamp.preferences or 'none'} -> "
+            f"{after.stamp.preferences or 'none'}, so the shortlist moved and the "
+            f"judge may have been told different rules"
         )
     if blockers:
         return Comparison(blockers=blockers, notes=notes)

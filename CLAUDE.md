@@ -62,6 +62,17 @@ conceptually, not just have working code.
   scoped by user_id. Uploaded CV files live in cv_files and expire after 30
   days (KEEP_ORIGINAL); the redacted text stays. Tests use the joblens_test
   database and skip without Docker.
+- Preferences (7.3, src/joblens/preferences/) are stated answers, never
+  inferred, and kept apart from the CV. Facts extraction fills (contract,
+  hours, work mode, distance, salary, languages, title level, employer) are
+  applied in code before the shortlist is cut: a contradiction moves a vacancy
+  behind those with fewer, never removes it, and unknown costs nothing; the run
+  records `before` and `conflicts` per vacancy. Years, degree and sectors go to
+  the holistic judge as a block after the CV, only when answered -- without
+  one the prompt is 3.6 to the byte. PREFERENCES_VERSION ("p1") covers both
+  halves; bump it when either changes. Distance is straight-line km between
+  PDOK place centroids (places_nl_coordinates.csv). Not measured on Mahdi's
+  labels until he answers the questionnaire.
 - Matching a CV is a call, not a script: src/joblens/service/ (`rank`, then
   `judge`; 7.1). Scripts and the coming API are its callers. A service takes
   settings (`Models`), data (a path or a `CVFile` upload) and a store, and
@@ -252,6 +263,7 @@ conceptually, not just have working code.
 - uv run python scripts/data_status.py                      # freshness and health
 - uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV
 - uv run python scripts/match_cv.py <cv> --top 10           # rank vacancies for a CV
+- uv run python scripts/preferences.py ask                  # what you want from a job
 - uv run python scripts/eval_cv_matching.py                 # which CV style wins
 - uv run python scripts/eval_judge.py                       # is the judge honest?
 - uv run python scripts/eval_judge.py --labelled            # judge vs every label, no index
