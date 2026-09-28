@@ -3282,3 +3282,78 @@ answers, found four things to fix:
 
 7 new tests; 903 in all. No new dependency.
 
+## 7.7.3 — The matches page, and marking a vacancy with a reason
+
+`/matches` shows one match in full. For every vacancy the judge read:
+- its verdict and score;
+- the judge's own sentence;
+- every line of the CV it used, each one found in the CV before it was stored;
+- everything missing, marked "required", "a plus", or "rules you out";
+- where it ranked, and where it would have ranked without your answers.
+
+Below the list, the vacancies your answers moved out of the shortlist, each
+with the answer it contradicts. A switcher shows earlier matches of the same CV.
+
+**One request per screen, again.** `GET /api/results` (the newest match of
+the active CV) and `GET /api/results/{run}` (an earlier one) answer with
+everything the page shows. That excludes the whole ranking. The viewer's run
+view (4.3) sends all ~1,166 ranked vacancies, which is right for a developer
+and far too much, and too internal, for a person.
+
+**A conflict in any language.** rerank.py stores each contradiction as an
+English line ("53 km from Den Haag as the crow flies"). The page gets it in
+parts instead, so it can say "53 km van Den Haag, hemelsbreed":
+- values: the contract type, the languages;
+- numbers: the hours, the euros, the km;
+- a place.
+
+The English line comes along only for something that could not be taken
+apart. A test builds all eight kinds of conflict with rerank's own function,
+so if the wording there changes, the test fails. The alternative would be
+English turning up in a Dutch page.
+
+**A mark is the same record the viewer writes.** `POST /api/marks` (in
+`service/marks.py`) appends a `Decision` to the CV's labels:
+- apply, maybe or not for me;
+- a required reason, kept as typed (at most 1,000 characters);
+- the run, and what the judge said at that moment.
+
+A second mark never erases the first; the page shows the newest. So the evals
+read a tester's marks exactly as they read Mahdi's.
+
+Two checks are different from the viewer's, on purpose:
+- **The run decides, not the open corpus.** The vacancy must be in the match
+  that was on screen, so one that closed since can still be marked.
+- **The run must be yours.** Another person's run answers 404, whether to
+  read or to mark.
+
+**"966 moved back" became "10 moved out".** The dashboard counted every
+vacancy your answers moved back: 966 of 1,166 in the 7.7.2 walk. True, and
+useless. It now counts the vacancies that would have been read without your
+answers and were not. The moved-out section lists exactly those.
+
+**Checked on the real server.** A fresh tester ran in a throwaway database:
+- Lisa's PDF, strict answers (permanent, hybrid or remote, 40 km from Den
+  Haag, 32-40 hours, medior), one match of ten: 9 s, 1 strong, 1 possible,
+  8 weak;
+- all three kinds of conflict that occurred came apart (distance, contract,
+  level), and none was left as an English line;
+- a mark without a reason got 422, and two marks kept the verdicts of that
+  moment (strong 84, weak 22);
+- a moved-out vacancy took a mark with an empty verdict.
+
+Screenshots at desktop size and in a 390 px frame, from a static copy fed
+with those answers, showed the page as designed: four items in the phone's
+bottom menu, the saved mark with "Change", the moved-out cards with the
+contradicted answer.
+
+**What the walk showed about the answers themselves.** Every one of the ten
+vacancies the answers moved out was in Amsterdam, 53-55 km from Den Haag,
+against a 40 km limit. The one strong match rose from place 14 to place 1.
+This is the open question from 7.3 ("a hard line, or a margin?") with real
+numbers behind it: 13 km over the limit counts the same as 130. It is a
+decision about the preferences, not about the page, so it waits for Mahdi.
+
+8 new tests and one more page in the session check; 912 in all. No new
+dependency.
+
