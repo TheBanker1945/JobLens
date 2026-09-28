@@ -284,9 +284,12 @@ contradicts, plus the vacancies your answers moved out of the shortlist, and
 lets you mark each one (apply, maybe, not for me) with a reason, which is
 kept as you typed it; "My CV" shows the exact text a model is sent,
 what a model read from it and your earlier versions; "My preferences" is the
-questionnaire as one form, every question optional. It speaks Dutch or English
-(German, French and Spanish follow), chosen from your browser's languages and
-switchable in the header. Plain HTML, CSS and JavaScript served by the same
+questionnaire as one form, every question optional; "Settings" (in the
+account menu) holds your name and language, whose AI reads your CV and what it
+cost this month, your own API key if you bring one, and downloading or
+deleting everything. It speaks English, Dutch, German, French and Spanish,
+chosen from your browser's languages and switchable in the header (the German,
+French and Spanish texts still need a native speaker's read). Plain HTML, CSS and JavaScript served by the same
 FastAPI app; no build step, no outside scripts, fonts or trackers.
 
 ### The API underneath

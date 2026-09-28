@@ -97,7 +97,10 @@ conceptually, not just have working code.
   (script/style/font from 'self' only): no inline script, no style="",
   no on*= handlers, no outside CDN or Google Fonts (the font is self-hosted,
   OFL). Scraped text goes in as text only -- never innerHTML -- and only
-  http(s) links are followed. Every text is a key in ui/assets/i18n/<code>.json
+  http(s) links are followed. Elements are filled with fill() from dom.js,
+  never replaceChildren() (which writes null and false as words; a test
+  forbids it). Five languages: en, nl, de, fr, es (informal; de/fr/es written
+  by Claude, not yet read by a native speaker). Every text is a key in ui/assets/i18n/<code>.json
   with identical keys and placeholders in every language (tests enforce it);
   the language is picked server-side (api/language.py: saved choice, then the
   browser's languages, then its country, then English). tests/test_ui.py holds

@@ -136,7 +136,9 @@ English; (2) the guide, the preferences form, My CV; (3) the matches page with
 evidence and marking with a reason; (4) settings (own AI, spending, language,
 download and delete my data), German, French and Spanish, phone polish.
 
-Steps 1 to 3 are built (learning log 7.7.1-7.7.3). The guide is shown to an
+All four steps are built (learning log 7.7.1-7.7.4). The German, French and
+Spanish texts were written by Claude and still need a native speaker's read
+before testers who speak them arrive. The guide is shown to an
 account until it is finished or skipped (`users.onboarded_at`, migration 0005)
 or while it has no CV; accounts that already had a CV never see it. On a phone
 the top menu becomes a bottom bar. The matches page shows every vacancy a
