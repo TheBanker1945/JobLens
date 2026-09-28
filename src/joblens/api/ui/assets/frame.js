@@ -3,12 +3,12 @@
 // do not each carry a copy that drifts.
 
 import { api } from "./api.js";
-import { byId, h, show } from "./dom.js";
+import { byId, fill, h, show } from "./dom.js";
 import { t } from "./i18n.js";
 
 // Each language's own name, so someone who cannot read the current language
 // can still find theirs.
-const ENDONYMS = { en: "English", nl: "Nederlands", de: "Deutsch", fr: "Français", es: "Español" };
+export const ENDONYMS = { en: "English", nl: "Nederlands", de: "Deutsch", fr: "Français", es: "Español" };
 
 export const FILE_ICON = "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5";
 
@@ -21,7 +21,7 @@ const PAGES = [
 
 export function setUpFrame(current, user, { onError } = {}) {
   const top = byId("topbar");
-  top.replaceChildren(
+  fill(top,
     h("a", { class: "brand", href: "/" }, logo(), "JobLens"),
     h("nav", { class: "mainnav", "aria-label": t("nav.label") },
       ...PAGES.map((one) => h("a", {
@@ -37,7 +37,7 @@ export function setUpFrame(current, user, { onError } = {}) {
   const bottom = byId("bottomnav");
   if (bottom) {
     bottom.setAttribute("aria-label", t("nav.label"));
-    bottom.replaceChildren(
+    fill(bottom,
       ...PAGES.map((one) => h("a", {
         href: one.href, "aria-current": one.href === current ? "page" : null,
       }, icon(one.icon), t(one.key))),
@@ -75,6 +75,7 @@ function accountMenu(user) {
       h("strong", {}, name),
       h("span", {}, [user.email, t(`account.${user.role}`)].filter(Boolean).join(" · ")),
     ),
+    h("a", { href: "/settings" }, t("account.settings")),
     h("a", { href: "/api/me/export", download: "joblens-my-data.json" }, t("account.download")),
     signOut,
   );

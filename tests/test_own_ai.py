@@ -124,6 +124,28 @@ def test_a_key_the_provider_refuses_is_not_kept(database, lisa, tmp_path, vault)
     assert after["using"] == "joblens"
 
 
+@pytest.mark.parametrize(
+    ("said", "shown"),
+    [
+        # What Gemini really answered a made-up key (7.7.4 walk, 2026-09-28).
+        (
+            "Error code: 400 - [{'error': {'code': 400, 'message': 'Please pass "
+            "a valid API key', 'status': 'INVALID_ARGUMENT', 'details': []}}]",
+            "Please pass a valid API key.",
+        ),
+        (
+            'Error code: 404 - {"error": {"message": "model not found"}}',
+            "model not found.",
+        ),
+        ("Incorrect API key", "Incorrect API key."),  # no JSON: the line itself
+    ],
+)
+def test_a_refusal_shows_the_providers_sentence_not_its_json(said, shown):
+    from joblens.service.ai import provider_sentence
+
+    assert provider_sentence(Exception(said)) == shown
+
+
 def test_a_working_key_is_kept_encrypted_and_never_shown_again(
     database, lisa, tmp_path, vault
 ):

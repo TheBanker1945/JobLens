@@ -3,7 +3,7 @@
 
 import { api, ApiError } from "./api.js";
 import { removedKinds, uploadForm } from "./cv-upload.js";
-import { byId, h, show } from "./dom.js";
+import { byId, fill, h, show } from "./dom.js";
 import { FILE_ICON, icon, setUpFrame } from "./frame.js";
 import { formatDate, formatList, formatNumber, loadLanguage, t, translate } from "./i18n.js";
 
@@ -37,9 +37,9 @@ async function activeCv() {
 
 function renderActive(cv) {
   const box = byId("active");
-  if (!cv) return box.replaceChildren(h("p", { class: "muted" }, t("cv.none")));
+  if (!cv) return fill(box, h("p", { class: "muted" }, t("cv.none")));
   const kinds = removedKinds(cv.removed);
-  box.replaceChildren(
+  fill(box,
     h("div", { class: "file-row" },
       h("span", { class: "file-icon" }, icon(FILE_ICON, { size: 20, color: "#1d4ed8" })),
       h("div", {},
@@ -89,8 +89,8 @@ function profile(p) {
 
 function renderHistory(older) {
   const box = byId("history");
-  if (!older.length) return box.replaceChildren(h("p", { class: "muted" }, t("cvpage.noHistory")));
-  box.replaceChildren(h("ul", { class: "plain-list history" }, ...older.map((cv) => {
+  if (!older.length) return fill(box, h("p", { class: "muted" }, t("cvpage.noHistory")));
+  fill(box, h("ul", { class: "plain-list history" }, ...older.map((cv) => {
     const button = h("button", { type: "button", class: "button button-outline" }, t("cvpage.makeActive"));
     button.addEventListener("click", async () => {
       button.disabled = true;

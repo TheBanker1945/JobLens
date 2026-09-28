@@ -6,7 +6,7 @@
 
 import { api, ApiError } from "./api.js";
 import { removedKinds, uploadForm } from "./cv-upload.js";
-import { byId, h, show } from "./dom.js";
+import { byId, fill, h, show } from "./dom.js";
 import { formatList, loadLanguage, t, translate } from "./i18n.js";
 import { preferencesForm, serverProblems } from "./prefs-form.js";
 import { followJob } from "./progress.js";
@@ -25,7 +25,7 @@ try {
   ]);
   cv = active;
   form = preferencesForm(prefs, places);
-  byId("prefs-fields").replaceChildren(form.element);
+  fill(byId("prefs-fields"), form.element);
   byId("cv-upload").append(uploadForm({ onDone: uploaded, onError: (e) => say(errorText(e)) }));
   showCv();
   wire();
@@ -77,9 +77,9 @@ async function uploaded(fresh) {
 
 function showCv() {
   show(byId("foot-1"), Boolean(cv));
-  if (!cv) return byId("cv-now").replaceChildren();
+  if (!cv) return fill(byId("cv-now"));
   const kinds = removedKinds(cv.removed);
-  byId("cv-now").replaceChildren(
+  fill(byId("cv-now"),
     h("div", { class: "success" },
       h("strong", {}, cv.filename),
       h("p", {}, kinds.length > 0

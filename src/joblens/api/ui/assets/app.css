@@ -367,3 +367,29 @@ pre.sent {
 @media (max-width: 720px) {
   .bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* -- settings (7.7.4) --------------------------------------------------------- */
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; align-items: start; }
+.settings-grid .form-foot, .settings-grid .facts, .field-wide { grid-column: 1 / -1; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--muted-2); font-weight: 600; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--blue); }
+.ai-line { margin: 0; font-weight: 600; }
+.bring { border-top: 1px solid #eef2f8; padding-top: 16px; }
+.danger-zone { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #eef2f8; padding-top: 16px; }
+.button-danger { background: var(--danger); color: #ffffff; border-color: var(--danger); }
+.button-danger:hover { background: #912018; color: #ffffff; }
+.button-danger:disabled { background: #e7b4ae; border-color: #e7b4ae; cursor: not-allowed; }
+@media (max-width: 720px) {
+  .settings-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* phone polish (7.7.4): long menu words (Tableau de bord, Correspondances,
+   Mein Lebenslauf) wrap under their icon instead of running into the next */
+@media (max-width: 720px) {
+  .bottomnav a { font-size: 11px; line-height: 1.15; text-align: center; padding: 0 3px; }
+}
+/* a heading's link stays on one line; the heading wraps instead */
+.card-head a { white-space: nowrap; flex-shrink: 0; }

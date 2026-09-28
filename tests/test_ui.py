@@ -27,8 +27,8 @@ from joblens.api.app import UI
         ("nl-NL,nl;q=0.9,en;q=0.8", None, "nl"),
         ("en-NL,en;q=0.9", None, "en"),  # set to English in NL: English
         ("pl-NL,pl;q=0.9", None, "nl"),  # a language we lack: the country's
-        ("tr-DE", None, "en"),  # German is not offered yet: English
-        ("fr-BE,fr;q=0.9", None, "nl"),  # French not offered yet; Belgium is nl
+        ("tr-DE", None, "en"),  # with only en and nl offered: English
+        ("fr-BE,fr;q=0.9", None, "nl"),  # likewise; Belgium's first language is nl
         ("de;q=0.3,nl;q=0.7", None, "nl"),  # the most wanted first
         ("nl-NL", "en", "en"),  # the switcher's choice wins
         ("nl-NL", "xx", "nl"),  # a saved code that is not offered is ignored
@@ -42,8 +42,23 @@ def test_a_page_is_in_the_language_the_browser_asks_for(header, saved, chosen):
 
 
 def test_only_languages_with_texts_are_offered():
-    assert language.available() == ("en", "nl")  # de, fr, es arrive in step 4
-    assert language.pick("de-DE", offered=("en", "nl", "de")) == "de"
+    assert language.available() == ("en", "nl", "de", "fr", "es")
+    assert language.pick("de-DE", offered=("en", "nl")) == "en"
+
+
+@pytest.mark.parametrize(
+    ("header", "chosen"),
+    [
+        ("de-AT,de;q=0.9", "de"),
+        ("tr-DE", "de"),  # a language we lack: the country's
+        ("fr-BE,fr;q=0.9", "fr"),  # the browser's own language beats the country
+        ("es-MX", "es"),
+        ("pl-NL", "nl"),
+        ("pt-BR", "en"),  # neither the language nor the country: English
+    ],
+)
+def test_with_all_five_languages_each_browser_gets_its_own(header, chosen):
+    assert language.pick(header) == chosen
 
 
 # -- the rules the files keep -------------------------------------------------
@@ -97,6 +112,14 @@ def test_no_page_breaks_its_own_security_policy():
             assert not inline.strip(), page.name
 
 
+def test_no_script_can_write_null_or_false_into_a_page():
+    """replaceChildren() writes null and false as words; fill() (dom.js) skips
+    them, as h() does. `cv.profile && ...` put "null" on a page before this."""
+    for script in (UI / "assets").glob("*.js"):
+        if script.name != "dom.js":
+            assert ".replaceChildren(" not in script.read_text("utf-8"), script.name
+
+
 def test_no_script_puts_text_into_the_page_as_html():
     """Titles and quotes are scraped text: HTML from them would be code."""
     for script in (UI / "assets").glob("*.js"):
@@ -136,7 +159,7 @@ def test_a_page_comes_in_the_browsers_language_with_its_security_headers(
         login = http.get("/login", headers={"Accept-Language": "nl"})
 
     assert '<html lang="nl">' in dutch.text and '<html lang="en">' in english.text
-    assert 'content="en,nl"' in dutch.text  # the languages the switcher offers
+    assert 'content="en,nl,de,fr,es"' in dutch.text  # what the switcher offers
     policy = dutch.headers["Content-Security-Policy"]
     assert "script-src 'self'" in policy and "unsafe-inline" not in policy
     assert "frame-ancestors 'none'" in policy
@@ -190,7 +213,9 @@ def test_an_account_that_already_has_a_cv_is_not_sent_to_the_guide(
     assert database.user(lisa.id).onboarded_at is None  # nothing was marked
 
 
-@pytest.mark.parametrize("path", ["/guide", "/matches", "/cv", "/preferences"])
+@pytest.mark.parametrize(
+    "path", ["/guide", "/matches", "/cv", "/preferences", "/settings"]
+)
 def test_every_page_needs_a_session_and_comes_in_your_language(
     database, lisa, tmp_path, path
 ):

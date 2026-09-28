@@ -23,6 +23,17 @@ export function h(tag, attributes = {}, ...children) {
   return node;
 }
 
+// Replace what `node` holds, skipping null, undefined and false like h() does.
+// The browser's own replaceChildren() writes those as the words "null" and
+// "false" -- which is how `cv.profile && ...` once put "null" on a page -- so
+// the scripts use this instead (tests/test_ui.py holds them to it).
+export function fill(node, ...children) {
+  node.replaceChildren(
+    ...children.flat().filter((child) => child !== null && child !== undefined && child !== false),
+  );
+  return node;
+}
+
 export function byId(id) {
   return document.getElementById(id);
 }
