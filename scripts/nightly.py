@@ -61,6 +61,18 @@ def main() -> int:
         print("The nightly update is switched off (settings, owner): nothing fetched.")
         database.close()
         return 0
+    # One run at a time: Cloud Scheduler delivers a start at least once, and
+    # was seen delivering one twice. Two runs would ask every site twice and
+    # write the same files to the bucket.
+    with database.nightly_lock() as mine:
+        if not mine:
+            print("Another nightly run is going: not starting a second one.")
+            database.close()
+            return 0
+        return run(database, bucket)
+
+
+def run(database: Database, bucket: str) -> int:
     raw = ROOT / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()

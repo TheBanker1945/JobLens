@@ -3775,3 +3775,21 @@ when it starts. So the app was redeployed first and the recovery run came
 after: a server whose database is newer than its code refuses to start.
 
 6 new tests for the switch and the quota; 952 in all. No new dependency.
+
+**Finishing the night, and two more things it taught.**
+- **The first recovery attempt never started.** A Cloud Run job's `--args`
+  replace the image's CMD, and the script was the CMD, so
+  `--args=--force,--no-fetch` ran "--force" as the program. The script is
+  now the image's ENTRYPOINT, and arguments are appended to it (#72).
+- **The recovery itself took 2 minutes.** 494 new vacancies were embedded:
+  the pacing waited out the limit this time. Then 1,571 open vacancies were
+  published into Neon, up from 1,166; the fetch had also found 88 old ones
+  closed. The live app took them up without a restart.
+- **Cloud Scheduler delivers at least once, and did deliver twice.** One
+  manual trigger of the schedule produced two runs, 30 seconds apart, both
+  answered 200. Both stopped at once, because the switch was off, but with
+  it on they would have fetched side by side: every site asked twice, and
+  two runs writing one bucket. So a run now holds a Postgres advisory lock
+  (NIGHTLY_LOCK) on its own connection for as long as it runs. A second run
+  finds it taken and stops, and a crashed run's lock goes with its
+  connection, so nobody is blocked the next night. 1 new test; 953 in all.

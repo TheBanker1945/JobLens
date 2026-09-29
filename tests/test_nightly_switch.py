@@ -21,6 +21,16 @@ def test_the_nightly_fetch_is_off_until_switched_on(database):
     assert database.nightly_enabled() is False
 
 
+def test_a_second_nightly_run_finds_the_lock_taken(database):
+    """Cloud Scheduler delivered one start twice, 30 s apart (2026-09-29): the
+    second run must see the first and not start. A lock goes with its run."""
+    with database.nightly_lock() as first:
+        with database.nightly_lock() as second:
+            assert (first, second) == (True, False)
+    with database.nightly_lock() as next_night:
+        assert next_night is True
+
+
 @pytest.fixture
 def people(database):
     owner = database.create_user(email=OWNER, role="owner")
