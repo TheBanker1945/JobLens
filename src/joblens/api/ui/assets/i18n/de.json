@@ -283,5 +283,7 @@
   "settings.delete": "Mein Konto löschen",
   "settings.deleteIntro": "Löscht dein Konto und alles darin, sofort und endgültig: Lebensläufe, Dateien, Wünsche, Markierungen, Treffer und deinen Schlüssel.",
   "settings.deleteConfirm": "Mir ist klar, dass das nicht rückgängig zu machen ist",
-  "settings.deleteButton": "Alles löschen"
+  "settings.deleteButton": "Alles löschen",
+
+  "prefs.distanceHint": "Etwas weiter passt noch: ein Viertel mehr, mindestens 5 km."
 }

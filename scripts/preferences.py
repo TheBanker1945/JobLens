@@ -114,7 +114,10 @@ def ask(current: Preferences) -> Preferences:
     )
     values["home"] = place("Where do you live? (a town or city)", current.home)
     values["max_distance_km"] = (
-        number("At most how many km away, as the crow flies", current.max_distance_km)
+        number(
+            "At most how many km away, as the crow flies (a quarter more still fits)",
+            current.max_distance_km,
+        )
         if values["home"]
         else None
     )

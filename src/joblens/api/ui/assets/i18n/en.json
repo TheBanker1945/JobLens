@@ -283,5 +283,7 @@
   "settings.delete": "Delete my account",
   "settings.deleteIntro": "Deletes your account and everything in it, now and for good: CVs, files, preferences, marks, matches and your key.",
   "settings.deleteConfirm": "I understand this cannot be undone",
-  "settings.deleteButton": "Delete everything"
+  "settings.deleteButton": "Delete everything",
+
+  "prefs.distanceHint": "A little further still fits: a quarter more, at least 5 km."
 }

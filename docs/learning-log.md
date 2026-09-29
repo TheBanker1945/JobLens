@@ -3430,3 +3430,38 @@ forbids `replaceChildren` anywhere else.
 
 11 new tests; 923 in all. No new dependency.
 
+
+## Preferences p2 — a distance limit has a margin
+
+The 7.7.3 walk showed the cost of a hard line. With a 40 km limit from Den
+Haag, every one of the ten vacancies moved out of the shortlist was in
+Amsterdam, 53-55 km away: 13 km over counted exactly like 130. Mahdi's answer
+(2026-09-29): "it can have a margin."
+
+**The rule.** A vacancy contradicts a distance limit only beyond
+`allowed_km(limit)`: a quarter more, and never less than 5 km more. So 40 km
+becomes 50, 10 becomes 15 (a quarter of a short limit would be nothing), 100
+becomes 125. The form says so under the field, in all five languages, and so
+does `scripts/preferences.py ask`. The conflict's `wanted` names both numbers
+("at most 40 km (50 with the margin)"). PREFERENCES_VERSION is now "p2", so a
+run says which rule moved it.
+
+**Only distance.** A contract type, a work mode or a language is not "a bit"
+wrong, so they keep no margin. Hours already count as fitting whenever the
+ranges overlap.
+
+**The alternative, rejected: half a conflict for a near miss.** It sounds
+gentler, but the ranking puts every vacancy with a conflict behind every
+vacancy with none. A 45 km vacancy counted as half a conflict would still sit
+behind hundreds that fit, and with a shortlist of ten it would never be read.
+That is a softer-looking hard line, not a margin.
+
+**Not fitted to the walk.** A quarter was chosen as a rule for every limit
+before looking at which vacancies it lets in. It leaves the walk's Amsterdam
+vacancies out (53-55 km against 50): someone who wants them sets 45 km.
+Choosing the number that happens to admit them would be fitting a rule to one
+example.
+
+Checked with real distances from Leiden and a 40 km limit: Utrecht (42 km)
+and Houten (48 km) fit now, Purmerend (51 km) is just past the margin, Almere
+(56 km) well past. 1 new test; 924 in all.

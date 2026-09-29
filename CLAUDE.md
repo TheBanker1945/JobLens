@@ -70,7 +70,9 @@ conceptually, not just have working code.
   behind those with fewer, never removes it, and unknown costs nothing; the run
   records `before` and `conflicts` per vacancy. Years, degree and sectors go to
   the holistic judge as a block after the CV, only when answered -- without
-  one the prompt is 3.6 to the byte. PREFERENCES_VERSION ("p1") covers both
+  one the prompt is 3.6 to the byte. A distance limit has a margin (p2,
+  Mahdi 2026-09-29): a quarter more, at least 5 km (rerank.allowed_km); no
+  other answer has one. PREFERENCES_VERSION ("p2") covers both
   halves; bump it when either changes. Distance is straight-line km between
   PDOK place centroids (places_nl_coordinates.csv). Not measured on Mahdi's
   labels until he answers the questionnaire.

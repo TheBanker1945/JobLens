@@ -19,7 +19,7 @@ from joblens.extraction.schema import ContractType, SalaryPeriod, WorkMode
 from joblens.preferences import Geo, Preferences, Seniority, for_judge, rerank
 from joblens.preferences.places import distance_km
 from joblens.preferences.prompt import HEADING
-from joblens.preferences.rerank import monthly, title_levels
+from joblens.preferences.rerank import allowed_km, monthly, title_levels
 from joblens.service import MatchRequest, judge, rank
 from joblens.sources.base import Vacancy
 from joblens.storage import FileStore
@@ -36,7 +36,7 @@ def test_the_stamp_names_the_rules_and_changes_with_the_answers():
     one = Preferences(contract_types=[ContractType.PERMANENT])
     two = Preferences(contract_types=[ContractType.PERMANENT, ContractType.FREELANCE])
 
-    assert one.stamp().startswith("p1:")
+    assert one.stamp().startswith("p2:")
     assert one.stamp() != two.stamp()
     assert one.stamp() == Preferences.model_validate(one.model_dump()).stamp()
 
@@ -195,6 +195,22 @@ def test_distance_counts_as_the_crow_flies_and_never_for_remote_work():
 
     assert list(result.conflicts) == [far.key]
     assert "km from Leiden as the crow flies" in result.conflicts[far.key][0].found
+
+
+def test_a_distance_limit_has_a_margin_of_a_quarter_and_at_least_5_km():
+    """From Leiden with a 40 km limit: Utrecht (42 km) and Houten (48 km) fit
+    now, Purmerend (51 km) is just past the margin, Almere (56 km) well past."""
+    places = ("Utrecht", "Houten", "Purmerend", "Almere")
+    jobs = [job(place.lower(), city=place) for place in places]
+    details = {one.key: make_details("x", city=one.city) for one in jobs}
+
+    result = rerank(
+        ranked(*jobs), details, Preferences(home="Leiden", max_distance_km=40)
+    )
+
+    assert [key.split(":")[-1] for key in result.conflicts] == ["purmerend", "almere"]
+    assert "50 with the margin" in result.conflicts[jobs[2].key][0].wanted
+    assert (allowed_km(40), allowed_km(10), allowed_km(100)) == (50, 15, 125)
 
 
 def test_a_language_the_person_does_not_work_in_moves_a_vacancy():

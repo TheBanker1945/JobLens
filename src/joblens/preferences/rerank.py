@@ -19,6 +19,10 @@ Three rules, all decided before this was written (phase-3 brief, 7.3 plan):
   number of years, need reading, not a field: those go to the judge
   (prompt.py), and never here.
 
+**A distance limit has a margin** (p2): a vacancy contradicts it only beyond
+`allowed_km` -- a quarter more, at least 5 km. The other answers have none:
+a contract type or a language is not "a bit" wrong.
+
 **How far a vacancy moves.** Each stated preference it contradicts puts it
 behind every vacancy that contradicts fewer; among equals, retrieval's order is
 kept. With a shortlist of ten out of 1,166, a contradicted vacancy is in effect
@@ -54,6 +58,20 @@ LEVELS: dict[str, Seniority] = {
 
 # Hours a week, when a salary is per hour and the advert does not say how many.
 FULL_TIME = 40
+
+# A distance limit has a margin (Mahdi, 2026-09-29: "it can have a margin").
+# Without one, 13 km over counted the same as 130: in the 7.7.3 walk a 40 km
+# limit moved ten 53-55 km vacancies out of the shortlist. A quarter more,
+# and never less than 5 km, because a quarter of a short limit is nothing.
+# Chosen as a rule for every limit, not fitted to that walk: 40 km still ends
+# at 50, and those 53-55 km vacancies stay moved. The form says so.
+DISTANCE_MARGIN = 0.25
+DISTANCE_MARGIN_MIN_KM = 5
+
+
+def allowed_km(limit: int) -> float:
+    """How far a vacancy may be before it contradicts a distance limit."""
+    return limit + max(limit * DISTANCE_MARGIN, DISTANCE_MARGIN_MIN_KM)
 
 
 @dataclass(frozen=True)
@@ -148,12 +166,13 @@ def conflicts(
         there = geo.locate(details.city or vacancy.city)
         if there is not None:
             km = distance_km(home, there)
-            if km > p.max_distance_km:
+            if km > allowed_km(p.max_distance_km):
                 found.append(
                     Conflict(
                         field="distance",
                         found=f"{km:.0f} km from {p.home} as the crow flies",
-                        wanted=f"at most {p.max_distance_km} km",
+                        wanted=f"at most {p.max_distance_km} km "
+                        f"({allowed_km(p.max_distance_km):.0f} with the margin)",
                     )
                 )
 

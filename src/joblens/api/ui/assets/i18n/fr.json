@@ -283,5 +283,7 @@
   "settings.delete": "Supprimer mon compte",
   "settings.deleteIntro": "Supprime ton compte et tout ce qu'il contient, immédiatement et définitivement : CV, fichiers, souhaits, avis, recherches et ta clé.",
   "settings.deleteConfirm": "Je comprends que c'est irréversible",
-  "settings.deleteButton": "Tout supprimer"
+  "settings.deleteButton": "Tout supprimer",
+
+  "prefs.distanceHint": "Un peu plus loin convient encore : un quart de plus, au moins 5 km."
 }
