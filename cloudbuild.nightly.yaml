@@ -1,0 +1,19 @@
+# The nightly job's image (7.8.5): the Dockerfile's `nightly` stage, pushed
+# next to the app's image. Build it, then point the job at it:
+#
+#   gcloud builds submit --config cloudbuild.nightly.yaml
+#   gcloud run jobs update joblens-nightly --region europe-west4 \
+#     --image europe-west4-docker.pkg.dev/PROJECT_ID/cloud-run-source-deploy/joblens-nightly:latest
+#
+# What is uploaded to build it is what .gcloudignore lets through.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --target
+      - nightly
+      - -t
+      - europe-west4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/joblens-nightly:latest
+      - .
+images:
+  - europe-west4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/joblens-nightly:latest

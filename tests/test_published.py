@@ -30,8 +30,10 @@ from joblens.storage.published import (
     document_vectors,
     load,
     publish,
+    published_at,
     published_model,
     published_vectors,
+    seed,
 )
 
 MODEL = MODELS.embed.model
@@ -59,6 +61,29 @@ def test_what_is_published_comes_back_in_its_order(database, tmp_path):
     assert back.funnel == FUNNEL and back.name == "raw"
     assert published_model(database) == MODEL
     assert published_vectors(database, MODEL).count() == 3
+
+
+def test_a_fresh_disk_is_seeded_and_a_new_publish_is_noticed(database, tmp_path):
+    """The nightly job starts with an empty cache: seeding it from what is
+    published means only new vacancies are embedded. And a server reloads
+    when published_at moves."""
+    corpus, vectors = corpus_and_vectors(tmp_path)
+    first = publish(database, corpus, vectors, MODEL)
+    fresh = SQLiteVectors(tmp_path / "job" / "cache.sqlite")
+
+    seeded = seed(fresh, database, MODEL)
+    again = publish(database, corpus, vectors, MODEL)
+
+    assert seeded == 3 and fresh.count() == 3
+    assert fresh.load(list(vectors)) == shared_as_floats(vectors)
+    assert published_at(database) == again.at > first.at
+
+
+def shared_as_floats(vectors):
+    """What comes back from float32 storage: the same numbers, as stored."""
+    from joblens.embeddings.store import pack, unpack
+
+    return {key: unpack(pack(vector)) for key, vector in vectors.items()}
 
 
 def test_a_new_publish_replaces_the_old_one_whole(database, tmp_path):
