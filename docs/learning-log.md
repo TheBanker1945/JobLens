@@ -3793,3 +3793,21 @@ after: a server whose database is newer than its code refuses to start.
   (NIGHTLY_LOCK) on its own connection for as long as it runs. A second run
   finds it taken and stops, and a crashed run's lock goes with its
   connection, so nobody is blocked the next night. 1 new test; 953 in all.
+
+**Two more, found by watching the live system for an hour.**
+- **Closed vacancies were embedded again every night.** The job's cache is
+  seeded with Neon's vectors, which are the open vacancies' only, while the
+  index step embedded every stored vacancy. The store never forgets one, so
+  that would have grown night after night: 92 re-embedded on the second run
+  with nothing new. The nightly job now passes `index_vacancies.py
+  --open-only`: exactly the set publish sends. A laptop's evals still embed
+  everything.
+- **Neon cuts idle connections, and the app's pool handed out a dead one.**
+  After about five idle minutes Neon's free plan suspends the database and
+  ends every connection. The live app's first reload, 15 minutes after a
+  restart, failed with "terminating connection due to administrator
+  command". The same would have met the first visitor after a quiet spell.
+  The pool now checks a connection before handing it out and closes one idle
+  for four minutes. A test ends the pool's connection from the server side,
+  the way Neon does, and the next request works. Without the check the same
+  test fails.

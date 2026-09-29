@@ -90,6 +90,27 @@ def test_two_files_with_one_number_are_refused(tmp_path):
         migrations(tmp_path)
 
 
+def test_a_pooled_connection_cut_by_the_server_is_replaced(database):
+    """What Neon does after five idle minutes: the server ends the pool's
+    connection. The next request must still work, on a new one."""
+    from conftest import TEST_DATABASE_URL
+
+    from joblens.storage import Database
+
+    pooled = Database(TEST_DATABASE_URL, pool_size=1)
+    try:
+        with pooled.connect() as conn:
+            pid = conn.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"]
+        with database.connect() as admin:
+            admin.execute("SELECT pg_terminate_backend(%s)", (pid,))
+        with pooled.connect() as conn:
+            answer = conn.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"]
+    finally:
+        pooled.close()
+
+    assert answer != pid  # a fresh connection, not an error
+
+
 # -- people -------------------------------------------------------------------
 
 

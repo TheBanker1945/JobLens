@@ -33,6 +33,7 @@ import openai
 from dotenv import load_dotenv
 
 from joblens.config import load_llm_settings
+from joblens.corpus import load_corpus
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.documents import STYLES
 from joblens.embeddings.index import VacancyIndex
@@ -69,6 +70,14 @@ def main() -> int:
     parser.add_argument("--skip-embedding", action="store_true")
     parser.add_argument(
         "--reextract", action="store_true", help="redo vacancies that have details"
+    )
+    # The nightly job (7.8.5): its cache is seeded with the published, open
+    # vacancies' vectors only, so without this every closed vacancy -- and the
+    # store never forgets one -- was embedded again every night.
+    parser.add_argument(
+        "--open-only",
+        action="store_true",
+        help="embed only the open vacancies a server ranks (the nightly job)",
     )
     args = parser.parse_args()
 
@@ -132,7 +141,8 @@ def main() -> int:
         return 1 if refused else 0
     # Embedding still runs after a refusal: what was extracted is worth
     # making searchable, and it is a different endpoint that may be fine.
-    return embed(store, details_store, sources, args.style) or (1 if refused else 0)
+    done = embed(store, details_store, sources, args.style, open_only=args.open_only)
+    return done or (1 if refused else 0)
 
 
 @dataclass
@@ -211,12 +221,21 @@ def extract_batch(todo, client, config, details_store, source) -> Batch:
 
 
 def embed(
-    store: VacancyStore, details_store: DetailsStore, sources: list[str], style: str
+    store: VacancyStore,
+    details_store: DetailsStore,
+    sources: list[str],
+    style: str,
+    *,
+    open_only: bool = False,
 ) -> int:
-    """Embed every vacancy that has details, filling the cache search reads."""
+    """Embed every vacancy that has details, filling the cache search reads.
+    `open_only`: only those a server ranks -- the set publish_corpus.py sends."""
     settings = load_llm_settings(prefix="EMBED")
     cache = cache_path(CACHE_DIR, settings.model)
-    vacancies = [vacancy for source in sources for vacancy in store.load(source)]
+    if open_only:
+        vacancies = load_corpus("raw", open_only=True).vacancies
+    else:
+        vacancies = [vacancy for source in sources for vacancy in store.load(source)]
     details = {
         key: record.details for key, record in details_store.load_all(sources).items()
     }
