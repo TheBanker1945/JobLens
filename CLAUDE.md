@@ -70,7 +70,11 @@ conceptually, not just have working code.
   settings only from the environment (never a .env), vacancies from the
   database, Secure cookies unless every JOBLENS_HOSTS entry is local, no local
   model providers, no access log of its own. .dockerignore keeps data/ and
-  .env out of the image; keep it that way. On Cloud Run it needs
+  .env out of the image; keep it that way, and .gcloudignore keeps them from
+  being uploaded at all (folder rules start with "/", or they match inside
+  src/ too; check `gcloud meta list-files-for-upload .` before a deploy).
+  Deployed (7.8.4): Cloud Run service `joblens`, europe-west4, service
+  account `joblens-run` (reads its three secrets only). On Cloud Run it needs
   --no-cpu-throttling (matches run after their request answers) and
   --max-instances 1 (a starting server marks open matches interrupted).
   The privacy page (7.8.3, /privacy, privacy.* keys) states what the code

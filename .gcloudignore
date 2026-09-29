@@ -1,0 +1,35 @@
+# What `gcloud run deploy --source .` may upload to Cloud Build (7.8.4).
+# .dockerignore only filters inside the build; this decides what leaves this
+# machine at all. data/ holds scraped vacancies AND personal files (CVs,
+# labels, runs) -- in a worktree it is a link to the real data -- and .env
+# holds secrets: neither is ever uploaded. `gcloud meta list-files-for-upload`
+# shows exactly what would go.
+#
+# Folder rules start with "/": without it a rule matches at every depth, and
+# "web/" or "evals/" would also drop src/joblens/web and src/joblens/evals,
+# which the app imports (caught by counting src's files before a deploy).
+.gcloudignore
+.env
+.env.*
+**/__pycache__/
+**/*.pyc
+/data
+/.git
+/.gitignore
+/.claude/
+/.venv/
+/.ruff_cache/
+/.pytest_cache/
+/tests/
+/docs/
+/evals/
+/web/
+/docker/
+/compose.yaml
+/boards.toml
+/sources.toml
+/CLAUDE.md
+/.python-version
+# Of the scripts, only the hosted start is part of the image.
+/scripts/*
+!/scripts/hosted.py

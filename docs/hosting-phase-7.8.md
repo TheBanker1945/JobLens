@@ -104,6 +104,23 @@ changes one setting (the allowed host), not the code.
   sessions by itself (at start, then every 6 hours), so "deleted after 30
   days" is true without anyone running `db.py purge-files`.
 
+- **7.8.4, deployed (2026-09-29)**: https://joblens-883656455192.europe-west4.run.app,
+  Cloud Run service `joblens` in europe-west4, running as the service account
+  `joblens-run`, which may read three secrets and nothing else. The secrets
+  (`joblens-database-url`, `gemini-api-key`, `joblens-secret-key`) are stored
+  in europe-west4 only. `.gcloudignore` decides what leaves this machine for
+  Cloud Build: 137 files (the Dockerfile, pyproject, the lockfile, src/ and
+  scripts/hosted.py), checked with `gcloud meta list-files-for-upload` before
+  the first deploy. A trial tester on the live address signed in over HTTPS
+  (cookie Secure), uploaded, and ran a match that finished while nobody asked
+  about it -- CPU always allocated works -- then was deleted.
+
+**Redeploying** after a change: the same command, from a checkout of main.
+The vacancies are refreshed by `daily_update.sh` on Mahdi's machine
+(publishes to Neon); a server picks them up when it next starts, and Cloud
+Run stops an idle server after a while, so the first visit of a day gets the
+night's set.
+
 ## Deploying to Cloud Run (needs Mahdi's Google Cloud project)
 
 What the container needs from Cloud Run, learned from the local trial:
@@ -124,6 +141,7 @@ and deploys (the values in capitals come from the project):
 
 ```bash
 gcloud run deploy joblens --source . --region europe-west4 \
+  --service-account joblens-run@PROJECT_ID.iam.gserviceaccount.com \
   --allow-unauthenticated --no-cpu-throttling --max-instances 1 --memory 1Gi \
   --set-env-vars JOBLENS_HOSTS=joblens-PROJECT_NUMBER.europe-west4.run.app \
   --set-env-vars CV_PROVIDER=gemini,CV_MODEL=gemini-3.8-flash,CV_THINKING=false \
