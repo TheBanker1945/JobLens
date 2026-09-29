@@ -15,6 +15,7 @@ not in the middle of the next match. The key is stored encrypted
 characters.
 """
 
+import re
 from collections.abc import Callable
 from contextlib import closing
 from datetime import datetime
@@ -106,6 +107,20 @@ def check_provider(settings: LLMSettings, chat: ChatFactory = LLMClient) -> None
         raise ValueError(f"{err} Tick 'thinking' for this model.") from err
 
 
+# The SDK's error text is "Error code: 400 - " and the provider's JSON printed
+# as a Python dict; the settings page showed all of it (7.7.4 walk). What the
+# person needs is the provider's own sentence inside it.
+_MESSAGE = re.compile(r"""['"]message['"]:\s*['"]([^'"]{1,300})['"]""")
+
+
+def provider_sentence(err: Exception) -> str:
+    """The provider's `message`, or the error's last line when it has none."""
+    text = str(err)
+    found = _MESSAGE.search(text)
+    sentence = found[1] if found else text.splitlines()[-1][:240]
+    return sentence.strip().rstrip(".") + "."
+
+
 def bring_own_key(
     store: PostgresStore,
     vault: Vault | None,
@@ -147,10 +162,9 @@ def bring_own_key(
         # Measured 2026-09-25: Gemini answers a bad key with 400 "Please pass a
         # valid API key" and an unknown model with 404. Both are this person's
         # settings, so they get the provider's own sentence and a 400.
-        reason = str(err).splitlines()[-1]
         raise ValueError(
             f"{preset.label} refused this key or model ({err.status_code}): "
-            f"{reason[:240]} Nothing was saved."
+            f"{provider_sentence(err)} Nothing was saved."
         ) from err
     except ProviderUnreachable as err:
         raise ValueError(f"{err} Nothing was saved.") from err

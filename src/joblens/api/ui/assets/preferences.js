@@ -2,7 +2,7 @@
 // Saving replaces all answers (PUT /api/preferences); the next match uses them.
 
 import { api, ApiError } from "./api.js";
-import { byId, show } from "./dom.js";
+import { byId, fill, show } from "./dom.js";
 import { setUpFrame } from "./frame.js";
 import { loadLanguage, t, translate } from "./i18n.js";
 import { preferencesForm, serverProblems } from "./prefs-form.js";
@@ -18,7 +18,7 @@ try {
   ]);
   setUpFrame("/preferences", me, { onError: (e) => say(errorText(e)) });
   const form = preferencesForm(prefs, places);
-  byId("prefs-fields").replaceChildren(form.element);
+  fill(byId("prefs-fields"), form.element);
   byId("prefs").addEventListener("submit", async (event) => {
     event.preventDefault();
     say(null);

@@ -3357,3 +3357,76 @@ decision about the preferences, not about the page, so it waits for Mahdi.
 8 new tests and one more page in the session check; 912 in all. No new
 dependency.
 
+## 7.7.4 — Settings, five languages, and the phone
+
+The last step of the UI:
+- **Settings (`/settings`)**, from the account menu, with four parts:
+  - your name and language;
+  - your AI: whose model, what JobLens measured about it, this month's
+    spending, and bringing or dropping your own key;
+  - downloading your data;
+  - deleting your account.
+- **German, French and Spanish**, beside Dutch and English.
+- **The phone**, checked in all five languages.
+
+**Nothing new on the server for settings.** Every route already existed:
+- `PATCH /api/me` for the name and language;
+- the 7.6 routes for an own key, the provider list and usage;
+- export and delete from 7.5.
+
+The page is the missing half of those. Two design points:
+- **A key goes in once and never comes back out.** The page shows its last
+  four characters, and the field empties after saving.
+- **Deleting needs a tick in "I understand this cannot be undone".** The API
+  also demands the exact words "delete everything", so no stray request can
+  do it by accident.
+
+**The provider's sentence, not its JSON.** The walk sent Gemini a made-up key.
+The refusal the page would have shown was the SDK's whole error dump:
+"Error code: 400 - [{'error': {'code': 400, 'message': 'Please pass a valid
+API key', ...". `service/ai.py` now takes the provider's `message` out of it:
+"Google Gemini refused this key or model (400): Please pass a valid API key.
+Nothing was saved." A test uses Gemini's real text.
+
+**Five languages, and who has checked them.** The German, French and Spanish
+files hold the same 268 keys as English, with the same placeholders (a test
+checks both). They are informal, like the Dutch ("du", "tu", "tú"). I wrote
+them myself, so they need a native speaker's read before testers see them.
+With five on offer, the choice already built in 7.7.1 does what question 8
+asked:
+- a browser set to German in Austria gets German;
+- Turkish in Germany gets German (the country);
+- French in Belgium gets French (the browser's own language beats the
+  country);
+- Brazilian Portuguese gets English (neither is offered).
+
+**A trap in the browser, closed for good.** `h()` skips `null` and `false`
+children. The browser's own `replaceChildren()` writes them as the words
+"null" and "false". The settings page showed "falsenull" under the model name,
+and the same pattern was waiting in two more places:
+- My CV (7.7.2), for a CV with nothing redacted or without a profile;
+- the empty matches page (7.7.3).
+
+The walks missed both because their CVs had both. Every script now fills an
+element through `fill()` in dom.js, which skips them like `h()`, and a test
+forbids `replaceChildren` anywhere else.
+
+**The phone, in the longest languages.** Frames of 390 px showed:
+- German settings, a French dashboard, Spanish matches, German preferences;
+- one real flaw: the bottom menu's long words ran into each other ("Tableau
+  de bordCorrespondances"). They now wrap under their icon in smaller type;
+- the dashboard's "all matches" link, shorter in French and Spanish, and no
+  longer allowed to break over two lines.
+
+**Checked on the real server,** as a fresh tester in a throwaway database:
+- a German browser gets the settings page in German, and all five languages
+  are offered;
+- the name saves, and French then replaces German;
+- a fake key is refused by Google itself and not stored;
+- a "-latest" alias, and a provider not on the list, are refused;
+- the export carries no key;
+- deleting takes the exact words, then clears the cookie, and the account is
+  gone from the database (`user_by_email` returns nothing).
+
+11 new tests; 923 in all. No new dependency.
+

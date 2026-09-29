@@ -4,7 +4,7 @@
 
 import { api, ApiError } from "./api.js";
 import { removedKinds, uploadForm } from "./cv-upload.js";
-import { byId, h, show } from "./dom.js";
+import { byId, fill, h, show } from "./dom.js";
 import { FILE_ICON, icon, setUpFrame } from "./frame.js";
 import {
   formatDate,
@@ -103,11 +103,11 @@ function renderMatches() {
         }),
       })
     : "";
-  if (!latest) return list.replaceChildren(h("div", { class: "empty" }, t("matches.none")));
+  if (!latest) return fill(list, h("div", { class: "empty" }, t("matches.none")));
   if (!latest.recommended.length) {
-    return list.replaceChildren(h("div", { class: "empty" }, t("matches.nothingClear")));
+    return fill(list, h("div", { class: "empty" }, t("matches.nothingClear")));
   }
-  list.replaceChildren(...latest.recommended.map(matchCard));
+  fill(list, ...latest.recommended.map(matchCard));
 }
 
 function matchCard(card) {
@@ -177,13 +177,13 @@ function renderCv() {
   const { cv } = data;
   const current = byId("cv-current");
   if (!cv) {
-    current.replaceChildren(h("p", { class: "muted" }, t("cv.none")));
+    fill(current, h("p", { class: "muted" }, t("cv.none")));
     show(byId("cv-removed"), false);
     show(byId("cv-replace"), false);
     show(byId("cv-upload"));
     return;
   }
-  current.replaceChildren(
+  fill(current,
     h("div", { class: "file-row" },
       h("span", { class: "file-icon" }, icon(FILE_ICON, { size: 20, color: "#1d4ed8" })),
       h("div", {},
@@ -222,7 +222,7 @@ function renderWishes() {
     (p.avoid_employers.length || p.avoid_sectors.length) &&
       t("wishes.avoid", { list: formatList([...p.avoid_employers, ...p.avoid_sectors]) }),
   ].filter(Boolean);
-  byId("wishes").replaceChildren(
+  fill(byId("wishes"),
     ...(chips.length
       ? chips.map((text) => h("span", { class: "chip" }, text))
       : [h("span", { class: "muted" }, t("wishes.none"))]),

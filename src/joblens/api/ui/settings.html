@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/settings.js"></script>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="page page-narrow">
+<div class="page-head">
+<h1 data-i18n="settings.title">Settings</h1>
+</div>
+<div id="notice" class="notice" role="alert" hidden></div>
+
+<section class="card" aria-labelledby="account-title">
+<h2 id="account-title" data-i18n="settings.account">Your account</h2>
+<form id="account" class="settings-grid" novalidate>
+<div class="field">
+<label for="display-name" data-i18n="settings.name">Your name</label>
+<input id="display-name" class="input" maxlength="80" autocomplete="name" aria-describedby="display-name-hint">
+<span class="field-hint" id="display-name-hint" data-i18n="settings.nameHint">How JobLens greets you.</span>
+</div>
+<div class="field">
+<label for="language-choice" data-i18n="settings.language">Language</label>
+<select id="language-choice" class="input" aria-describedby="language-hint"></select>
+<span class="field-hint" id="language-hint" data-i18n="settings.languageHint">Until you choose one, JobLens follows your browser.</span>
+</div>
+<dl class="facts">
+<dt data-i18n="settings.email">E-mail</dt><dd id="email"></dd>
+<dt data-i18n="settings.role">Role</dt><dd id="role"></dd>
+</dl>
+<div class="form-foot">
+<span id="account-saved" class="saved" role="status" aria-live="polite"></span>
+<button type="submit" class="button button-primary" data-i18n="settings.save">Save</button>
+</div>
+</form>
+</section>
+
+<section class="card" aria-labelledby="ai-title">
+<h2 id="ai-title" data-i18n="settings.ai">Your AI</h2>
+<p class="muted" data-i18n="settings.aiIntro">A model reads your CV and judges each vacancy.</p>
+<div id="ai-now" class="stack"></div>
+<div id="ai-usage" class="stack"></div>
+<form id="bring" class="stack bring" novalidate hidden>
+<h3 class="subhead" data-i18n="settings.bring">Use your own key</h3>
+<p class="muted" data-i18n="settings.bringIntro">One small test call first; nothing is saved if it fails.</p>
+<div class="settings-grid">
+<div class="field">
+<label for="provider" data-i18n="settings.provider">Provider</label>
+<select id="provider" class="input"></select>
+</div>
+<div class="field">
+<label for="model" data-i18n="settings.model">Model id</label>
+<input id="model" class="input" autocomplete="off" spellcheck="false" aria-describedby="model-hint">
+<span class="field-hint" id="model-hint"></span>
+</div>
+<div class="field field-wide">
+<label for="api-key" data-i18n="settings.key">API key</label>
+<input id="api-key" class="input" type="password" autocomplete="off" spellcheck="false" aria-describedby="api-key-hint">
+<span class="field-hint" id="api-key-hint" data-i18n="settings.keyHint">Stored encrypted, never shown again.</span>
+</div>
+</div>
+<label class="check"><input type="checkbox" id="thinking"> <span data-i18n="settings.thinking">Let the model think first</span></label>
+<p id="where" class="card-note"></p>
+<span id="bring-error" class="field-error" role="alert" hidden></span>
+<div class="form-foot">
+<button type="submit" id="test-save" class="button button-primary" data-i18n="settings.testSave">Test and save</button>
+</div>
+</form>
+</section>
+
+<section class="card" aria-labelledby="data-title">
+<h2 id="data-title" data-i18n="settings.data">Your data</h2>
+<p class="muted" data-i18n="settings.dataIntro">Everything JobLens keeps about you, as one file.</p>
+<div><a class="button button-outline" href="/api/me/export" download="joblens-my-data.json" data-i18n="settings.download">Download my data</a></div>
+<div class="danger-zone">
+<h3 class="subhead" data-i18n="settings.delete">Delete my account</h3>
+<p class="muted" data-i18n="settings.deleteIntro">Deletes your account and everything in it, now and for good.</p>
+<label class="check"><input type="checkbox" id="delete-sure"> <span data-i18n="settings.deleteConfirm">I understand this cannot be undone</span></label>
+<div><button type="button" id="delete" class="button button-danger" data-i18n="settings.deleteButton" disabled>Delete everything</button></div>
+</div>
+</section>
+</main>
+<nav class="bottomnav" id="bottomnav"></nav>
+</body>
+</html>

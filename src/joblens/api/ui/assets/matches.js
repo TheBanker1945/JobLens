@@ -8,7 +8,7 @@
 // the time, and never overwrites an earlier one (service/marks.py).
 
 import { api, ApiError } from "./api.js";
-import { byId, h, show } from "./dom.js";
+import { byId, fill, h, show } from "./dom.js";
 import { setUpFrame } from "./frame.js";
 import {
   formatDate,
@@ -68,11 +68,11 @@ async function renderEmpty() {
   }
   byId("summary").textContent = "";
   for (const id of ["filters", "pushed", "run"]) show(byId(id), false);
-  byId("results").replaceChildren();
+  fill(byId("results"));
   const start = byId("start");
   start.textContent = t("action.firstMatch");
   show(start, hasCv);
-  byId("empty").replaceChildren(
+  fill(byId("empty"),
     h("p", {}, t(hasCv ? "results.noRun" : "results.noCv")),
     !hasCv && h("a", { class: "button button-primary", href: "/cv" }, t("results.toCv")),
   );
@@ -89,7 +89,7 @@ function render() {
     read: formatNumber(data.matches.length),
   });
   const picker = byId("run");
-  picker.replaceChildren(...data.runs.map((run) => h("option", { value: run.id },
+  fill(picker, ...data.runs.map((run) => h("option", { value: run.id },
     formatDate(run.at, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))));
   picker.value = data.id;
   show(picker, data.runs.length > 1);
@@ -112,7 +112,7 @@ function renderFilters() {
     weak: data.weak,
     unmarked: data.matches.filter((one) => !one.mark).length,
   };
-  byId("filters").replaceChildren(...FILTERS.map((name) => {
+  fill(byId("filters"), ...FILTERS.map((name) => {
     const button = h("button", {
       type: "button", class: "filter", "aria-pressed": String(name === filter),
     }, t(`results.filter.${name}`), h("span", { class: "filter-count" }, formatNumber(count[name])));
@@ -129,13 +129,13 @@ function renderFilters() {
 function renderList() {
   const shown = data.matches.filter((one) =>
     filter === "all" ? true : filter === "unmarked" ? !one.mark : one.verdict === filter);
-  byId("results").replaceChildren(...(shown.length
+  fill(byId("results"), ...(shown.length
     ? shown.map(matchCard)
     : [h("div", { class: "empty" }, t(data.matches.length ? "results.noneHere" : "results.nothingRead"))]));
 }
 
 function renderPushed() {
-  byId("pushed-list").replaceChildren(...data.pushed_out.map(pushedCard));
+  fill(byId("pushed-list"), ...data.pushed_out.map(pushedCard));
   show(byId("pushed"), data.pushed_out.length > 0);
 }
 
@@ -256,7 +256,7 @@ function markArea(item) {
     if (item.mark && !editing) {
       const change = h("button", { type: "button", class: "link-button" }, t("mark.change"));
       change.addEventListener("click", () => draw(true, item.mark.call));
-      return box.replaceChildren(view || "", h("div", { class: `your-mark your-mark-${item.mark.call}` },
+      return fill(box, view || "", h("div", { class: `your-mark your-mark-${item.mark.call}` },
         h("div", {},
           h("strong", {}, t(`call.${item.mark.call}`)),
           h("span", { class: "muted" }, ` · ${formatDate(item.mark.at, { day: "numeric", month: "short" })}`),
@@ -274,7 +274,7 @@ function markArea(item) {
     });
     const parts = [view || "", h("div", { class: "calls", role: "group", "aria-label": t("mark.label") }, ...buttons)];
     if (chosen) parts.push(reasonForm(item, chosen, () => draw(false)));
-    box.replaceChildren(...parts);
+    fill(box, ...parts);
     box.querySelector("textarea")?.focus();
   };
 

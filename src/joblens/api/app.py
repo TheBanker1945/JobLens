@@ -338,6 +338,7 @@ def create_app(config: AppConfig) -> FastAPI:
         ("/matches", "matches.html"),
         ("/cv", "cv.html"),
         ("/preferences", "preferences.html"),
+        ("/settings", "settings.html"),
     ):
         app.add_api_route(
             path, signed_in_page(name), methods=["GET"], include_in_schema=False
