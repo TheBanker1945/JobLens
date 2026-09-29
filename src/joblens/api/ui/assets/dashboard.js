@@ -86,7 +86,9 @@ function renderStats() {
   byId("stat-strong").textContent = formatNumber(latest.strong);
   byId("stat-possible").textContent = formatNumber(latest.possible);
   byId("stat-weak").textContent = formatNumber(latest.weak);
-  byId("stat-moved").textContent = formatNumber(latest.moved);
+  // Not every vacancy the answers moved back (966 of 1,166 in the 7.7.2
+  // walk), only those that would otherwise have been read.
+  byId("stat-moved").textContent = formatNumber(latest.pushed_out);
 }
 
 // -- the matches ------------------------------------------------------------

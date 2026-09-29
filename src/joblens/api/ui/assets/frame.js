@@ -1,5 +1,5 @@
 // The frame every signed-in page shares: the top bar (brand, menu, language,
-// account) and, on a phone, the bottom menu. Built here once, so four pages
+// account) and, on a phone, the bottom menu. Built here once, so the pages
 // do not each carry a copy that drifts.
 
 import { api } from "./api.js";
@@ -10,9 +10,12 @@ import { t } from "./i18n.js";
 // can still find theirs.
 const ENDONYMS = { en: "English", nl: "Nederlands", de: "Deutsch", fr: "Français", es: "Español" };
 
+export const FILE_ICON = "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5";
+
 const PAGES = [
   { href: "/", key: "nav.dashboard", icon: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
-  { href: "/cv", key: "nav.cv", icon: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5" },
+  { href: "/matches", key: "nav.matches", icon: "M9 6h11 M9 12h11 M9 18h11 M4 6h.01 M4 12h.01 M4 18h.01" },
+  { href: "/cv", key: "nav.cv", icon: FILE_ICON },
   { href: "/preferences", key: "nav.preferences", icon: "M4 6h16 M4 12h10 M4 18h6" },
 ];
 
@@ -126,5 +129,3 @@ function logo() {
   mark.prepend(circle);
   return h("span", { class: "logo" }, mark);
 }
-
-export const FILE_ICON = PAGES[1].icon;

@@ -125,7 +125,10 @@ conceptually, not just have working code.
   the stored text and profile, never the file.
 - A mark in the viewer requires a reason and is stored verbatim with what the
   judge said at the time. Never infer a rule from a pattern of answers and write
-  it down as if the user had stated it.
+  it down as if the user had stated it. The web app's marks (7.7.3,
+  service/marks.py, POST /api/marks) are the same `Decision`s in the same
+  labels: appended, never overwritten, checked against the run that was on
+  screen (not the open corpus, so a closed vacancy can still be marked).
 - Personal data (CVs) may go to cloud models when that makes the app measurably
   better (Mahdi's decision, 2026-09-21). Local-only is no longer the rule; being
   over-cautious at the cost of quality is not wanted. Conditions: the choice stays

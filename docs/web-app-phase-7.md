@@ -136,16 +136,21 @@ English; (2) the guide, the preferences form, My CV; (3) the matches page with
 evidence and marking with a reason; (4) settings (own AI, spending, language,
 download and delete my data), German, French and Spanish, phone polish.
 
-Steps 1 and 2 are built (learning log 7.7.1, 7.7.2). The guide is shown to an
+Steps 1 to 3 are built (learning log 7.7.1-7.7.3). The guide is shown to an
 account until it is finished or skipped (`users.onboarded_at`, migration 0005)
 or while it has no CV; accounts that already had a CV never see it. On a phone
-the top menu becomes a bottom bar.
+the top menu becomes a bottom bar. The matches page shows every vacancy a
+match read and those the answers moved out of the shortlist; a mark there is
+the same `Decision` the viewer (4.4) writes, with a required reason, so the
+evals read a tester's marks the way they read Mahdi's.
 
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
   sits behind every vacancy that contradicts nothing. A margin, or marking each
   answer "must" or "nice to have", would soften that. Decide after using it.
+  The 7.7.3 walk put numbers on it: with a 40 km limit from Den Haag, all ten
+  vacancies moved out of the shortlist were in Amsterdam, 53-55 km away.
 - **Is a year's contract "met uitzicht op vast" temporary?** Extraction says
   temporary (249 such vacancies against 181 permanent). A separate answer --
   "I accept a first-year contract with a view to permanent" -- would say what

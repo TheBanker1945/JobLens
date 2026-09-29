@@ -278,7 +278,11 @@ new account starts in a three-step guide -- your CV, what you are looking for,
 a first match -- that can be skipped at any point. After that: a dashboard with
 your latest match (verdicts, the CV quote behind each, what is missing), your
 CV and what was taken out of it before sending, what you are looking for, and
-what your AI has cost this month; "My CV" shows the exact text a model is sent,
+what your AI has cost this month; "Matches" shows every vacancy a match read,
+with each CV line it used, what is missing and which of your answers it
+contradicts, plus the vacancies your answers moved out of the shortlist, and
+lets you mark each one (apply, maybe, not for me) with a reason, which is
+kept as you typed it; "My CV" shows the exact text a model is sent,
 what a model read from it and your earlier versions; "My preferences" is the
 questionnaire as one form, every question optional. It speaks Dutch or English
 (German, French and Spanish follow), chosen from your browser's languages and
