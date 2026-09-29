@@ -97,9 +97,9 @@
   "wishes.distance": "Como mucho a {km} km de {home}",
   "wishes.salary": "Desde {amount}",
   "wishes.hours": "{min}–{max} horas a la semana",
-  "wishes.moreYears": "Se presenta con hasta {n} años más",
-  "wishes.anyYears": "Se presenta sin importar los años",
-  "wishes.higherDegree": "Se presenta sin el título",
+  "wishes.moreYears": "También si piden hasta {n} años más",
+  "wishes.anyYears": "Sin importar los años que pidan",
+  "wishes.higherDegree": "También sin el título que piden",
   "wishes.avoid": "No: {list}",
 
   "contract.permanent": "Indefinido",
@@ -237,7 +237,7 @@
   "mark.cancel": "Cancelar",
   "mark.why": "¿Por qué?",
   "mark.hint": "Tu motivo se guarda tal y como lo escribes, junto con lo que JobLens dice ahora de esta vacante. Nunca se convierte en una regla.",
-  "mark.needReason": "Di por qué en pocas palabras: eso es lo que hace útil una marca.",
+  "mark.needReason": "Di por qué en pocas palabras: eso es lo que hace útil tu valoración.",
 
   "account.settings": "Ajustes",
   "settings.title": "Ajustes",
@@ -278,10 +278,10 @@
   "settings.keysOff": "Este servidor no acepta claves propias.",
   "settings.forget": "Dejar de usar mi clave",
   "settings.data": "Tus datos",
-  "settings.dataIntro": "Todo lo que JobLens guarda sobre ti, en un solo archivo: tu cuenta, tus CV tal y como se envían, tus preferencias, marcas y búsquedas. Tu clave de API nunca está en él.",
+  "settings.dataIntro": "Todo lo que JobLens guarda sobre ti, en un solo archivo: tu cuenta, tus CV tal y como se envían, tus preferencias, valoraciones y búsquedas. Tu clave de API nunca está en él.",
   "settings.download": "Descargar mis datos",
   "settings.delete": "Borrar mi cuenta",
-  "settings.deleteIntro": "Borra tu cuenta y todo lo que contiene, ahora y para siempre: CV, archivos, preferencias, marcas, búsquedas y tu clave.",
+  "settings.deleteIntro": "Borra tu cuenta y todo lo que contiene, ahora y para siempre: CV, archivos, preferencias, valoraciones, búsquedas y tu clave.",
   "settings.deleteConfirm": "Entiendo que esto no se puede deshacer",
   "settings.deleteButton": "Borrarlo todo"
 }

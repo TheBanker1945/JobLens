@@ -97,9 +97,9 @@
   "wishes.distance": "Au plus {km} km de {home}",
   "wishes.salary": "À partir de {amount}",
   "wishes.hours": "{min}–{max} heures par semaine",
-  "wishes.moreYears": "Postule avec jusqu'à {n} ans de plus",
-  "wishes.anyYears": "Postule quel que soit le nombre d'années",
-  "wishes.higherDegree": "Postule sans le diplôme",
+  "wishes.moreYears": "Même si l'offre demande jusqu'à {n} ans de plus",
+  "wishes.anyYears": "Quel que soit le nombre d'années demandé",
+  "wishes.higherDegree": "Même sans le diplôme demandé",
   "wishes.avoid": "Pas : {list}",
 
   "contract.permanent": "CDI",
@@ -219,7 +219,7 @@
   "results.rankMoved": "Place {rank} du classement (place {before} sans tes souhaits)",
   "results.pushedRank": "Place {before} sans tes souhaits, maintenant place {rank}",
   "results.moved": "Contraire à tes souhaits : ",
-  "results.pushedTitle": "Sorties de ta tête de liste par tes souhaits",
+  "results.pushedTitle": "Écartées de ta sélection par tes souhaits",
   "results.pushedIntro": "Sans tes souhaits, celles-ci auraient été lues attentivement. Elles ne sont pas cachées, seulement reculées.",
   "moved.contract": "Contrat : {list}",
   "moved.workMode": "Mode de travail : {list}",
@@ -237,7 +237,7 @@
   "mark.cancel": "Annuler",
   "mark.why": "Pourquoi ?",
   "mark.hint": "Ta raison est gardée exactement telle que tu l'écris, avec ce que JobLens dit maintenant de cette offre. Elle n'est jamais transformée en règle.",
-  "mark.needReason": "Dis pourquoi en quelques mots : c'est ce qui rend une marque utile.",
+  "mark.needReason": "Dis pourquoi en quelques mots : c'est ce qui rend ton avis utile.",
 
   "account.settings": "Paramètres",
   "settings.title": "Paramètres",
@@ -278,10 +278,10 @@
   "settings.keysOff": "Ce serveur n'accepte pas de clés personnelles.",
   "settings.forget": "Ne plus utiliser ma clé",
   "settings.data": "Tes données",
-  "settings.dataIntro": "Tout ce que JobLens garde sur toi, en un seul fichier : ton compte, tes CV tels qu'ils sont envoyés, tes souhaits, tes marques et tes recherches. Ta clé d'API n'y figure jamais.",
+  "settings.dataIntro": "Tout ce que JobLens garde sur toi, en un seul fichier : ton compte, tes CV tels qu'ils sont envoyés, tes souhaits, tes avis et tes recherches. Ta clé d'API n'y figure jamais.",
   "settings.download": "Télécharger mes données",
   "settings.delete": "Supprimer mon compte",
-  "settings.deleteIntro": "Supprime ton compte et tout ce qu'il contient, immédiatement et définitivement : CV, fichiers, souhaits, marques, recherches et ta clé.",
+  "settings.deleteIntro": "Supprime ton compte et tout ce qu'il contient, immédiatement et définitivement : CV, fichiers, souhaits, avis, recherches et ta clé.",
   "settings.deleteConfirm": "Je comprends que c'est irréversible",
   "settings.deleteButton": "Tout supprimer"
 }
