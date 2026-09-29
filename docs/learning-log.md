@@ -3645,3 +3645,60 @@ an invite-only service, and worth one look by someone who does this for a
 living before strangers are invited.
 
 3 new tests; 931 in all. No new dependency.
+
+## 7.8.4 — Deployed
+
+JobLens runs at https://joblens-883656455192.europe-west4.run.app since
+2026-09-29: Cloud Run in the Netherlands, Neon in Frankfurt. The steps, and
+what each one caught:
+
+**What leaves this machine is decided by `.gcloudignore`, not `.dockerignore`.**
+`gcloud run deploy --source .` uploads the folder to Cloud Build, and in this
+worktree `data/raw` is a link to the real data: Mahdi's CV, labels and runs.
+So the first file was a `.gcloudignore`, and nothing was deployed before
+`gcloud meta list-files-for-upload` showed the list.
+
+The list caught a bug of my own. A rule without a leading "/" matches at
+every depth, so `web/` and `evals/` also dropped `src/joblens/web` and
+`src/joblens/evals`. The app imports both, so the first deploy would have
+crashed on start. It showed only because src/ counted 121 files instead of
+130. Every folder rule is now anchored, and the upload is 137 files: the
+Dockerfile, pyproject, the lockfile, src/, and scripts/hosted.py.
+
+**Secrets stay in the EU, and the app can read nothing else.**
+- Three secrets (the Neon address, the Gemini key, JOBLENS_SECRET_KEY) went
+  from .env into Secret Manager on gcloud's input, never on a screen or a
+  command line.
+- They are stored in europe-west4 only, instead of Google's default of
+  anywhere.
+- The service runs as its own account, `joblens-run`, which may read those
+  three secrets and nothing else. Cloud Run's default account can change far
+  more in many projects: a hole in the app would be a hole in the project.
+- The CV key and the embedding key are the same Gemini key, so one secret
+  serves both. That was compared in code, not by printing them.
+
+**One command built and deployed it,** with the settings the container
+trial asked for: CPU always allocated, at most one instance, 1 GiB, the
+known address in JOBLENS_HOSTS.
+
+**Checked on the live address:**
+- health gave 1,166 vacancies in 0.3 s;
+- the pages came with the security policy, `no-referrer` and `no-store`;
+- the log showed the server read Neon through the secrets, and warned that
+  the privacy page names nobody yet.
+
+Then a trial tester, made with `db.py invite` against Neon:
+- signed in over HTTPS, with a Secure, HttpOnly, SameSite cookie;
+- landed in the guide, and uploaded in 5.3 s;
+- started a match and then asked nothing for 25 seconds. The match was done
+  when asked. With Cloud Run's default the CPU would have gone when the
+  answer to "start" was sent, so this is the proof that CPU always allocated
+  is set and needed;
+- 1 strong, 3 possible, 6 weak, with $0.043 recorded against the allowance;
+- every page loaded.
+
+The tester was deleted afterwards, and Neon holds only the vacancies.
+
+**Not yet:** Mahdi's own account on the live site, his name and contact on
+the privacy page, a quota on the Gemini key, and the nightly fetch in the
+cloud. Until then daily_update.sh publishes from his machine.
