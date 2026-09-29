@@ -102,6 +102,18 @@ Deleting an account (`scripts/db.py delete-user`) removes everything it stored
 in one statement, and an uploaded CV file is kept 30 days
 (`scripts/db.py purge-files`); its redacted text stays until the account goes.
 
+A hosted server has no `data/raw/`, so the vacancies it ranks live in the
+database too. `publish_corpus.py` copies exactly the open, extracted vacancies
+a local server would load, with their embeddings, in one transaction;
+`daily_update.sh` does it after every update when `.env` has a
+`NEON_DATABASE_URL`. A server started with `--corpus db` reads them, and ranks
+a CV identically to one reading the files (checked on all 1,166 vacancies).
+
+```bash
+uv run python scripts/publish_corpus.py --to NEON_DATABASE_URL   # 3 s, no model calls
+uv run python scripts/api.py --corpus db                         # read them from DATABASE_URL
+```
+
 ## Where the vacancies come from
 
 Five sources, one interface. Adding another is one adapter file plus a few lines

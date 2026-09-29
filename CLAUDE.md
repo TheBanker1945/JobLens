@@ -60,7 +60,13 @@ conceptually, not just have working code.
   refuses). Every table holding a person's data references users ON DELETE
   CASCADE, so deleting a user deletes everything. Every PostgresStore query is
   scoped by user_id. Uploaded CV files live in cv_files and expire after 30
-  days (KEEP_ORIGINAL); the redacted text stays. Tests use the joblens_test
+  days (KEEP_ORIGINAL); the redacted text stays. The vacancies a hosted server
+  ranks are published into the database (7.8.1, storage/published.py,
+  scripts/publish_corpus.py): exactly load_corpus("raw", open_only=True)
+  .extracted(), in its order, with vectors keyed as the local cache keys them;
+  `api.py --corpus db` reads them. Public adverts, no user_id -- and never a
+  vector derived from a CV (LayeredVectors keeps those in the server's local
+  cache). Tests use the joblens_test
   database, rebuilt from this checkout's migrations at the start of every run
   (worktrees on different branches share it), and skip without Docker.
 - Preferences (7.3, src/joblens/preferences/) are stated answers, never
@@ -312,6 +318,7 @@ conceptually, not just have working code.
 - uv run --group scrape python scripts/fetch_vacancies.py   # fetch new vacancies
 - uv run python scripts/discover_boards.py [--accept]       # find employer boards
 - uv run python scripts/index_vacancies.py                  # extract, then embed
+- uv run python scripts/publish_corpus.py --to NEON_DATABASE_URL  # vacancies to the hosted db
 - uv run python scripts/search_vacancies.py "query" --corpus raw
 - uv run python scripts/data_status.py                      # freshness and health
 - uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV

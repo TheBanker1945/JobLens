@@ -79,6 +79,17 @@ changes one setting (the allowed host), not the code.
      train on it), Neon for storage, Google Cloud Run to run it;
    - for how long, and the rights already built: download and delete.
 
+## Decided and done
+
+- **2026-09-29: Mahdi went with the recommendations** (1A, 2A, run.app) and
+  created the Neon project: Postgres only (no object storage, functions, AI
+  gateway or Neon Auth), Frankfurt, Postgres 18.6. Migrations 0001-0005 ran on
+  it after a trial in a throwaway schema, and the whole test suite passed
+  against a temporary database there (924 tests).
+- **7.8.1, the vacancies in Postgres**: migration 0006, published from this
+  machine in 3 s; a CV ranks identically from Neon and from the files
+  (learning log 7.8.1).
+
 ## The order, once the answers are in
 
 1. A Dockerfile (Python 3.12 slim with uv, a non-root user, listening on
