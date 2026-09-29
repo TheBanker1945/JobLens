@@ -3539,3 +3539,65 @@ on the test corpus, and a server refuses to start when the published vectors
 are another model's (`api.py`: one vector space).
 
 4 new tests; 928 in all. No new dependency.
+
+## 7.8.2 — The container: the hosted app from its environment alone
+
+**Three files.**
+- The `Dockerfile`: Python 3.12 slim with uv pinned to the lockfile's
+  version, the runtime dependencies only (no dev tools, no scraper), and a
+  user that is not root.
+- `.dockerignore`: `data/` and `.env` can never be copied in. data/raw holds
+  scraped adverts, but also Mahdi's CV, his labels and his runs.
+- `scripts/hosted.py`, the app as it runs hosted:
+  - every setting from the environment, never from a .env file;
+  - `0.0.0.0:$PORT`, and the vacancies from the database (7.8.1);
+  - Secure cookies unless every host in JOBLENS_HOSTS is this machine, which
+    is create_app's own rule;
+  - no local model providers;
+  - no access log of its own. Cloud Run keeps one already, and a second would
+    copy every visitor's IP address into another place.
+
+The rejected alternative was a `--hosted` switch on api.py. Two very
+different sets of trust in one script is how the laptop's defaults end up in
+production.
+
+**What is in the image,** checked from inside it: the `joblens` user, no .env
+anywhere, no data directory, no scraper, but the places files, the
+migrations, the fonts and the five languages. 455 MB, most of it numpy,
+cryptography and the PDF readers.
+
+**Tried locally against Neon** as Cloud Run will run it, with a settings file
+built from .env by python-dotenv (quotes handled), never printed, deleted
+afterwards:
+- it loaded the 1,166 vacancies from Neon and answered on :8080;
+- a foreign Host got 400, and the login page came with its security policy and
+  `no-store`;
+- a temporary tester made with `db.py invite` against Neon signed in and landed
+  in the guide;
+- the upload took 4 s and removed six kinds of contact details;
+- a match of ten ran in 31 s (locally 9-11 s: a new container embeds the CV's
+  queries itself, and every progress update crosses to Frankfurt) and gave 2
+  possible and 8 weak, with 8 moved out;
+- $0.0415 was recorded against the tester allowance;
+- Neon's shared vectors stayed at 1,160: nothing derived from the CV went in.
+
+A second container answering only `joblens.example` refused 127.0.0.1 (400)
+and set the session cookie Secure, HttpOnly and SameSite. Then the tester was
+deleted with `db.py delete-user`: Neon holds no users, CVs, runs, jobs, usage
+or sessions, only the vacancies.
+
+**What Cloud Run must be told,** learned from reading the trial rather than
+from the deploy:
+- **CPU always allocated.** A match runs in a thread after the request that
+  started it has answered, and Cloud Run's default takes the CPU away once an
+  answer is sent.
+- **At most one instance.** A starting server marks open matches
+  interrupted: right after a restart, wrong beside a running twin.
+- **1 GiB of memory.**
+- **The address can be known in advance,** from the project number.
+
+The command is in docs/hosting-phase-7.8.md. It waits for the Google Cloud
+project.
+
+No new tests: the container is checked by running it (above), and the code
+it runs is the tested code. 928 in all. No new dependency.

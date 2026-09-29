@@ -66,7 +66,14 @@ conceptually, not just have working code.
   .extracted(), in its order, with vectors keyed as the local cache keys them;
   `api.py --corpus db` reads them. Public adverts, no user_id -- and never a
   vector derived from a CV (LayeredVectors keeps those in the server's local
-  cache). Tests use the joblens_test
+  cache). The hosted app is the Dockerfile running scripts/hosted.py (7.8.2):
+  settings only from the environment (never a .env), vacancies from the
+  database, Secure cookies unless every JOBLENS_HOSTS entry is local, no local
+  model providers, no access log of its own. .dockerignore keeps data/ and
+  .env out of the image; keep it that way. On Cloud Run it needs
+  --no-cpu-throttling (matches run after their request answers) and
+  --max-instances 1 (a starting server marks open matches interrupted).
+  Tests use the joblens_test
   database, rebuilt from this checkout's migrations at the start of every run
   (worktrees on different branches share it), and skip without Docker.
 - Preferences (7.3, src/joblens/preferences/) are stated answers, never
@@ -319,6 +326,7 @@ conceptually, not just have working code.
 - uv run python scripts/discover_boards.py [--accept]       # find employer boards
 - uv run python scripts/index_vacancies.py                  # extract, then embed
 - uv run python scripts/publish_corpus.py --to NEON_DATABASE_URL  # vacancies to the hosted db
+- docker build -t joblens . && docker run -p 8080:8080 --env-file F joblens   # the hosted app
 - uv run python scripts/search_vacancies.py "query" --corpus raw
 - uv run python scripts/data_status.py                      # freshness and health
 - uv run python scripts/read_cv.py <cv.pdf|.md|.txt>        # read and redact a CV

@@ -1,0 +1,17 @@
+# What never goes into the image. data/ holds scraped vacancies and personal
+# files (CVs, labels, runs); .env holds secrets. The hosted app reads the
+# vacancies from its database and its settings from the environment.
+.env
+.env.*
+data/
+.git/
+.claude/
+.venv/
+.ruff_cache/
+.pytest_cache/
+**/__pycache__/
+**/*.pyc
+tests/
+docs/
+Dockerfile
+.dockerignore
