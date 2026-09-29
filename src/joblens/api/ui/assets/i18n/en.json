@@ -310,5 +310,12 @@
   "privacy.rights.title": "Your rights",
   "privacy.rights.text": "In Settings you can download everything JobLens keeps about you as one file, and delete your account with everything in it, at once. For anything else, write to {contact}. You can also complain to the Dutch data protection authority, the Autoriteit Persoonsgegevens.",
   "privacy.why.title": "Why",
-  "privacy.why.text": "JobLens uses your data only to give you what you asked for: comparing your CV with vacancies (GDPR, article 6(1)(b))."
+  "privacy.why.text": "JobLens uses your data only to give you what you asked for: comparing your CV with vacancies (GDPR, article 6(1)(b)).",
+
+  "settings.owner": "For you, the owner",
+  "settings.nightly": "Nightly vacancy update",
+  "settings.nightlyHint": "When on, JobLens fetches new vacancies every night at 03:00 (Dutch time) from every source, Indeed included, and makes them searchable. When off, nothing is fetched and the vacancies already there stay. A run that has started finishes either way.",
+  "settings.nightlyOn": "Fetch new vacancies every night",
+  "settings.nightlyLast": "Last update: {date}, {count} vacancies.",
+  "settings.nightlyNever": "No update has arrived yet."
 }

@@ -3702,3 +3702,76 @@ The tester was deleted afterwards, and Neon holds only the vacancies.
 **Not yet:** Mahdi's own account on the live site, his name and contact on
 the privacy page, a quota on the Gemini key, and the nightly fetch in the
 cloud. Until then daily_update.sh publishes from his machine.
+
+## 7.8.5 — The nightly update in the cloud, with the owner's switch
+
+Mahdi's decision (2026-09-29): nothing runs on his machine any more, so the
+nightly fetch moves to Google Cloud. Indeed through JobSpy stays, tried from
+a datacenter even though such sites refuse cloud addresses more often: "this
+vacancy sourcing is very important".
+
+**A Cloud Run job whose disk is a bucket.** A job starts with an empty disk
+every time, and the fetch keeps its state in files that it appends to: the
+stored vacancies, the extractions, the sightings, the refusals. So
+`scripts/nightly.py`:
+1. downloads that state from the bucket `joblens-state-883656455192`
+   (europe-west4, private, versioned for 30 days);
+2. seeds the embedding cache from what is published, so only new vacancies
+   are embedded;
+3. runs the same fetch, index and publish as `daily_update.sh`;
+4. uploads what changed, even when a step failed.
+
+`src/joblens/cloud/state.py` talks to the bucket's JSON API over httpx with
+the metadata server's token (no new dependency). Only an allow-list of
+vacancy state ever moves: seeding it from the laptop sent 28 files and kept
+the CV, the labels, the CV runs and the TalentCLEF data home, and a test
+proves a CV on the disk never goes up. The rejected alternative was mounting
+the bucket as a folder. The stores append line by line, and a bucket rewrites
+the whole object on every append, with folder semantics that are not the
+disk's the fetch was built on.
+
+**Least privilege, again.** The job runs as `joblens-nightly`: its bucket,
+the database address and the Gemini key, not the encryption key. Cloud
+Scheduler starts it at 03:00 Amsterdam time as `joblens-scheduler`, which may
+start this job and nothing else. The job is never retried automatically,
+because a retry would ask every site a second time.
+
+**The owner's switch, off by default** (Mahdi: "on default turn it off and
+have an option for me to turn it on within the web"). The scheduler starts
+the job every night, and the job's first step reads a switch in the database
+(`app_settings`, migration 0007). Off: it stops within seconds, having asked
+no site. On: it fetches. The switch is on the settings page, for the owner
+only (403 for a tester), with when the last set arrived and how big it was.
+`--force` runs it by hand anyway. The rejected alternative was letting the
+web app pause and resume the Cloud Scheduler job. That would give the
+internet-facing app rights over the cloud setup; a row in the database keeps
+it to the rights it has.
+
+**The first run, by hand.**
+- **The fetch took 14 minutes from the datacenter and worked, Indeed
+  included.** Twenty searches (developer, software engineer, data engineer,
+  machine learning and AI engineer in Amsterdam, Rotterdam, Den Haag and
+  Utrecht), 22 paced requests, no refusal. The store grew from 1,184 to
+  1,663 vacancies. Two employer boards failed: one on its own domain was
+  unreachable from Google's network, and one answered with an HTTP error.
+- **The extraction read all the new vacancies without a failure.**
+- **The embedding was refused: 429, "exceeded your current quota".** The
+  cause was my own advice an hour earlier. I had suggested lowering Gemini's
+  embed limit to 300 requests a minute, thinking a batch counts as one
+  request. Every text in a batch counts, and 480 new vacancies went out in
+  15 batches of 32 within seconds. So nothing was published that night, while
+  the state, with the fetch's work in it, went back to the bucket intact.
+
+Two fixes came of it:
+- **The embedding client paces itself.** On a 429 it waits a minute and sends
+  that batch again, up to five times, so a backlog finishes at any
+  per-minute limit. This is JobLens against its own paid quota, not the
+  politeness gate for job sites, which still never retries a refusal.
+- **`--no-fetch`** finishes a night with index and publish only, without
+  asking every site again the same day.
+
+The new job reads the switch through migration 0007, which the app applies
+when it starts. So the app was redeployed first and the recovery run came
+after: a server whose database is newer than its code refuses to start.
+
+6 new tests for the switch and the quota; 952 in all. No new dependency.

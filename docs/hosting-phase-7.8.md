@@ -115,7 +115,25 @@ changes one setting (the allowed host), not the code.
   (cookie Secure), uploaded, and ran a match that finished while nobody asked
   about it -- CPU always allocated works -- then was deleted.
 
-**Redeploying** after a change: the same command, from a checkout of main.
+- **7.8.5, the nightly update in the cloud** (Mahdi, 2026-09-29: nothing runs
+  on his machine; JobSpy/Indeed stays, tried from the datacenter). Cloud Run
+  job `joblens-nightly` (the Dockerfile's `nightly` stage, scripts/nightly.py),
+  1 CPU, 2 GiB, up to 3 hours, never retried automatically, as service
+  account `joblens-nightly` (its bucket, the database address and the Gemini
+  key; not the encryption key). Its disk is the bucket
+  `joblens-state-883656455192` in europe-west4 -- private, versioned, old
+  versions kept 30 days -- holding only vacancy state (the allow-list in
+  src/joblens/cloud/state.py), seeded once from Mahdi's laptop: 28 files, 23
+  MB; his CV, labels and runs stayed home. Cloud Scheduler starts it at 03:00
+  Amsterdam time as `joblens-scheduler`, which may start this job and nothing
+  else. The live app reloads a new publish within 15 minutes.
+
+**Rebuilding the nightly image** after a change to the fetch:
+`gcloud builds submit --config cloudbuild.nightly.yaml`, then
+`gcloud run jobs update joblens-nightly --region europe-west4 --image ...`
+(the command is in cloudbuild.nightly.yaml).
+
+**Redeploying** the app after a change: the same command, from a checkout of main.
 The vacancies are refreshed by `daily_update.sh` on Mahdi's machine
 (publishes to Neon); a server picks them up when it next starts, and Cloud
 Run stops an idle server after a while, so the first visit of a day gets the

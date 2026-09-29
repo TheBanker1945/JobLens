@@ -10,11 +10,23 @@ text. Instruction-aware models (like Qwen3-Embedding) expect the query to carry 
 task instruction; documents are embedded as they are.
 """
 
-from openai import DefaultHttpxClient, OpenAI
+import time
+from collections.abc import Callable
+
+from openai import DefaultHttpxClient, OpenAI, RateLimitError
 
 from joblens.config import LLMSettings
 
 Vector = list[float]
+
+# A provider's per-minute quota counts every text in a batch (measured
+# 2026-09-29: Gemini refused a backlog of 480 new vacancies at a limit of 300
+# a minute, 32 texts per request). The SDK's own two quick retries do not
+# outlast a minute, so on a 429 the batch waits a minute and is sent again, a
+# few times, before giving up. This paces JobLens against its own paid quota;
+# it has nothing to do with the politeness gate for job sites.
+RATE_LIMIT_WAITS = 5
+RATE_LIMIT_WAIT_S = 60.0
 
 DEFAULT_TASK = "Given a job search query, retrieve job vacancies that match it"
 
@@ -36,9 +48,11 @@ class EmbeddingClient:
         max_retries: int = 2,
         batch_size: int = 32,  # texts per request
         http_client: DefaultHttpxClient | None = None,  # tests pass a fake server
+        sleep: Callable[[float], None] = time.sleep,  # tests pass a fake clock
     ):
         self.settings = settings
         self.batch_size = batch_size
+        self._sleep = sleep
         self._sdk = OpenAI(
             base_url=settings.base_url,
             api_key=settings.api_key,
@@ -62,7 +76,16 @@ class EmbeddingClient:
         return self._embed([self.query_text(query, task)])[0]
 
     def _embed(self, texts: list[str]) -> list[Vector]:
-        response = self._sdk.embeddings.create(model=self.settings.model, input=texts)
+        for waited in range(RATE_LIMIT_WAITS + 1):
+            try:
+                response = self._sdk.embeddings.create(
+                    model=self.settings.model, input=texts
+                )
+                break
+            except RateLimitError:
+                if waited == RATE_LIMIT_WAITS:
+                    raise
+                self._sleep(RATE_LIMIT_WAIT_S)
         items = list(response.data)
         # OpenAI and Ollama number the items; Gemini leaves index empty and relies on
         # the order. Sort when we can, trust the order when we cannot.

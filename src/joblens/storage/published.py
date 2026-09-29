@@ -130,6 +130,30 @@ def published_model(database: Database) -> str | None:
     return row["model"] if row else None
 
 
+def published_summary(database: Database) -> tuple[datetime, int] | None:
+    """When the last set was published, and how many vacancies it held."""
+    with database.connect() as conn:
+        row = conn.execute(
+            "SELECT published_at, vacancies FROM corpus_published"
+        ).fetchone()
+    return (row["published_at"], row["vacancies"]) if row else None
+
+
+def published_at(database: Database) -> datetime | None:
+    """When the set was last published: a server reloads when this moves."""
+    with database.connect() as conn:
+        row = conn.execute("SELECT published_at FROM corpus_published").fetchone()
+    return row["published_at"] if row else None
+
+
+def seed(store: VectorStore, database: Database, model: str) -> int:
+    """Copy the published vectors into a local store, so an index built on a
+    fresh disk (the nightly job's) embeds only what is new. Returns how many."""
+    shared = published_vectors(database, model)
+    store.store(shared.load(shared.keys()))
+    return shared.count()
+
+
 class PublishedVectors:
     """The published vectors of one model, read once and held as bytes.
 
@@ -149,6 +173,9 @@ class PublishedVectors:
 
     def count(self) -> int:
         return len(self._blobs)
+
+    def keys(self) -> list[str]:
+        return list(self._blobs)
 
     def close(self) -> None:
         pass  # shared by every match on this server

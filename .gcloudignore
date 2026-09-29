@@ -22,14 +22,19 @@
 /.pytest_cache/
 /tests/
 /docs/
-/evals/
 /web/
 /docker/
 /compose.yaml
-/boards.toml
-/sources.toml
 /CLAUDE.md
 /.python-version
-# Of the scripts, only the hosted start is part of the image.
+# Of the evals, only the extraction settings the nightly index reads (7.8.5).
+/evals/*
+!/evals/extraction.toml
+# Of the scripts, the hosted start (app image) and the nightly job's four
+# (nightly image). boards.toml and sources.toml stay: the fetch reads them.
 /scripts/*
 !/scripts/hosted.py
+!/scripts/nightly.py
+!/scripts/fetch_vacancies.py
+!/scripts/index_vacancies.py
+!/scripts/publish_corpus.py

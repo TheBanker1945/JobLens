@@ -180,8 +180,10 @@ def database(_test_database):
     """The test database, empty: every person and everything they own gone."""
     with _test_database.connect() as conn:
         # Everything a person owns hangs off users; the published corpus
-        # (7.8.1) belongs to nobody, so it is emptied by name.
+        # (7.8.1) and the owner's switches (7.8.5) belong to nobody, so they are
+        # emptied by name.
         conn.execute(
-            "TRUNCATE users, vacancies, vacancy_vectors, corpus_published CASCADE"
+            "TRUNCATE users, vacancies, vacancy_vectors, corpus_published, "
+            "app_settings CASCADE"
         )
     return _test_database

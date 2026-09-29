@@ -73,6 +73,14 @@
 </form>
 </section>
 
+<section id="owner" class="card" aria-labelledby="owner-title" hidden>
+<h2 id="owner-title" data-i18n="settings.owner">For you, the owner</h2>
+<h3 class="subhead" data-i18n="settings.nightly">Nightly vacancy update</h3>
+<p class="muted" data-i18n="settings.nightlyHint">Every night at 03:00, new vacancies from every source.</p>
+<label class="check"><input type="checkbox" id="nightly"> <span data-i18n="settings.nightlyOn">Fetch new vacancies every night</span></label>
+<p id="nightly-state" class="muted" role="status" aria-live="polite"></p>
+</section>
+
 <section class="card" aria-labelledby="data-title">
 <h2 id="data-title" data-i18n="settings.data">Your data</h2>
 <p class="muted" data-i18n="settings.dataIntro">Everything JobLens keeps about you, as one file.</p>

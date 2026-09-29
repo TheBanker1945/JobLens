@@ -310,5 +310,12 @@
   "privacy.rights.title": "Je rechten",
   "privacy.rights.text": "In Instellingen download je alles wat JobLens over je bewaart als één bestand, en verwijder je je account met alles erin, in één keer. Voor al het andere schrijf je naar {contact}. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens.",
   "privacy.why.title": "Waarom",
-  "privacy.why.text": "JobLens gebruikt je gegevens alleen om je te geven waar je om vroeg: je cv met vacatures vergelijken (AVG, artikel 6 lid 1 onder b)."
+  "privacy.why.text": "JobLens gebruikt je gegevens alleen om je te geven waar je om vroeg: je cv met vacatures vergelijken (AVG, artikel 6 lid 1 onder b).",
+
+  "settings.owner": "Voor jou als eigenaar",
+  "settings.nightly": "Nachtelijke vacature-update",
+  "settings.nightlyHint": "Staat dit aan, dan haalt JobLens elke nacht om 03:00 nieuwe vacatures op uit alle bronnen, Indeed ook, en maakt ze doorzoekbaar. Staat het uit, dan wordt er niets opgehaald en blijven de vacatures die er al zijn. Een run die al begonnen is, maakt het in beide gevallen af.",
+  "settings.nightlyOn": "Elke nacht nieuwe vacatures ophalen",
+  "settings.nightlyLast": "Laatste update: {date}, {count} vacatures.",
+  "settings.nightlyNever": "Er is nog geen update binnengekomen."
 }
