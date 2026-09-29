@@ -90,6 +90,46 @@ changes one setting (the allowed host), not the code.
   machine in 3 s; a CV ranks identically from Neon and from the files
   (learning log 7.8.1).
 
+- **7.8.2, the container**: `Dockerfile`, `.dockerignore`, `scripts/hosted.py`.
+  Tried locally against Neon: a new tester's whole path works (guide, upload,
+  a match of ten in 31 s, results, usage recorded), no CV vector reached the
+  shared table, a foreign host is refused, and on a public host name the
+  session cookie is Secure. The trial account was deleted afterwards.
+
+## Deploying to Cloud Run (needs Mahdi's Google Cloud project)
+
+What the container needs from Cloud Run, learned from the local trial:
+- **CPU always allocated** (`--no-cpu-throttling`). A match runs in a thread
+  after its request has answered; with Cloud Run's default the CPU goes when
+  the answer is sent, and the match would stall until the next request.
+- **At most one instance** (`--max-instances 1`). A starting server marks
+  every open match "interrupted", which is right after a restart and wrong
+  when a second instance starts beside a first that is still running one.
+- **At least 1 GiB of memory**: the corpus and its vectors are held in memory.
+- **The address is known before the first deploy**:
+  `joblens-<project number>.europe-west4.run.app`. It goes in JOBLENS_HOSTS.
+
+Once the project exists (billing on; the Run, Artifact Registry, Cloud Build
+and Secret Manager APIs enabled), the secrets go in Secret Manager -- the
+Neon address, the Gemini key, JOBLENS_SECRET_KEY -- and one command builds
+and deploys (the values in capitals come from the project):
+
+```bash
+gcloud run deploy joblens --source . --region europe-west4 \
+  --allow-unauthenticated --no-cpu-throttling --max-instances 1 --memory 1Gi \
+  --set-env-vars JOBLENS_HOSTS=joblens-PROJECT_NUMBER.europe-west4.run.app \
+  --set-env-vars CV_PROVIDER=gemini,CV_MODEL=gemini-3.8-flash,CV_THINKING=false \
+  --set-env-vars EMBED_PROVIDER=gemini,EMBED_MODEL=gemini-embedding-2 \
+  --set-env-vars CV_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai,EMBED_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai \
+  --set-secrets DATABASE_URL=joblens-database-url:latest \
+  --set-secrets CV_API_KEY=gemini-api-key:latest,EMBED_API_KEY=gemini-api-key:latest \
+  --set-secrets JOBLENS_SECRET_KEY=joblens-secret-key:latest
+```
+
+"--allow-unauthenticated" lets the internet reach the login page; JobLens
+itself decides who is signed in. Invites are still made from a laptop, with
+`JOBLENS_BASE_URL` set to the hosted address and `DATABASE_URL` to Neon.
+
 ## The order, once the answers are in
 
 1. A Dockerfile (Python 3.12 slim with uv, a non-root user, listening on
