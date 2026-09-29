@@ -28,7 +28,8 @@ from joblens.preferences.places import Geo
 # is shown (prompt.py). Stamped on every run that used preferences, together
 # with a digest of the answers, so a run can say which rules moved it. Bump it
 # when either changes.
-PREFERENCES_VERSION = "p1"
+# p2 (2026-09-29): a distance limit has a margin (rerank.allowed_km).
+PREFERENCES_VERSION = "p2"
 
 # "However many years it asks." The questionnaire offers no, 1, 2, 3 or any.
 ANY_YEARS = 10

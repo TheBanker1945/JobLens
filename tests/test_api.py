@@ -175,7 +175,7 @@ def test_a_match_runs_as_a_job_and_leaves_a_run_behind(database, lisa, tmp_path)
         judged = run["recommended"] + run["rejected"]
         # The preference moved both Altrecht jobs back: Coolblue was judged.
         assert [row["company"] for row in judged] == ["Coolblue"]
-        assert run["stamp"]["preferences"].startswith("p1:")
+        assert run["stamp"]["preferences"].startswith("p2:")
         assert [one["id"] for one in http.get("/api/runs").json()] == [job["run_id"]]
 
 

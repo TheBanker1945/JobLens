@@ -283,5 +283,7 @@
   "settings.delete": "Mijn account verwijderen",
   "settings.deleteIntro": "Verwijdert je account en alles erin, nu en voorgoed: cv's, bestanden, wensen, markeringen, matches en je sleutel.",
   "settings.deleteConfirm": "Ik begrijp dat dit niet ongedaan kan worden",
-  "settings.deleteButton": "Alles verwijderen"
+  "settings.deleteButton": "Alles verwijderen",
+
+  "prefs.distanceHint": "Iets verder past nog: een kwart meer, minstens 5 km."
 }

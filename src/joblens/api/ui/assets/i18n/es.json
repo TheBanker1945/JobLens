@@ -283,5 +283,7 @@
   "settings.delete": "Borrar mi cuenta",
   "settings.deleteIntro": "Borra tu cuenta y todo lo que contiene, ahora y para siempre: CV, archivos, preferencias, valoraciones, búsquedas y tu clave.",
   "settings.deleteConfirm": "Entiendo que esto no se puede deshacer",
-  "settings.deleteButton": "Borrarlo todo"
+  "settings.deleteButton": "Borrarlo todo",
+
+  "prefs.distanceHint": "Un poco más lejos todavía encaja: una cuarta parte más, al menos 5 km."
 }

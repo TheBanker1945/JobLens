@@ -153,6 +153,9 @@ evals read a tester's marks the way they read Mahdi's.
   answer "must" or "nice to have", would soften that. Decide after using it.
   The 7.7.3 walk put numbers on it: with a 40 km limit from Den Haag, all ten
   vacancies moved out of the shortlist were in Amsterdam, 53-55 km away.
+  **Decided 2026-09-29 (Mahdi): "it can have a margin."** Built as p2: a
+  quarter more, at least 5 km (rerank.allowed_km), said under the form field.
+  The other answers keep no margin: a contract type is not "a bit" wrong.
 - **Is a year's contract "met uitzicht op vast" temporary?** Extraction says
   temporary (249 such vacancies against 181 permanent). A separate answer --
   "I accept a first-year contract with a view to permanent" -- would say what

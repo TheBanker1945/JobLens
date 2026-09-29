@@ -86,7 +86,7 @@ export function preferencesForm(prefs, places = []) {
     h("div", { class: "field-row" },
       input("home", "prefs.home", prefs.home, { list: "places", autocomplete: "off" },
         "prefs.homeHint"),
-      number("max_distance_km", "prefs.distance", prefs.max_distance_km),
+      number("max_distance_km", "prefs.distance", prefs.max_distance_km, "prefs.distanceHint"),
     ),
     h("div", { class: "field-row" },
       number("hours_min", "prefs.hoursMin", prefs.hours_min, "prefs.perWeek"),
