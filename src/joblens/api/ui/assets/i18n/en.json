@@ -285,5 +285,30 @@
   "settings.deleteConfirm": "I understand this cannot be undone",
   "settings.deleteButton": "Delete everything",
 
-  "prefs.distanceHint": "A little further still fits: a quarter more, at least 5 km."
+  "prefs.distanceHint": "A little further still fits: a quarter more, at least 5 km.",
+
+  "privacy.link": "Privacy",
+  "settings.privacyLink": "How JobLens handles your data",
+  "privacy.title": "Privacy",
+  "privacy.intro": "JobLens is a small, invite-only service. This page says what it keeps about you, where that goes, for how long, and how you take it with you or delete it.",
+  "privacy.unset": "(not filled in yet)",
+  "privacy.who.title": "Who is responsible",
+  "privacy.who.text": "{operator} runs JobLens and decides what happens with your data. For questions or requests: {contact}.",
+  "privacy.what.title": "What JobLens keeps",
+  "privacy.what.account": "Your account: your e-mail address, the name and language you chose, and whether you are a tester. Login links and sign-ins are stored only as fingerprints, never as they are.",
+  "privacy.what.cv": "Your CV: the file you upload is kept for 30 days, then deleted. What stays is its text with your contact details taken out (e-mail, phone, address, postcode, date of birth, links and ID numbers, and your name if you give it), and what a model read from it.",
+  "privacy.what.answers": "What you are looking for: your answers, exactly as you gave them.",
+  "privacy.what.matches": "Your matches and marks: which vacancies were compared with your CV, what the model said about them, and every mark with the reason you typed.",
+  "privacy.what.usage": "Usage: which paid model calls you caused and what they cost, so that a free allowance can be kept.",
+  "privacy.what.key": "Your own API key, if you add one: stored encrypted, never shown again and never in a download.",
+  "privacy.where.title": "Where it goes",
+  "privacy.where.model": "To read your CV and judge vacancies, its text, without your contact details, is sent to an AI model: Google's Gemini, on a paid account, which Google does not use to improve its products. If you add your own key, reading and judging go to the provider you chose; turning your CV into a search vector always uses Gemini, so that it can be compared with the vacancies.",
+  "privacy.where.storage": "Everything is stored in a database at Neon in Frankfurt (EU), and JobLens runs on Google Cloud in the Netherlands.",
+  "privacy.where.nothing": "No advertising, no analytics, no trackers. JobLens sets one cookie, to keep you signed in, and loads its fonts and scripts from itself.",
+  "privacy.long.title": "How long",
+  "privacy.long.text": "The uploaded file: 30 days. A login link: 7 days. A sign-in: 30 days. Everything else: until you delete your account.",
+  "privacy.rights.title": "Your rights",
+  "privacy.rights.text": "In Settings you can download everything JobLens keeps about you as one file, and delete your account with everything in it, at once. For anything else, write to {contact}. You can also complain to the Dutch data protection authority, the Autoriteit Persoonsgegevens.",
+  "privacy.why.title": "Why",
+  "privacy.why.text": "JobLens uses your data only to give you what you asked for: comparing your CV with vacancies (GDPR, article 6(1)(b))."
 }

@@ -17,6 +17,7 @@ Settings (docs/hosting-phase-7.8.md):
   CV_*, EMBED_*, GEMINI_API_KEY   the models, as in .env.example
   JOBLENS_SECRET_KEY  encrypts own API keys; without it own keys are off
   JOBLENS_TESTER_MONTHLY_USD, JOBLENS_OPERATOR_MONTHLY_USD   (optional)
+  JOBLENS_OPERATOR, JOBLENS_CONTACT   who runs it, for the privacy page
   PORT                set by Cloud Run; 8080 otherwise
 
 Cookies are Secure unless every host in JOBLENS_HOSTS is this machine, which
@@ -28,6 +29,7 @@ import logging
 import os
 import sys
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 
 import uvicorn
@@ -97,8 +99,18 @@ def main() -> int:
             vault=Vault.from_env(),  # None: own keys off, and the page says so
             budgets=Budgets.from_env(),
             allow_local_providers=False,  # "localhost" is this server, not them
+            # What the privacy page promises happens by itself (7.8.3): old
+            # upload files, links and sessions go at start and every 6 hours.
+            purge_every=timedelta(hours=6),
+            operator=os.environ.get("JOBLENS_OPERATOR") or None,
+            contact=os.environ.get("JOBLENS_CONTACT") or None,
         )
     )
+    if not (os.environ.get("JOBLENS_OPERATOR") and os.environ.get("JOBLENS_CONTACT")):
+        print(
+            "WARNING: the privacy page names nobody. Set JOBLENS_OPERATOR and "
+            "JOBLENS_CONTACT before inviting testers."
+        )
     port = int(os.environ.get("PORT", "8080"))
     print(f"{len(corpus)} vacancies ({model}); answering {', '.join(hosts)} on :{port}")
     # No access log of our own: Cloud Run keeps one already, and a second

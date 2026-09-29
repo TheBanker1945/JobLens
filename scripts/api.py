@@ -20,6 +20,7 @@ serves it over https, where they are.
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -115,6 +116,8 @@ def main() -> int:
             vault=Vault.from_env(),  # None: own keys off (JOBLENS_SECRET_KEY)
             budgets=Budgets.from_env(),
             allow_local_providers=True,  # this machine's Ollama is the user's
+            operator=os.environ.get("JOBLENS_OPERATOR") or None,
+            contact=os.environ.get("JOBLENS_CONTACT") or None,
         )
     )
     print(

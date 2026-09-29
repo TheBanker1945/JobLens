@@ -36,10 +36,11 @@ Two rules from 7.4 stay, now as the cookie session's protection:
 """
 
 import logging
+import threading
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -130,6 +131,13 @@ class AppConfig:
     # Where the vacancies' vectors are read (7.8.1): None is the SQLite file in
     # cache_dir; `--corpus db` passes the published ones (storage/published.py).
     vectors: VectorsFactory | None = None
+    # Delete uploaded files past 30 days, and expired links and sessions, at
+    # start and then this often (7.8.3): what the privacy page promises has to
+    # happen without anyone remembering `db.py purge-files`. None: by hand.
+    purge_every: timedelta | None = None
+    # Who runs this JobLens and how to reach them: the privacy page says so.
+    operator: str | None = None
+    contact: str | None = None
 
 
 class MatchAsk(BaseModel):
@@ -193,6 +201,24 @@ PAGE_POLICY = (
 )
 
 
+def purge(database: Database) -> None:
+    """What `db.py purge-files` does: uploaded files past 30 days (the text
+    stays), and login links and sessions past their date."""
+    try:
+        files = database.purge_expired_files()
+        logins = database.purge_expired_logins()
+    except Exception:  # a purge that fails once is tried again next time
+        logger.exception("purging expired files, links and sessions failed")
+        return
+    if files or logins:
+        logger.info("purged %d file(s) and %d link(s)/session(s)", files, logins)
+
+
+def purge_until(database: Database, every: timedelta, stop: threading.Event) -> None:
+    while not stop.wait(every.total_seconds()):
+        purge(database)
+
+
 def page(name: str, lang: str, *, referrer: str = "same-origin") -> HTMLResponse:
     """A page from ui/, in the chosen language (api/language.py)."""
     html = (
@@ -221,7 +247,17 @@ def create_app(config: AppConfig) -> FastAPI:
         interrupted = config.database.fail_interrupted_jobs()
         if interrupted:
             logger.warning("%d job(s) were cut off by a restart", interrupted)
+        stop = threading.Event()
+        if config.purge_every:
+            purge(config.database)
+            threading.Thread(
+                target=purge_until,
+                args=(config.database, config.purge_every, stop),
+                name="purge",
+                daemon=True,
+            ).start()
         yield
+        stop.set()
         config.runner.shutdown()
 
     app = FastAPI(
@@ -353,6 +389,25 @@ def create_app(config: AppConfig) -> FastAPI:
         No referrer, so the page's address never travels to another site."""
         chosen = language.pick(request.headers.get("accept-language"))
         return page("login.html", chosen, referrer="no-referrer")
+
+    @app.get("/privacy", include_in_schema=False)
+    def privacy(
+        request: Request,
+        session: Annotated[str | None, Depends(SESSION_COOKIE)],
+    ) -> HTMLResponse:
+        """What JobLens keeps, where it goes, for how long, and your rights:
+        for everyone, signed in or not (7.8.3)."""
+        user = config.database.session_user(session) if session else None
+        chosen = language.pick(
+            request.headers.get("accept-language"), user.locale if user else None
+        )
+        return page("privacy.html", chosen)
+
+    @app.get("/api/privacy")
+    def who_runs_this() -> dict:
+        """Who runs this JobLens and how to reach them: the privacy page names
+        them. Public; null until JOBLENS_OPERATOR and JOBLENS_CONTACT are set."""
+        return {"operator": config.operator, "contact": config.contact}
 
     app.mount("/assets", StaticFiles(directory=UI / "assets"), name="assets")
 

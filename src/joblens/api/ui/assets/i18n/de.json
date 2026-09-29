@@ -285,5 +285,30 @@
   "settings.deleteConfirm": "Mir ist klar, dass das nicht rückgängig zu machen ist",
   "settings.deleteButton": "Alles löschen",
 
-  "prefs.distanceHint": "Etwas weiter passt noch: ein Viertel mehr, mindestens 5 km."
+  "prefs.distanceHint": "Etwas weiter passt noch: ein Viertel mehr, mindestens 5 km.",
+
+  "privacy.link": "Datenschutz",
+  "settings.privacyLink": "Wie JobLens mit deinen Daten umgeht",
+  "privacy.title": "Datenschutz",
+  "privacy.intro": "JobLens ist ein kleiner Dienst, nur auf Einladung. Hier steht, was JobLens über dich speichert, wohin es geht, wie lange, und wie du es mitnimmst oder löschst.",
+  "privacy.unset": "(noch nicht ausgefüllt)",
+  "privacy.who.title": "Wer verantwortlich ist",
+  "privacy.who.text": "{operator} betreibt JobLens und entscheidet, was mit deinen Daten geschieht. Für Fragen oder Anliegen: {contact}.",
+  "privacy.what.title": "Was JobLens speichert",
+  "privacy.what.account": "Dein Konto: deine E-Mail-Adresse, der Name und die Sprache, die du gewählt hast, und ob du Tester bist. Anmeldelinks und Anmeldungen werden nur als Fingerabdruck gespeichert, nie im Klartext.",
+  "privacy.what.cv": "Dein Lebenslauf: Die hochgeladene Datei wird 30 Tage aufbewahrt und dann gelöscht. Was bleibt, ist ihr Text ohne deine Kontaktdaten (E-Mail, Telefon, Adresse, Postleitzahl, Geburtsdatum, Links und ID-Nummern, und dein Name, wenn du ihn angibst), und was ein Modell daraus gelesen hat.",
+  "privacy.what.answers": "Was du suchst: deine Antworten, genau so, wie du sie gegeben hast.",
+  "privacy.what.matches": "Deine Treffer und Markierungen: welche Stellen mit deinem Lebenslauf verglichen wurden, was das Modell dazu sagte, und jede Markierung mit der Begründung, die du geschrieben hast.",
+  "privacy.what.usage": "Nutzung: welche kostenpflichtigen Modellaufrufe du ausgelöst hast und was sie kosteten, damit ein kostenloses Guthaben eingehalten werden kann.",
+  "privacy.what.key": "Dein eigener API-Schlüssel, falls du einen hinzufügst: verschlüsselt gespeichert, nie wieder angezeigt und nie in einem Download.",
+  "privacy.where.title": "Wohin es geht",
+  "privacy.where.model": "Um deinen Lebenslauf zu lesen und Stellen zu beurteilen, wird sein Text, ohne deine Kontaktdaten, an ein KI-Modell gesendet: Google Gemini, über ein bezahltes Konto, mit dem Google seine Produkte nicht verbessert. Fügst du deinen eigenen Schlüssel hinzu, gehen Lesen und Beurteilen an den Anbieter, den du gewählt hast; die Umwandlung deines Lebenslaufs in einen Suchvektor nutzt immer Gemini, damit er mit den Stellen vergleichbar ist.",
+  "privacy.where.storage": "Alles wird in einer Datenbank bei Neon in Frankfurt (EU) gespeichert, und JobLens läuft auf Google Cloud in den Niederlanden.",
+  "privacy.where.nothing": "Keine Werbung, keine Statistiken, keine Tracker. JobLens setzt ein einziges Cookie, um dich angemeldet zu halten, und lädt seine Schriften und Skripte von sich selbst.",
+  "privacy.long.title": "Wie lange",
+  "privacy.long.text": "Die hochgeladene Datei: 30 Tage. Ein Anmeldelink: 7 Tage. Eine Anmeldung: 30 Tage. Alles andere: bis du dein Konto löschst.",
+  "privacy.rights.title": "Deine Rechte",
+  "privacy.rights.text": "In den Einstellungen kannst du alles, was JobLens über dich speichert, als eine Datei herunterladen und dein Konto mit allem darin auf einmal löschen. Für alles andere schreib an {contact}. Du kannst dich auch bei der niederländischen Datenschutzbehörde, der Autoriteit Persoonsgegevens, beschweren.",
+  "privacy.why.title": "Warum",
+  "privacy.why.text": "JobLens nutzt deine Daten nur, um dir zu geben, worum du gebeten hast: deinen Lebenslauf mit Stellen zu vergleichen (DSGVO, Artikel 6 Absatz 1 Buchstabe b)."
 }
