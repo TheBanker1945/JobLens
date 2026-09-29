@@ -85,7 +85,7 @@ from joblens.service import (
 from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.marks import MarkRefused, NotInRun, mark
-from joblens.service.matching import ChatFactory, EmbedFactory
+from joblens.service.matching import ChatFactory, EmbedFactory, VectorsFactory
 from joblens.storage import Database, Job, PostgresStore, RunSummary, User
 from joblens.storage.postgres import SESSION_VALID
 from joblens.vault import Vault, VaultError
@@ -127,6 +127,9 @@ class AppConfig:
     budgets: Budgets = field(default_factory=Budgets)
     allow_local_providers: bool = False  # Ollama/LM Studio: this machine only
     check_provider: Callable[[LLMSettings], None] = check_provider
+    # Where the vacancies' vectors are read (7.8.1): None is the SQLite file in
+    # cache_dir; `--corpus db` passes the published ones (storage/published.py).
+    vectors: VectorsFactory | None = None
 
 
 class MatchAsk(BaseModel):
@@ -527,6 +530,7 @@ def create_app(config: AppConfig) -> FastAPI:
             chat=config.chat,
             embed=config.embed,
             paid_by=paid_by,
+            vectors=config.vectors,
         )
         return store.job(job.id)
 

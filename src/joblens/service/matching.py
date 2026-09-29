@@ -62,7 +62,7 @@ from joblens.cv.runs import RunRecord, RunStamp, build_record, corpus_digest, di
 from joblens.cv.store import CVCache
 from joblens.embeddings.client import EmbeddingClient
 from joblens.embeddings.index import VacancyIndex
-from joblens.embeddings.store import CachedEmbedder, cache_path
+from joblens.embeddings.store import CachedEmbedder, VectorStore, cache_path
 from joblens.llm.client import LLMClient
 from joblens.llm.pricing import cost_usd
 from joblens.llm.structured import StructuredError, default_mode
@@ -161,6 +161,10 @@ class MatchRun:
 OnProgress = Callable[[Progress], None]
 ChatFactory = Callable[[LLMSettings], ChatClient]
 EmbedFactory = Callable[[LLMSettings], EmbeddingClient]
+# Where an embedding model's vectors are kept, by model name. None: the
+# SQLite file in cache_dir. A hosted server passes the published vectors with
+# a local file under them (storage/published.py, 7.8.1).
+VectorsFactory = Callable[[str], VectorStore]
 
 
 def rank(
@@ -172,6 +176,7 @@ def rank(
     progress: OnProgress | None = None,
     chat: ChatFactory = LLMClient,
     embed: EmbedFactory = EmbeddingClient,
+    vectors: VectorsFactory | None = None,
 ) -> Ranked:
     """Read the CV and rank every vacancy in `corpus` against it.
 
@@ -196,10 +201,10 @@ def rank(
             )
         report(Progress("ranking"))
         embedder = stack.enter_context(closing(embed(models.embed)))
-        vectors = stack.enter_context(
-            closing(CachedEmbedder(embedder, cache_path(cache_dir, models.embed.model)))
-        )
-        index = VacancyIndex.build(corpus.vacancies, corpus.details, vectors)
+        model = models.embed.model
+        kept = vectors(model) if vectors else cache_path(cache_dir, model)
+        cached = stack.enter_context(closing(CachedEmbedder(embedder, kept)))
+        index = VacancyIndex.build(corpus.vacancies, corpus.details, cached)
         # The whole corpus, not the shortlist: judging reads the head of this
         # list and the rest is stored, so a rejection by retrieval has a
         # position and a score you can go and look at (4.1).

@@ -26,6 +26,7 @@ from joblens.service.matching import (
     MatchRequest,
     Models,
     Progress,
+    VectorsFactory,
     judge,
     rank,
 )
@@ -47,6 +48,7 @@ def run_match_job(
     chat: ChatFactory = LLMClient,
     embed: EmbedFactory = EmbeddingClient,
     paid_by: str = "operator",
+    vectors: VectorsFactory | None = None,
 ) -> None:
     """Match the account's active CV, with its preferences, and store the run.
 
@@ -80,6 +82,7 @@ def run_match_job(
             progress=progress,
             chat=chat,
             embed=embed,
+            vectors=vectors,
         )
         run = judge(
             ranked,
