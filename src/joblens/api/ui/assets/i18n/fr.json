@@ -285,5 +285,30 @@
   "settings.deleteConfirm": "Je comprends que c'est irréversible",
   "settings.deleteButton": "Tout supprimer",
 
-  "prefs.distanceHint": "Un peu plus loin convient encore : un quart de plus, au moins 5 km."
+  "prefs.distanceHint": "Un peu plus loin convient encore : un quart de plus, au moins 5 km.",
+
+  "privacy.link": "Confidentialité",
+  "settings.privacyLink": "Comment JobLens traite tes données",
+  "privacy.title": "Confidentialité",
+  "privacy.intro": "JobLens est un petit service, sur invitation uniquement. Cette page dit ce que JobLens garde sur toi, où cela va, combien de temps, et comment tu le récupères ou le supprimes.",
+  "privacy.unset": "(pas encore renseigné)",
+  "privacy.who.title": "Qui est responsable",
+  "privacy.who.text": "{operator} gère JobLens et décide de ce qui arrive à tes données. Pour toute question ou demande : {contact}.",
+  "privacy.what.title": "Ce que JobLens garde",
+  "privacy.what.account": "Ton compte : ton adresse e-mail, le nom et la langue que tu as choisis, et si tu es testeur. Les liens de connexion et les sessions ne sont gardés que sous forme d'empreinte, jamais tels quels.",
+  "privacy.what.cv": "Ton CV : le fichier que tu téléverses est gardé 30 jours, puis supprimé. Ce qui reste, c'est son texte sans tes coordonnées (e-mail, téléphone, adresse, code postal, date de naissance, liens et numéros d'identification, et ton nom si tu le donnes), et ce qu'un modèle en a retenu.",
+  "privacy.what.answers": "Ce que tu cherches : tes réponses, telles que tu les as données.",
+  "privacy.what.matches": "Tes correspondances et tes avis : quelles offres ont été comparées à ton CV, ce que le modèle en a dit, et chaque avis avec la raison que tu as écrite.",
+  "privacy.what.usage": "Utilisation : quels appels payants à un modèle tu as provoqués et ce qu'ils ont coûté, pour tenir un crédit gratuit.",
+  "privacy.what.key": "Ta propre clé d'API, si tu en ajoutes une : stockée chiffrée, jamais réaffichée et jamais dans un téléchargement.",
+  "privacy.where.title": "Où cela va",
+  "privacy.where.model": "Pour lire ton CV et évaluer les offres, son texte, sans tes coordonnées, est envoyé à un modèle d'IA : Google Gemini, via un compte payant, que Google n'utilise pas pour améliorer ses produits. Si tu ajoutes ta propre clé, la lecture et l'évaluation passent par le fournisseur que tu as choisi ; la transformation de ton CV en vecteur de recherche utilise toujours Gemini, pour pouvoir le comparer aux offres.",
+  "privacy.where.storage": "Tout est stocké dans une base de données chez Neon à Francfort (UE), et JobLens tourne sur Google Cloud aux Pays-Bas.",
+  "privacy.where.nothing": "Pas de publicité, pas de statistiques, pas de traceurs. JobLens pose un seul cookie, pour te garder connecté, et charge ses polices et ses scripts depuis lui-même.",
+  "privacy.long.title": "Combien de temps",
+  "privacy.long.text": "Le fichier téléversé : 30 jours. Un lien de connexion : 7 jours. Une session : 30 jours. Tout le reste : jusqu'à ce que tu supprimes ton compte.",
+  "privacy.rights.title": "Tes droits",
+  "privacy.rights.text": "Dans les paramètres, tu peux télécharger tout ce que JobLens garde sur toi en un seul fichier, et supprimer ton compte avec tout son contenu, d'un coup. Pour le reste, écris à {contact}. Tu peux aussi porter plainte auprès de l'autorité néerlandaise de protection des données, l'Autoriteit Persoonsgegevens.",
+  "privacy.why.title": "Pourquoi",
+  "privacy.why.text": "JobLens utilise tes données uniquement pour te donner ce que tu as demandé : comparer ton CV aux offres (RGPD, article 6, paragraphe 1, point b)."
 }

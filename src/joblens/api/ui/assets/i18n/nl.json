@@ -285,5 +285,30 @@
   "settings.deleteConfirm": "Ik begrijp dat dit niet ongedaan kan worden",
   "settings.deleteButton": "Alles verwijderen",
 
-  "prefs.distanceHint": "Iets verder past nog: een kwart meer, minstens 5 km."
+  "prefs.distanceHint": "Iets verder past nog: een kwart meer, minstens 5 km.",
+
+  "privacy.link": "Privacy",
+  "settings.privacyLink": "Hoe JobLens met je gegevens omgaat",
+  "privacy.title": "Privacy",
+  "privacy.intro": "JobLens is een kleine dienst, alleen op uitnodiging. Hier staat wat JobLens over je bewaart, waar dat heen gaat, hoe lang, en hoe je het meeneemt of verwijdert.",
+  "privacy.unset": "(nog niet ingevuld)",
+  "privacy.who.title": "Wie is verantwoordelijk",
+  "privacy.who.text": "{operator} beheert JobLens en bepaalt wat er met je gegevens gebeurt. Voor vragen of verzoeken: {contact}.",
+  "privacy.what.title": "Wat JobLens bewaart",
+  "privacy.what.account": "Je account: je e-mailadres, de naam en taal die je koos, en of je tester bent. Inloglinks en inlogsessies worden alleen als vingerafdruk bewaard, nooit zoals ze zijn.",
+  "privacy.what.cv": "Je cv: het bestand dat je uploadt, wordt 30 dagen bewaard en daarna verwijderd. Wat blijft, is de tekst zonder je contactgegevens (e-mail, telefoon, adres, postcode, geboortedatum, links en id-nummers, en je naam als je die opgeeft), en wat een model eruit haalde.",
+  "privacy.what.answers": "Wat je zoekt: je antwoorden, precies zoals je ze gaf.",
+  "privacy.what.matches": "Je matches en markeringen: welke vacatures met je cv vergeleken zijn, wat het model erover zei, en elke markering met de reden die je typte.",
+  "privacy.what.usage": "Gebruik: welke betaalde modelaanroepen je veroorzaakte en wat ze kostten, zodat een gratis tegoed bijgehouden kan worden.",
+  "privacy.what.key": "Je eigen API-sleutel, als je die toevoegt: versleuteld opgeslagen, nooit meer getoond en nooit in een download.",
+  "privacy.where.title": "Waar het heen gaat",
+  "privacy.where.model": "Om je cv te lezen en vacatures te beoordelen, gaat de tekst, zonder je contactgegevens, naar een AI-model: Google Gemini, op een betaald account, waarmee Google zijn producten niet verbetert. Voeg je je eigen sleutel toe, dan gaan lezen en beoordelen naar de aanbieder die je koos; het omzetten van je cv naar een zoekvector gebeurt altijd met Gemini, zodat het met de vacatures te vergelijken is.",
+  "privacy.where.storage": "Alles wordt opgeslagen in een database bij Neon in Frankfurt (EU), en JobLens draait op Google Cloud in Nederland.",
+  "privacy.where.nothing": "Geen advertenties, geen statistieken, geen trackers. JobLens zet één cookie, om je ingelogd te houden, en laadt zijn lettertypen en scripts van zichzelf.",
+  "privacy.long.title": "Hoe lang",
+  "privacy.long.text": "Het geüploade bestand: 30 dagen. Een inloglink: 7 dagen. Een inlogsessie: 30 dagen. Al het andere: tot je je account verwijdert.",
+  "privacy.rights.title": "Je rechten",
+  "privacy.rights.text": "In Instellingen download je alles wat JobLens over je bewaart als één bestand, en verwijder je je account met alles erin, in één keer. Voor al het andere schrijf je naar {contact}. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens.",
+  "privacy.why.title": "Waarom",
+  "privacy.why.text": "JobLens gebruikt je gegevens alleen om je te geven waar je om vroeg: je cv met vacatures vergelijken (AVG, artikel 6 lid 1 onder b)."
 }

@@ -73,6 +73,11 @@ conceptually, not just have working code.
   .env out of the image; keep it that way. On Cloud Run it needs
   --no-cpu-throttling (matches run after their request answers) and
   --max-instances 1 (a starting server marks open matches interrupted).
+  The privacy page (7.8.3, /privacy, privacy.* keys) states what the code
+  does: what is kept, where it goes, retention (file 30 days, link 7, session
+  30), rights. Change it in the same commit as any change to those facts. A
+  hosted server purges expired files, links and sessions by itself
+  (AppConfig.purge_every); JOBLENS_OPERATOR and JOBLENS_CONTACT name who runs it.
   Tests use the joblens_test
   database, rebuilt from this checkout's migrations at the start of every run
   (worktrees on different branches share it), and skip without Docker.

@@ -3601,3 +3601,47 @@ project.
 
 No new tests: the container is checked by running it (above), and the code
 it runs is the tested code. 928 in all. No new dependency.
+
+## 7.8.3 — The privacy page, and the promise it makes kept by the server
+
+**A privacy page may only say what the code does.** So every sentence on
+`/privacy` was written from the code, not from what such pages usually say:
+- **What is kept:** account, the redacted CV and its profile, the answers,
+  matches and marks, usage, an own key encrypted;
+- **Where it goes:** Gemini on a paid account; a person's own provider for
+  reading and judging; Neon in Frankfurt; Cloud Run in the Netherlands;
+- **For how long:** the file 30 days, a link 7, a sign-in 30, the rest until
+  the account is deleted;
+- **The rights built:** download and delete, both in Settings.
+
+In five languages, public (signed in or not), linked from the login page and
+from Settings.
+
+**One sentence was nearly wrong.** A first draft said that with your own key
+your CV text goes "to the provider you chose instead". The code says
+otherwise: reading and judging go to your provider, but turning the CV into a
+search vector always uses JobLens's Gemini key, because a CV can only be
+compared with vacancies embedded by the same model (7.1). The page says
+exactly that.
+
+**"Deleted after 30 days" had to become true.** It was only true if someone
+ran `db.py purge-files` by hand. `AppConfig.purge_every` now makes a server
+delete expired upload files, links and sessions at start and then at that
+interval, in a background thread. A failed purge is logged and tried again
+next time. The hosted start sets 6 hours. With Cloud Run scaling to zero, a
+server also starts at least whenever someone comes back. A test backdates a
+file and a session, starts the app, and finds both gone, with the CV's text
+still there. Without `purge_every`, nothing moves.
+
+**Two facts only the operator can give.** Who runs this JobLens, and how to
+reach them, are the settings JOBLENS_OPERATOR and JOBLENS_CONTACT. They are
+served by a public `/api/privacy` and put into the page as text. Until they
+are set, the page says "(not filled in yet)", and the hosted server warns at
+every start.
+
+This is a careful draft from the code, not legal advice. The legal basis
+named (GDPR 6(1)(b): providing the service asked for) is the obvious one for
+an invite-only service, and worth one look by someone who does this for a
+living before strangers are invited.
+
+3 new tests; 931 in all. No new dependency.
