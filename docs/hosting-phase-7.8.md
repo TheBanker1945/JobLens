@@ -96,6 +96,14 @@ changes one setting (the allowed host), not the code.
   shared table, a foreign host is refused, and on a public host name the
   session cookie is Secure. The trial account was deleted afterwards.
 
+- **7.8.3, the privacy page**: `/privacy` in five languages, written from what
+  the code does, linked from the login page and settings. The two facts only
+  Mahdi can give are settings: JOBLENS_OPERATOR (who runs it) and
+  JOBLENS_CONTACT (how to reach them); the hosted server warns at start while
+  they are missing. A hosted server now purges expired upload files, links and
+  sessions by itself (at start, then every 6 hours), so "deleted after 30
+  days" is true without anyone running `db.py purge-files`.
+
 ## Deploying to Cloud Run (needs Mahdi's Google Cloud project)
 
 What the container needs from Cloud Run, learned from the local trial:
@@ -123,7 +131,8 @@ gcloud run deploy joblens --source . --region europe-west4 \
   --set-env-vars CV_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai,EMBED_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai \
   --set-secrets DATABASE_URL=joblens-database-url:latest \
   --set-secrets CV_API_KEY=gemini-api-key:latest,EMBED_API_KEY=gemini-api-key:latest \
-  --set-secrets JOBLENS_SECRET_KEY=joblens-secret-key:latest
+  --set-secrets JOBLENS_SECRET_KEY=joblens-secret-key:latest \
+  --set-env-vars "JOBLENS_OPERATOR=YOUR NAME,JOBLENS_CONTACT=YOUR ADDRESS"
 ```
 
 "--allow-unauthenticated" lets the internet reach the login page; JobLens
