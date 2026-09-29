@@ -41,7 +41,10 @@ COPY scripts/nightly.py scripts/fetch_vacancies.py scripts/index_vacancies.py \
 RUN uv sync --frozen --no-dev --group scrape \
     && mkdir -p /app/data/raw /app/data/cache && chown -R joblens /app/data
 USER joblens
-CMD ["/app/.venv/bin/python", "scripts/nightly.py"]
+# ENTRYPOINT, not CMD: a Cloud Run job's --args replace the CMD, so with a CMD
+# `gcloud run jobs execute --args=--force` ran "--force" as the program. With
+# the script as the entrypoint, arguments are appended to it.
+ENTRYPOINT ["/app/.venv/bin/python", "scripts/nightly.py"]
 
 
 FROM base AS app
