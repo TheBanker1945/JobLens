@@ -53,6 +53,10 @@ from joblens.storage.migrate import Migration, migrate
 # session lasts a month, then the person asks for a new link.
 LOGIN_LINK_VALID = timedelta(days=7)
 SESSION_VALID = timedelta(days=30)
+# One nightly run at a time (7.8.5): Cloud Scheduler delivers at least once,
+# and was seen delivering one start twice, 30 seconds apart. Beside
+# migrate.LOCK (70_200_001) and the tests' (70_200_002).
+NIGHTLY_LOCK = 70_200_003
 
 
 class Database:
@@ -266,6 +270,22 @@ class Database:
                 (Jsonb({"enabled": enabled}),),
             ).fetchone()
         return row["updated_at"]
+
+    @contextmanager
+    def nightly_lock(self) -> Iterator[bool]:
+        """Hold the one-run-at-a-time lock while the block runs. Yields False,
+        without waiting, when another run holds it. On a connection of its
+        own, so it lasts the whole run -- and goes when the process does, so
+        a run that crashed blocks nobody."""
+        with psycopg.connect(self.url, autocommit=True) as conn:
+            got = conn.execute(
+                "SELECT pg_try_advisory_lock(%s)", (NIGHTLY_LOCK,)
+            ).fetchone()[0]
+            try:
+                yield got
+            finally:
+                if got:
+                    conn.execute("SELECT pg_advisory_unlock(%s)", (NIGHTLY_LOCK,))
 
     def nightly_switched_at(self) -> datetime | None:
         with self.connect() as conn:
