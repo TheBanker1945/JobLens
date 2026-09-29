@@ -128,6 +128,13 @@ changes one setting (the allowed host), not the code.
   Amsterdam time as `joblens-scheduler`, which may start this job and nothing
   else. The live app reloads a new publish within 15 minutes.
 
+**A run by hand**, e.g. while the switch is off, or to finish a night whose
+fetch went fine (index and publish only):
+`gcloud run jobs execute joblens-nightly --region europe-west4 --args=--force`
+and `--args=--force,--no-fetch`. The script is the image's ENTRYPOINT, so
+`--args` are appended to it; with a CMD they replaced it (the first recovery
+attempt ran "--force" as a program).
+
 **Rebuilding the nightly image** after a change to the fetch:
 `gcloud builds submit --config cloudbuild.nightly.yaml`, then
 `gcloud run jobs update joblens-nightly --region europe-west4 --image ...`
