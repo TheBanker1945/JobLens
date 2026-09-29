@@ -42,7 +42,7 @@ ROOT = Path(__file__).parent.parent
 PYTHON = sys.executable
 STEPS = (
     ("fetch", [PYTHON, "scripts/fetch_vacancies.py"]),
-    ("index", [PYTHON, "scripts/index_vacancies.py"]),
+    ("index", [PYTHON, "scripts/index_vacancies.py", "--open-only"]),
     ("publish", [PYTHON, "scripts/publish_corpus.py", "--to", "DATABASE_URL"]),
 )
 

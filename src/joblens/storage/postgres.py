@@ -62,7 +62,14 @@ NIGHTLY_LOCK = 70_200_003
 class Database:
     def __init__(self, url: str, *, pool_size: int = 0):
         """`pool_size` > 0 keeps that many connections open (the web server,
-        7.4): opening one to Neon costs a TLS handshake, every request."""
+        7.4): opening one to Neon costs a TLS handshake, every request.
+
+        Neon's free plan suspends the database after about five idle minutes
+        and cuts every connection ("terminating connection due to
+        administrator command", seen 2026-09-29 on the hosted app). So a
+        connection is checked before it is handed out, and one idle for four
+        minutes is closed before Neon does it: the first request after a
+        quiet spell gets a live connection, not an error."""
         self.url = url
         self._pool = (
             ConnectionPool(
@@ -70,6 +77,8 @@ class Database:
                 min_size=1,
                 max_size=pool_size,
                 kwargs={"autocommit": True, "row_factory": dict_row},
+                check=ConnectionPool.check_connection,
+                max_idle=240,
                 open=True,
             )
             if pool_size
