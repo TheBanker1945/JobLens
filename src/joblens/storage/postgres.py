@@ -247,6 +247,33 @@ class Database:
                 "DELETE FROM sessions WHERE token_hash = %s", (_hash(session),)
             )
 
+    def nightly_enabled(self) -> bool:
+        """Whether the nightly job fetches vacancies (7.8.5). Off until the
+        owner switches it on in settings: a missing row is off."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM app_settings WHERE key = 'nightly_fetch'"
+            ).fetchone()
+        return bool(row and row["value"].get("enabled"))
+
+    def set_nightly(self, enabled: bool) -> datetime:
+        """Switch the nightly fetch on or off; returns when it was switched."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "INSERT INTO app_settings (key, value) VALUES ('nightly_fetch', %s) "
+                "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, "
+                "updated_at = now() RETURNING updated_at",
+                (Jsonb({"enabled": enabled}),),
+            ).fetchone()
+        return row["updated_at"]
+
+    def nightly_switched_at(self) -> datetime | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT updated_at FROM app_settings WHERE key = 'nightly_fetch'"
+            ).fetchone()
+        return row["updated_at"] if row else None
+
     def purge_expired_logins(self) -> int:
         """Sessions and links past their date; `db.py purge-files` runs it."""
         with self.connect() as conn:

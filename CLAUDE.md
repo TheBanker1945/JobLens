@@ -310,8 +310,24 @@ conceptually, not just have working code.
   its own board closed. Matching and search use `load_corpus(open_only=True)`;
   the evals keep the default (everything), so a closed labelled vacancy cannot
   move their scores.
-- Scraping never runs while someone is using JobLens: scripts/daily_update.sh
-  fetches on a schedule, and search only reads what is already stored.
+- Scraping never runs while someone is using JobLens: it runs on a schedule,
+  and search only reads what is already stored. Since 7.8.5 that schedule is
+  in the cloud, not on a laptop (Mahdi: "everything should be cloud based",
+  JobSpy/Indeed included, tried from a datacenter): Cloud Run job
+  `joblens-nightly` (scripts/nightly.py, the Dockerfile's `nightly` stage)
+  started by Cloud Scheduler at 03:00 Europe/Amsterdam, fetch -> index ->
+  publish to Neon. Its disk is the bucket `joblens-state-883656455192`
+  (europe-west4, versioned 30 days): vacancy state only, by the allow-list in
+  src/joblens/cloud/state.py -- a CV, label or run never goes there. The job
+  is never retried automatically (a retry would ask every site again). It
+  fetches only while the owner's switch is on (settings page, app_settings
+  'nightly_fetch', default OFF, Mahdi 2026-09-29); --force overrides it for a
+  run by hand, --no-fetch only indexes and publishes. The embedding client
+  waits out a 429 (a minute, up to five times): per-minute quotas count every
+  text in a batch. The
+  live app takes up a new publish within 15 minutes, without a restart.
+  daily_update.sh stays for a run by hand on a laptop; the bucket, not
+  data/raw/, is now the vacancies' source of truth.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source
   looks broken, throttled, refused, or suspiciously empty.
 

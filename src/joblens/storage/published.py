@@ -130,6 +130,15 @@ def published_model(database: Database) -> str | None:
     return row["model"] if row else None
 
 
+def published_summary(database: Database) -> tuple[datetime, int] | None:
+    """When the last set was published, and how many vacancies it held."""
+    with database.connect() as conn:
+        row = conn.execute(
+            "SELECT published_at, vacancies FROM corpus_published"
+        ).fetchone()
+    return (row["published_at"], row["vacancies"]) if row else None
+
+
 def published_at(database: Database) -> datetime | None:
     """When the set was last published: a server reloads when this moves."""
     with database.connect() as conn:

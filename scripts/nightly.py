@@ -1,6 +1,8 @@
 """The nightly update in the cloud (7.8.5): fetch, index, publish, as a Cloud Run job.
 
-    python scripts/nightly.py   # in the nightly image; Cloud Scheduler starts it
+    python scripts/nightly.py           # Cloud Scheduler, every night at 03:00
+    python scripts/nightly.py --force   # a run by hand, even while switched off
+    python scripts/nightly.py --force --no-fetch   # finish a night: index, publish
 
 daily_update.sh on a laptop, moved to where it runs every night whether a
 laptop is on or not (Mahdi, 2026-09-29: "everything should be cloud based",
@@ -51,6 +53,14 @@ def main() -> int:
     if not bucket:
         print("JOBLENS_STATE_BUCKET is not set: the bucket holding the vacancy state.")
         return 1
+    database = Database.from_env()
+    # The owner's switch in settings (7.8.5), off by default: Cloud Scheduler
+    # starts this every night, and it asks no site at all while the switch is
+    # off. --force runs it anyway, for a run started by hand.
+    if "--force" not in sys.argv and not database.nightly_enabled():
+        print("The nightly update is switched off (settings, owner): nothing fetched.")
+        database.close()
+        return 0
     raw = ROOT / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
@@ -59,7 +69,6 @@ def main() -> int:
             bucket, raw, token=lambda: metadata_token(client), client=client
         )
         print(f"state: {state.download()} files from gs://{bucket}")
-        database = Database.from_env()
         model = os.environ.get("EMBED_MODEL", "")
         cache = SQLiteVectors(cache_path(ROOT / "data" / "cache", model))
         print(f"cache: {published.seed(cache, database, model)} published vectors")
@@ -67,8 +76,13 @@ def main() -> int:
         database.close()
 
         failed = []
+        # --no-fetch: only index and publish, to finish a night whose fetch
+        # went fine without asking every site a second time the same day.
+        steps = [
+            step for step in STEPS if step[0] != "fetch" or "--no-fetch" not in sys.argv
+        ]
         try:
-            for name, command in STEPS:
+            for name, command in steps:
                 print(f"=== {name} ===")
                 if subprocess.run(command, cwd=ROOT).returncode:
                     failed.append(name)

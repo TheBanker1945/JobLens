@@ -87,7 +87,7 @@ from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.marks import MarkRefused, NotInRun, mark
 from joblens.service.matching import ChatFactory, EmbedFactory, VectorsFactory
-from joblens.storage import Database, Job, PostgresStore, RunSummary, User
+from joblens.storage import Database, Job, PostgresStore, RunSummary, User, published
 from joblens.storage.postgres import SESSION_VALID
 from joblens.vault import Vault, VaultError
 from joblens.web import api as viewer
@@ -170,6 +170,19 @@ class AboutMe(BaseModel):
     onboarded: Literal[True] | None = Field(
         None, description="the guide is done, or skipped: do not show it again"
     )
+
+
+class NightlySwitch(BaseModel):
+    enabled: bool = Field(description="fetch new vacancies every night (03:00)")
+
+
+class Nightly(BaseModel):
+    """The nightly update as the owner's settings card shows it (7.8.5)."""
+
+    enabled: bool
+    switched_at: datetime | None  # when the switch was last flipped
+    published_at: datetime | None  # when the last set of vacancies arrived
+    vacancies: int | None  # how many it held
 
 
 class Goodbye(BaseModel):
@@ -681,6 +694,36 @@ def create_app(config: AppConfig) -> FastAPI:
     def forget_key(store: Mine) -> None:
         """Go back to JobLens's model (with a monthly allowance for testers)."""
         store.delete_provider_key()
+
+    # -- the owner's switches (7.8.5) -------------------------------------------
+
+    def owner_only(user: User) -> None:
+        if not user.is_owner:
+            raise HTTPException(403, "Only the owner of this JobLens can change this.")
+
+    def nightly_state() -> Nightly:
+        summary = published.published_summary(config.database)
+        return Nightly(
+            enabled=config.database.nightly_enabled(),
+            switched_at=config.database.nightly_switched_at(),
+            published_at=summary[0] if summary else None,
+            vacancies=summary[1] if summary else None,
+        )
+
+    @app.get("/api/admin/nightly")
+    def nightly(user: Me) -> Nightly:
+        """Whether the nightly job fetches new vacancies, and the last update."""
+        owner_only(user)
+        return nightly_state()
+
+    @app.put("/api/admin/nightly")
+    def switch_nightly(user: Me, given: NightlySwitch) -> Nightly:
+        """Switch the nightly fetch on or off. Off: the job starts at 03:00,
+        sees this, and stops without asking any site; a run already going
+        finishes."""
+        owner_only(user)
+        config.database.set_nightly(given.enabled)
+        return nightly_state()
 
     @app.get("/api/usage")
     def my_usage(user: Me, store: Mine) -> budget.Usage:

@@ -310,5 +310,12 @@
   "privacy.rights.title": "Tus derechos",
   "privacy.rights.text": "En Ajustes puedes descargar todo lo que JobLens guarda sobre ti en un solo archivo, y borrar tu cuenta con todo lo que contiene, de una vez. Para lo demás, escribe a {contact}. También puedes reclamar ante la autoridad neerlandesa de protección de datos, la Autoriteit Persoonsgegevens.",
   "privacy.why.title": "Por qué",
-  "privacy.why.text": "JobLens usa tus datos solo para darte lo que pediste: comparar tu CV con vacantes (RGPD, artículo 6, apartado 1, letra b)."
+  "privacy.why.text": "JobLens usa tus datos solo para darte lo que pediste: comparar tu CV con vacantes (RGPD, artículo 6, apartado 1, letra b).",
+
+  "settings.owner": "Para ti, el propietario",
+  "settings.nightly": "Actualización nocturna de vacantes",
+  "settings.nightlyHint": "Si está activado, JobLens trae cada noche a las 03:00 (hora neerlandesa) vacantes nuevas de todas las fuentes, Indeed incluido, y las hace buscables. Si está desactivado, no se trae nada y las vacantes que ya hay se quedan. Una actualización que ya ha empezado termina en ambos casos.",
+  "settings.nightlyOn": "Traer vacantes nuevas cada noche",
+  "settings.nightlyLast": "Última actualización: {date}, {count} vacantes.",
+  "settings.nightlyNever": "Todavía no ha llegado ninguna actualización."
 }

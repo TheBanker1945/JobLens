@@ -32,6 +32,7 @@ try {
     byId("delete").disabled = !byId("delete-sure").checked;
   });
   byId("delete").addEventListener("click", deleteEverything);
+  if (me.role === "owner") await showNightly();
   providers = await api("/api/ai/providers");
   fillProviders();
   byId("provider").addEventListener("change", () => providerChanged());
@@ -196,6 +197,36 @@ async function forgetKey() {
   } catch (error) {
     say(errorText(error));
   }
+}
+
+// -- the owner's switch (7.8.5) -------------------------------------------------
+
+async function showNightly() {
+  const box = byId("nightly");
+  const draw = (state) => {
+    box.checked = state.enabled;
+    byId("nightly-state").textContent = state.published_at
+      ? t("settings.nightlyLast", {
+          date: formatDate(state.published_at, {
+            day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+          }),
+          count: formatNumber(state.vacancies),
+        })
+      : t("settings.nightlyNever");
+  };
+  draw(await api("/api/admin/nightly"));
+  box.addEventListener("change", async () => {
+    box.disabled = true;
+    try {
+      draw(await api("/api/admin/nightly", { method: "PUT", json: { enabled: box.checked } }));
+    } catch (error) {
+      box.checked = !box.checked;
+      say(errorText(error));
+    } finally {
+      box.disabled = false;
+    }
+  });
+  show(byId("owner"));
 }
 
 // -- your data ------------------------------------------------------------------
