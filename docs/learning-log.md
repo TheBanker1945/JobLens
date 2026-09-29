@@ -3465,3 +3465,77 @@ example.
 Checked with real distances from Leiden and a 40 km limit: Utrecht (42 km)
 and Houten (48 km) fit now, Purmerend (51 km) is just past the margin, Almere
 (56 km) well past. 1 new test; 924 in all.
+
+## 7.8.1 — The vacancies in Postgres, so a server needs no disk
+
+Hosting starts here (docs/hosting-phase-7.8.md; Mahdi chose the
+recommendations on 2026-09-29). A server on this machine reads what it ranks
+from data/raw and the vectors from data/cache. A container on Cloud Run has
+no lasting disk, so both now live in Postgres as well.
+
+**First, Neon itself.** The project Mahdi created is the direct connection
+(not the pooled one), in Frankfurt, Postgres 18.6, with pgvector 0.8.6
+available, about 17 ms per round trip from here. The migrations ran first in a
+throwaway schema, which was dropped afterwards, and only then for real. The
+local Docker database is Postgres 17, so the whole test suite also ran once
+against a temporary `joblens_test` database on Neon: 924 passed, in 3 minutes
+instead of 18 seconds, because every query now crosses the internet.
+
+**What moved** (migration 0006, storage/published.py):
+- `vacancies`: one row per vacancy a match may rank, with its extraction and
+  its position;
+- `vacancy_vectors`: one float32 vector per document, under the same key the
+  local cache uses (sha256 of the model and the exact text);
+- `corpus_published`: when, and what the funnel dropped on the way.
+
+These are public adverts: no user_id, and nothing a person owns.
+
+**Published exactly as a server would load it.** `publish_corpus.py` takes
+`load_corpus("raw", open_only=True).extracted()` and the vector of each
+vacancy's document from the local cache. It replaces the old set in one
+transaction, so a server starting halfway through sees the old set or the new
+one. The measured run:
+- 1,166 vacancies, 1,160 vectors (six adverts write identical documents, and
+  share one);
+- 0 model calls;
+- 3 seconds into Neon.
+
+`daily_update.sh` now publishes after fetch and index whenever `.env` names
+`NEON_DATABASE_URL`. Until the fetch moves to the cloud, the hosted vacancies
+are exactly as fresh as the local ones.
+
+**The order is part of the data.** Two vacancies can tie on score, and then
+their order in the corpus decides. So `vacancies.position` keeps the file
+corpus's order, and `load` reads it back in that order.
+
+**One seam in the embedding cache.** `CachedEmbedder` kept its vectors in a
+SQLite file; it now takes any `VectorStore`, with the SQLite file as the
+default, so every script and eval works as before. A server with
+`--corpus db` passes `LayeredVectors`:
+- the published vectors, read once at start and held as bytes (about 14 MB);
+- underneath, a local file for everything else.
+
+**A CV's vectors never go to the shared table.** Anything new a match embeds
+(a CV's queries, its wishlist) goes into that local file. The shared table
+has no user_id, so a vector derived from someone's CV kept there would
+survive the deletion of their account. The table is read-only to a match:
+`PublishedVectors.store` raises.
+
+**Rejected: pgvector.** It is available on Neon, but ranking happens in Python:
+two queries fused by position, and a cap per employer. Holding 1,200 vectors
+in memory is trivial, so the extension would be a moving part with nothing to
+do yet. Vectors stay bytes, as in the local cache.
+
+**Checked on the real corpus, not only the test one.** Lisa's CV, ranked
+twice:
+- from the files: 1,166 ranked in 2.1 s;
+- from Neon: loaded in 2.7 s once, then ranked in 3.2 s. The difference is
+  the two query vectors embedded fresh, because a server's local cache starts
+  empty.
+
+The same order and the same scores for all 1,166, the same shortlist, and the
+two new vectors in the local file, not in Neon. The test suite holds the same
+on the test corpus, and a server refuses to start when the published vectors
+are another model's (`api.py`: one vector space).
+
+4 new tests; 928 in all. No new dependency.

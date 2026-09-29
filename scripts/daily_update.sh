@@ -26,6 +26,16 @@ status=0
     uv run python scripts/index_vacancies.py
 } >>"$log" 2>&1 || status=1
 
+# The hosted app reads the vacancies from its database (7.8.1): publish them
+# there after every update, when .env names one. Until the fetch itself moves
+# to the cloud, this is how the hosted vacancies stay as fresh as these.
+if grep -q '^NEON_DATABASE_URL=' .env 2>/dev/null; then
+    {
+        echo "=== publish $(date --iso-8601=seconds) ==="
+        uv run python scripts/publish_corpus.py --to NEON_DATABASE_URL
+    } >>"$log" 2>&1 || status=1
+fi
+
 if [ "$status" -ne 0 ]; then
     echo "JobLens update had a problem. Last lines of $log:"
     tail -n 25 "$log"

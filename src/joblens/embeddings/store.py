@@ -22,6 +22,10 @@ change no ranking, and storing them as text was the 200 MB.
 
 A cache written by the old version sits next to the new one as a `.json` file
 and is imported once, the first time the new one is opened empty.
+
+**Where the vectors are kept is a `VectorStore`** (7.8.1): the SQLite file
+here by default, or, on a hosted server, the vacancies' vectors in Postgres
+with a local file under them for everything else (storage/vectors.py).
 """
 
 import hashlib
@@ -29,6 +33,7 @@ import json
 import sqlite3
 from array import array
 from pathlib import Path
+from typing import Protocol
 
 from joblens.embeddings.client import DEFAULT_TASK, EmbeddingClient, Vector
 
@@ -42,24 +47,81 @@ def cache_path(cache_dir: Path, model: str) -> Path:
     return cache_dir / f"embeddings-{model.replace(':', '-')}.sqlite"
 
 
-class CachedEmbedder:
-    """Wraps an EmbeddingClient; only texts that are not cached hit the API."""
+def vector_key(model: str, text: str) -> str:
+    """The key a vector is kept under: the model and the exact text it read.
+    The same everywhere -- a laptop's cache and the database share keys."""
+    return hashlib.sha256(f"{model}\0{text}".encode()).hexdigest()
 
-    def __init__(self, client: EmbeddingClient, path: Path):
-        self.client = client
+
+class VectorStore(Protocol):
+    """Where a CachedEmbedder keeps vectors, by key."""
+
+    def load(self, keys: list[str]) -> dict[str, Vector]: ...
+
+    def store(self, vectors: dict[str, Vector]) -> None: ...
+
+    def count(self) -> int: ...
+
+    def close(self) -> None: ...
+
+
+class SQLiteVectors:
+    """One model's vectors in one local file (the default since 2026-09-22)."""
+
+    def __init__(self, path: Path):
         self.path = path
-        self.hits = 0
-        self.misses = 0
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(path)
+        self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS vectors (key TEXT PRIMARY KEY, vector BLOB)"
         )
         self._import_legacy_json(path.with_suffix(".json"))
 
+    def load(self, keys: list[str]) -> dict[str, Vector]:
+        unique = list(dict.fromkeys(keys))
+        found: dict[str, Vector] = {}
+        for start in range(0, len(unique), KEYS_PER_QUERY):
+            batch = unique[start : start + KEYS_PER_QUERY]
+            marks = ",".join("?" * len(batch))
+            rows = self._db.execute(
+                f"SELECT key, vector FROM vectors WHERE key IN ({marks})", batch
+            )
+            found |= {key: unpack(blob) for key, blob in rows}
+        return found
+
+    def store(self, vectors: dict[str, Vector]) -> None:
+        with self._db:  # one transaction: all of these land, or none of them
+            self._db.executemany(
+                "INSERT OR REPLACE INTO vectors (key, vector) VALUES (?, ?)",
+                [(key, pack(vector)) for key, vector in vectors.items()],
+            )
+
+    def count(self) -> int:
+        return self._db.execute("SELECT COUNT(*) FROM vectors").fetchone()[0]
+
+    def close(self) -> None:
+        self._db.close()
+
+    def _import_legacy_json(self, legacy: Path) -> None:
+        """Carry a cache from before 2026-09-22 over, once. The file is left be."""
+        if not legacy.exists() or self.count():
+            return
+        vectors = json.loads(legacy.read_text(encoding="utf-8"))
+        self.store(vectors)
+
+
+class CachedEmbedder:
+    """Wraps an EmbeddingClient; only texts that are not cached hit the API."""
+
+    def __init__(self, client: EmbeddingClient, where: Path | VectorStore):
+        self.client = client
+        self.vectors = SQLiteVectors(where) if isinstance(where, Path) else where
+        self.hits = 0
+        self.misses = 0
+
     def embed_documents(self, texts: list[str]) -> list[Vector]:
         keys = [self._key(text) for text in texts]
-        found = self._load(keys)
+        found = self.vectors.load(keys)
         missing = [t for t in dict.fromkeys(texts) if self._key(t) not in found]
         self.hits += len(texts) - len(missing)
         self.misses += len(missing)
@@ -69,8 +131,8 @@ class CachedEmbedder:
                 self._key(text): vector
                 for text, vector in zip(missing, vectors, strict=True)
             }
-            self._store(fresh)
-            found |= {key: _unpack(_pack(vector)) for key, vector in fresh.items()}
+            self.vectors.store(fresh)
+            found |= {key: unpack(pack(vector)) for key, vector in fresh.items()}
         return [found[key] for key in keys]
 
     def embed_query(self, query: str, task: str = DEFAULT_TASK) -> Vector:
@@ -79,53 +141,23 @@ class CachedEmbedder:
 
     def is_cached(self, text: str) -> bool:
         """Whether this text already has a vector, without asking the server."""
-        row = self._db.execute(
-            "SELECT 1 FROM vectors WHERE key = ?", (self._key(text),)
-        ).fetchone()
-        return row is not None
+        return bool(self.vectors.load([self._key(text)]))
 
     def __len__(self) -> int:
-        return self._db.execute("SELECT COUNT(*) FROM vectors").fetchone()[0]
+        return self.vectors.count()
 
     def close(self) -> None:
-        self._db.close()
-
-    def _load(self, keys: list[str]) -> dict[str, Vector]:
-        unique = list(dict.fromkeys(keys))
-        found: dict[str, Vector] = {}
-        for start in range(0, len(unique), KEYS_PER_QUERY):
-            batch = unique[start : start + KEYS_PER_QUERY]
-            marks = ",".join("?" * len(batch))
-            rows = self._db.execute(
-                f"SELECT key, vector FROM vectors WHERE key IN ({marks})", batch
-            )
-            found |= {key: _unpack(blob) for key, blob in rows}
-        return found
-
-    def _store(self, vectors: dict[str, Vector]) -> None:
-        with self._db:  # one transaction: all of these land, or none of them
-            self._db.executemany(
-                "INSERT OR REPLACE INTO vectors (key, vector) VALUES (?, ?)",
-                [(key, _pack(vector)) for key, vector in vectors.items()],
-            )
-
-    def _import_legacy_json(self, legacy: Path) -> None:
-        """Carry a cache from before 2026-09-22 over, once. The file is left be."""
-        if not legacy.exists() or len(self):
-            return
-        vectors = json.loads(legacy.read_text(encoding="utf-8"))
-        self._store(vectors)
+        self.vectors.close()
 
     def _key(self, text: str) -> str:
-        fingerprint = f"{self.client.settings.model}\0{text}".encode()
-        return hashlib.sha256(fingerprint).hexdigest()
+        return vector_key(self.client.settings.model, text)
 
 
-def _pack(vector: Vector) -> bytes:
+def pack(vector: Vector) -> bytes:
     return array("f", vector).tobytes()
 
 
-def _unpack(blob: bytes) -> Vector:
+def unpack(blob: bytes) -> Vector:
     numbers = array("f")
     numbers.frombytes(blob)
     return numbers.tolist()

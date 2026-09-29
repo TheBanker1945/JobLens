@@ -29,9 +29,10 @@ from dotenv import load_dotenv
 from joblens.api import AppConfig, create_app
 from joblens.config import load_llm_settings
 from joblens.corpus import NAMES, load_corpus
+from joblens.embeddings.store import SQLiteVectors, cache_path
 from joblens.service import Models
 from joblens.service.budget import Budgets
-from joblens.storage import Database
+from joblens.storage import Database, published
 from joblens.vault import Vault
 
 ROOT = Path(__file__).parent.parent
@@ -40,7 +41,12 @@ ROOT = Path(__file__).parent.parent
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--port", type=int, default=8001)
-    parser.add_argument("--corpus", choices=NAMES, default="raw")
+    parser.add_argument(
+        "--corpus",
+        choices=(*NAMES, "db"),
+        default="raw",
+        help="db: the vacancies published into the database (publish_corpus.py)",
+    )
     parser.add_argument("--link", metavar="EMAIL", help="print a login link for them")
     args = parser.parse_args()
     # A line at a time, even into a file or a process manager: the login link
@@ -68,17 +74,43 @@ def main() -> int:
         token = database.create_login_link(user.id)
         print(f"login link for {user.email}:\n  {base}/login#{token}")
 
-    # Open vacancies only, as match_cv.py: a job taken down is not a match.
-    corpus = load_corpus(args.corpus, open_only=True).extracted()
+    models = Models(
+        cv=load_llm_settings(prefix="CV"), embed=load_llm_settings(prefix="EMBED")
+    )
+    cache_dir = ROOT / "data" / "cache"
+    vectors = None
+    if args.corpus == "db":
+        # What publish_corpus.py put in the database (7.8.1): the same open,
+        # extracted vacancies, with their vectors; the CV's own vectors go to
+        # the local cache only (storage/published.py says why).
+        corpus = published.load(database)
+        if corpus is None:
+            print("Nothing is published in this database: run publish_corpus.py")
+            return 1
+        model = published.published_model(database)
+        if model != models.embed.model:
+            print(
+                f"The published vectors are {model}'s and EMBED_MODEL is "
+                f"{models.embed.model}: one vector space only. Publish again."
+            )
+            return 1
+        shared = published.published_vectors(database, model)
+
+        def vectors(model: str) -> published.LayeredVectors:
+            return published.LayeredVectors(
+                shared, SQLiteVectors(cache_path(cache_dir, model))
+            )
+
+    else:
+        # Open vacancies only, as match_cv.py: a job taken down is not a match.
+        corpus = load_corpus(args.corpus, open_only=True).extracted()
     app = create_app(
         AppConfig(
             database=database,
             corpus=corpus,
-            models=Models(
-                cv=load_llm_settings(prefix="CV"),
-                embed=load_llm_settings(prefix="EMBED"),
-            ),
-            cache_dir=ROOT / "data" / "cache",
+            models=models,
+            vectors=vectors,
+            cache_dir=cache_dir,
             secure_cookies=False,  # plain http on this machine only
             vault=Vault.from_env(),  # None: own keys off (JOBLENS_SECRET_KEY)
             budgets=Budgets.from_env(),
