@@ -102,6 +102,19 @@ def test_an_email_is_one_account_however_it_is_capitalised(database):
         database.create_user(email="mahdi@example.test")
 
 
+def test_the_guide_is_marked_done_once_and_other_changes_leave_it(database):
+    made = database.create_user(email="new@example.test")
+    assert made.onboarded_at is None
+
+    done = database.update_user(made.id, onboarded=True)
+    again = database.update_user(made.id, onboarded=True)
+    renamed = database.update_user(made.id, locale="en")
+
+    assert done.onboarded_at is not None
+    assert again.onboarded_at == done.onboarded_at  # the first time is kept
+    assert renamed.onboarded_at == done.onboarded_at and renamed.locale == "en"
+
+
 @pytest.mark.parametrize("bad", ["not-a-uuid", "00000000-0000-0000-0000-000000000000"])
 def test_a_store_is_only_handed_out_for_a_real_person(database, bad):
     with pytest.raises(KeyError):

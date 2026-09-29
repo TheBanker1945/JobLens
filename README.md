@@ -273,10 +273,14 @@ changes by itself — it reports what entered and left the shortlist instead.
 uv run python scripts/api.py --link you@example.com   # prints a login link
 ```
 
-Open the link, press "Sign in", and JobLens opens at http://127.0.0.1:8001/: a
-dashboard with your latest match (verdicts, the CV quote behind each, what is
-missing), your CV and what was taken out of it before sending, what you are
-looking for, and what your AI has cost this month. It speaks Dutch or English
+Open the link, press "Sign in", and JobLens opens at http://127.0.0.1:8001/. A
+new account starts in a three-step guide -- your CV, what you are looking for,
+a first match -- that can be skipped at any point. After that: a dashboard with
+your latest match (verdicts, the CV quote behind each, what is missing), your
+CV and what was taken out of it before sending, what you are looking for, and
+what your AI has cost this month; "My CV" shows the exact text a model is sent,
+what a model read from it and your earlier versions; "My preferences" is the
+questionnaire as one form, every question optional. It speaks Dutch or English
 (German, French and Spanish follow), chosen from your browser's languages and
 switchable in the header. Plain HTML, CSS and JavaScript served by the same
 FastAPI app; no build step, no outside scripts, fonts or trackers.

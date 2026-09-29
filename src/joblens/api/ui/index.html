@@ -9,27 +9,7 @@
 <script type="module" src="/assets/dashboard.js"></script>
 </head>
 <body>
-<header class="topbar">
-<a class="brand" href="/">
-<span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"></circle><path d="M15 15l5 5"></path></svg></span>
-JobLens
-</a>
-<nav class="mainnav" data-i18n-attr="aria-label:nav.label">
-<a href="/" aria-current="page" data-i18n="nav.dashboard">Dashboard</a>
-</nav>
-<div class="topbar-end">
-<label class="visually-hidden" for="language" data-i18n="nav.language">Language</label>
-<select id="language" class="language"></select>
-<div class="account">
-<button type="button" id="account-button" class="avatar" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu" data-i18n-attr="aria-label:account.menu"></button>
-<div id="account-menu" class="menu" hidden>
-<div class="menu-who"><strong id="account-name"></strong><span id="account-email"></span></div>
-<a href="/api/me/export" download="joblens-my-data.json" data-i18n="account.download">Download my data</a>
-<button type="button" id="sign-out" data-i18n="account.signOut">Sign out</button>
-</div>
-</div>
-</div>
-</header>
+<header class="topbar" id="topbar"></header>
 
 <main class="dashboard">
 <section class="primary">
@@ -41,6 +21,7 @@ JobLens
 </div>
 <div class="hero-actions">
 <button type="button" id="start-match" class="button button-light" hidden></button>
+<a href="/preferences" class="button button-ghost-light" data-i18n="action.editWishes">Change what I'm looking for</a>
 </div>
 </div>
 
@@ -66,23 +47,15 @@ JobLens
 
 <aside class="side">
 <section class="card" aria-labelledby="cv-title">
-<h2 id="cv-title" data-i18n="cv.title">Your CV</h2>
+<div class="card-head"><h2 id="cv-title" data-i18n="cv.title">Your CV</h2><a href="/cv" data-i18n="dash.view">View</a></div>
 <div id="cv-current"></div>
 <p id="cv-removed" class="card-note" hidden></p>
 <button type="button" id="cv-replace" class="button button-outline" data-i18n="cv.replace" hidden>Upload a new version</button>
-<form id="cv-form" class="form" hidden>
-<label class="field"><span data-i18n="cv.file">CV file</span>
-<input type="file" id="cv-file" class="input" name="file" accept=".pdf,.md,.txt">
-</label>
-<label class="field"><span data-i18n="cv.name">Your name as it is on your CV</span>
-<input type="text" id="cv-name" class="input" name="strip_name" autocomplete="name">
-</label>
-<button type="submit" id="cv-submit" class="button button-primary" data-i18n="cv.upload">Upload</button>
-</form>
+<div id="cv-upload" hidden></div>
 </section>
 
 <section class="card" aria-labelledby="wishes-title">
-<h2 id="wishes-title" data-i18n="wishes.title">What you're looking for</h2>
+<div class="card-head"><h2 id="wishes-title" data-i18n="wishes.title">What you're looking for</h2><a href="/preferences" data-i18n="dash.edit">Change</a></div>
 <div id="wishes" class="chips"></div>
 <p class="card-note" data-i18n="wishes.note">If a vacancy doesn't fit, we move it back.</p>
 </section>
@@ -95,5 +68,6 @@ JobLens
 </section>
 </aside>
 </main>
+<nav class="bottomnav" id="bottomnav"></nav>
 </body>
 </html>

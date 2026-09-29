@@ -147,13 +147,19 @@ class Database:
         *,
         locale: str | None = None,
         display_name: str | None = None,
+        onboarded: bool = False,
     ) -> User:
-        """Change what a person may change themselves; None leaves it as is."""
+        """Change what a person may change themselves; None leaves it as is.
+        `onboarded` marks the guide done (or skipped), once: the first time
+        is the one kept."""
         with self.connect() as conn:
             row = conn.execute(
                 "UPDATE users SET locale = coalesce(%s, locale), "
-                "display_name = coalesce(%s, display_name) WHERE id = %s RETURNING *",
-                (locale, display_name, _id(user_id, "user")),
+                "display_name = coalesce(%s, display_name), "
+                "onboarded_at = CASE WHEN %s THEN coalesce(onboarded_at, now()) "
+                "ELSE onboarded_at END "
+                "WHERE id = %s RETURNING *",
+                (locale, display_name, onboarded, _id(user_id, "user")),
             ).fetchone()
         if row is None:
             raise KeyError(f"no user {user_id!r}")

@@ -6,9 +6,12 @@
 // cookie is sent with same-origin requests only.
 
 export class ApiError extends Error {
-  constructor(status, detail) {
+  // `details`: a 422's list of field problems ({loc, msg}), for a form to
+  // place next to its fields; `message`: a single sentence, when there is one.
+  constructor(status, detail, details = null) {
     super(detail);
     this.status = status;
+    this.details = details;
   }
 }
 
@@ -39,7 +42,8 @@ export async function api(path, { method = "GET", json, form, signedIn = true } 
   const data = await answer.json().catch(() => ({}));
   if (!answer.ok) {
     const detail = typeof data.detail === "string" ? data.detail : null;
-    throw new ApiError(answer.status, detail);
+    const details = Array.isArray(data.detail) ? data.detail : null;
+    throw new ApiError(answer.status, detail, details);
   }
   return data;
 }

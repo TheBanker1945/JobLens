@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/guide.js"></script>
+</head>
+<body>
+<header class="topbar guide-top">
+<a class="brand" href="/">
+<span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"></circle><path d="M15 15l5 5"></path></svg></span>
+JobLens
+</a>
+<ol class="stepper" data-i18n-attr="aria-label:guide.label">
+<li id="stepper-1"><span class="step-dot">1</span><span class="step-name" data-i18n="guide.step1">Your CV</span></li>
+<li class="step-line" aria-hidden="true"></li>
+<li id="stepper-2"><span class="step-dot">2</span><span class="step-name" data-i18n="guide.step2">What you're looking for</span></li>
+<li class="step-line" aria-hidden="true"></li>
+<li id="stepper-3"><span class="step-dot">3</span><span class="step-name" data-i18n="guide.step3">Your first matches</span></li>
+</ol>
+<a href="/" id="skip" class="skip"><span class="skip-long" data-i18n="action.skip">Skip, go to the dashboard</span><span class="skip-short" data-i18n="action.skipShort">Skip</span></a>
+</header>
+
+<main class="page page-narrow">
+<div id="notice" class="notice" role="alert" hidden></div>
+
+<section id="step-1" class="card guide-card" aria-labelledby="step-1-title" hidden>
+<h1 id="step-1-title" tabindex="-1" data-i18n="guide.cv.title">Start with your CV</h1>
+<p data-i18n="guide.cv.intro">PDF, .md or .txt.</p>
+<div id="cv-now"></div>
+<div id="cv-upload"></div>
+<div id="foot-1" class="form-foot" hidden>
+<button type="button" id="to-2" class="button button-primary" data-i18n="action.next">Next</button>
+</div>
+</section>
+
+<section id="step-2" class="card guide-card" aria-labelledby="step-2-title" hidden>
+<h1 id="step-2-title" tabindex="-1" data-i18n="prefs.title">What are you looking for?</h1>
+<p data-i18n="prefs.intro">Everything is optional.</p>
+<div id="prefs-fields"></div>
+<div class="form-foot">
+<span class="muted" data-i18n="prefs.apart">Your CV says what you've done; this says what you want.</span>
+<button type="button" id="back-1" class="button button-outline" data-i18n="action.back">Back</button>
+<button type="button" id="to-3" class="button button-primary" data-i18n="prefs.saveNext">Save and continue</button>
+</div>
+</section>
+
+<section id="step-3" class="card guide-card" aria-labelledby="step-3-title" hidden>
+<h1 id="step-3-title" tabindex="-1" data-i18n="guide.first.title">Your first matches</h1>
+<p data-i18n="guide.first.intro">We compare your CV with every open vacancy.</p>
+<p class="muted" data-i18n="guide.first.cost">About 4 cents.</p>
+<div id="progress" class="progress" role="status" aria-live="polite" hidden>
+<div id="progress-text"></div>
+<div class="bar"><div class="bar-fill" id="progress-fill"></div></div>
+</div>
+<div class="form-foot">
+<button type="button" id="back-2" class="button button-outline" data-i18n="action.back">Back</button>
+<button type="button" id="start" class="button button-primary" data-i18n="guide.first.start">Start my first match</button>
+</div>
+</section>
+</main>
+</body>
+</html>

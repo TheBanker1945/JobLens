@@ -136,6 +136,11 @@ English; (2) the guide, the preferences form, My CV; (3) the matches page with
 evidence and marking with a reason; (4) settings (own AI, spending, language,
 download and delete my data), German, French and Spanish, phone polish.
 
+Steps 1 and 2 are built (learning log 7.7.1, 7.7.2). The guide is shown to an
+account until it is finished or skipped (`users.onboarded_at`, migration 0005)
+or while it has no CV; accounts that already had a CV never see it. On a phone
+the top menu becomes a bottom bar.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

@@ -70,6 +70,7 @@ from joblens.llm.client import LLMClient
 from joblens.llm.presets import MEASURED, available
 from joblens.llm.pricing import cost_usd
 from joblens.preferences import Preferences
+from joblens.preferences.places import place_names
 from joblens.service import (
     MAX_UPLOAD_BYTES,
     CVUnreadable,
@@ -147,6 +148,9 @@ class AboutMe(BaseModel):
 
     locale: Literal["en", "nl", "de", "fr", "es"] | None = None
     display_name: str | None = Field(None, min_length=1, max_length=80)
+    onboarded: Literal[True] | None = Field(
+        None, description="the guide is done, or skipped: do not show it again"
+    )
 
 
 class Goodbye(BaseModel):
@@ -234,7 +238,12 @@ def create_app(config: AppConfig) -> FastAPI:
                 },
                 status_code=403,
             )
-        return await call_next(request)
+        answer = await call_next(request)
+        # Answers carry CV text and matches: no browser or proxy keeps a copy
+        # (a shared computer's cache would hand it to the next person).
+        if request.url.path.startswith("/api/"):
+            answer.headers.setdefault("Cache-Control", "no-store")
+        return answer
 
     @app.exception_handler(ServiceError)
     async def service_error(request: Request, err: ServiceError) -> JSONResponse:
@@ -289,8 +298,37 @@ def create_app(config: AppConfig) -> FastAPI:
         user = config.database.session_user(session) if session else None
         if user is None:
             return RedirectResponse("/login", status_code=303)
+        # A new account starts in the guide; one that finished or skipped it,
+        # or already has a CV (accounts from before the guide), does not.
+        store = config.database.store_for(user.id)
+        if user.onboarded_at is None and store.active_cv() is None:
+            return RedirectResponse("/guide", status_code=303)
         chosen = language.pick(request.headers.get("accept-language"), user.locale)
         return page("index.html", chosen)
+
+    def signed_in_page(name: str):
+        """A page that needs a session; without one, the way in."""
+
+        def route(
+            request: Request,
+            session: Annotated[str | None, Depends(SESSION_COOKIE)],
+        ) -> Response:
+            user = config.database.session_user(session) if session else None
+            if user is None:
+                return RedirectResponse("/login", status_code=303)
+            chosen = language.pick(request.headers.get("accept-language"), user.locale)
+            return page(name, chosen)
+
+        return route
+
+    for path, name in (
+        ("/guide", "guide.html"),
+        ("/cv", "cv.html"),
+        ("/preferences", "preferences.html"),
+    ):
+        app.add_api_route(
+            path, signed_in_page(name), methods=["GET"], include_in_schema=False
+        )
 
     @app.get("/login", include_in_schema=False)
     def login(request: Request) -> HTMLResponse:
@@ -336,10 +374,16 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.patch("/api/me")
     def update_me(user: Me, change: AboutMe) -> User:
-        """Change your language or the name the page greets you with."""
+        """Change your language or the name the page greets you with, or mark
+        the guide as done so the dashboard stops sending you to it."""
         return config.database.update_user(
             user.id, **change.model_dump(exclude_none=True)
         )
+
+    @app.get("/api/places")
+    def places(user: Me) -> list[str]:
+        """The Dutch places a home can be: what the home field suggests."""
+        return list(place_names())
 
     @app.get("/api/dashboard")
     def my_dashboard(user: Me, store: Mine) -> views.Dashboard:

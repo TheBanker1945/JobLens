@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/preferences.js"></script>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="page page-narrow">
+<div class="page-head">
+<h1 data-i18n="prefs.title">What are you looking for?</h1>
+<p data-i18n="prefs.intro">Everything is optional.</p>
+</div>
+<div id="notice" class="notice" role="alert" hidden></div>
+<form id="prefs" class="card" novalidate>
+<div id="prefs-fields"></div>
+<div class="form-foot">
+<span class="muted" data-i18n="prefs.apart">Your CV says what you've done; this says what you want.</span>
+<span id="saved" class="saved" role="status" aria-live="polite"></span>
+<button type="submit" id="save" class="button button-primary" data-i18n="prefs.save">Save</button>
+</div>
+</form>
+</main>
+<nav class="bottomnav" id="bottomnav"></nav>
+</body>
+</html>

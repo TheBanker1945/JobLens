@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/cv.js"></script>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="page">
+<div class="page-head">
+<h1 data-i18n="cvpage.title">My CV</h1>
+</div>
+<div id="notice" class="notice" role="alert" hidden></div>
+<div class="cv-grid">
+<section class="card" aria-labelledby="active-title">
+<h2 id="active-title" data-i18n="cvpage.active">Active CV</h2>
+<div id="active" class="stack"></div>
+</section>
+<aside class="side">
+<section class="card" aria-labelledby="upload-title">
+<h2 id="upload-title" data-i18n="cvpage.upload">Upload a new version</h2>
+<div id="upload"></div>
+</section>
+<section class="card" aria-labelledby="history-title">
+<h2 id="history-title" data-i18n="cvpage.history">Earlier versions</h2>
+<div id="history"></div>
+</section>
+</aside>
+</div>
+</main>
+<nav class="bottomnav" id="bottomnav"></nav>
+</body>
+</html>
