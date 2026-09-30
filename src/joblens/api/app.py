@@ -17,12 +17,12 @@ blocking clients, and FastAPI runs a plain function in a thread for exactly
 that.
 
 **Signing in (7.5).** Invite-only: the owner makes an account and a one-time
-login link (scripts/db.py invite), the link opens a page whose button starts a
-session, and the session is an HttpOnly cookie that lasts 30 days. The
-database keeps a hash of each link and session, never the token. Every route
-but /api/health and the login itself answers 401 without a valid session, and
-every query below runs through that person's store, so one person's ids open
-nothing of another's.
+login link (scripts/db.py invite, or the settings page since 7.9.1), the link
+opens a page whose button starts a session, and the session is an HttpOnly
+cookie that lasts 30 days. The database keeps a hash of each link and session,
+never the token. Every route but /api/health and the login itself answers 401
+without a valid session, and every query below runs through that person's
+store, so one person's ids open nothing of another's.
 
 Two rules from 7.4 stay, now as the cookie session's protection:
 
@@ -57,7 +57,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, APIKeyHeader
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from joblens.api import language, views
 from joblens.api.runner import Runner, ThreadRunner
@@ -87,7 +87,15 @@ from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.marks import MarkRefused, NotInRun, mark
 from joblens.service.matching import ChatFactory, EmbedFactory, VectorsFactory
-from joblens.storage import Database, Job, PostgresStore, RunSummary, User, published
+from joblens.storage import (
+    Database,
+    Job,
+    Person,
+    PostgresStore,
+    RunSummary,
+    User,
+    published,
+)
 from joblens.storage.postgres import SESSION_VALID
 from joblens.vault import Vault, VaultError
 from joblens.web import api as viewer
@@ -183,6 +191,31 @@ class Nightly(BaseModel):
     switched_at: datetime | None  # when the switch was last flipped
     published_at: datetime | None  # when the last set of vacancies arrived
     vacancies: int | None  # how many it held
+
+
+class Invite(BaseModel):
+    """Who the owner invites from the settings page (7.9.1). Anything else
+    is refused, a role above all: an owner is made with db.py, not a page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(
+        max_length=254,
+        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        description="their e-mail; an account that exists gets a new link",
+    )
+    display_name: str | None = Field(None, min_length=1, max_length=80)
+    locale: Literal["en", "nl", "de", "fr", "es"] | None = Field(
+        None, description="their language; empty: their browser's"
+    )
+
+
+class Invited(BaseModel):
+    """A new login link, shown once. Only its hash is kept."""
+
+    person: Person
+    link: str = Field(description="/login#token: the page puts its own address first")
+    new_account: bool
 
 
 class Goodbye(BaseModel):
@@ -724,6 +757,30 @@ def create_app(config: AppConfig) -> FastAPI:
         owner_only(user)
         config.database.set_nightly(given.enabled)
         return nightly_state()
+
+    # -- inviting people (7.9.1) -------------------------------------------------
+
+    @app.get("/api/admin/people")
+    def people(user: Me) -> list[Person]:
+        """Every account, newest first: whether their link is still waiting,
+        and whether they have a session that works."""
+        owner_only(user)
+        return config.database.people()
+
+    @app.post("/api/admin/invites", status_code=201)
+    def invite(user: Me, given: Invite) -> Invited:
+        """An account (a tester) if there is none, and a new login link either
+        way, replacing one that was not used yet. The link is in this answer
+        only: send it yourself. It works once, for 7 days.
+
+        The answer holds the path, not the address: behind Cloud Run's proxy
+        the server cannot be sure of its own, and the owner's page knows it."""
+        owner_only(user)
+        person, token, created = config.database.invite(
+            given.email, display_name=given.display_name, locale=given.locale
+        )
+        listed = next(one for one in config.database.people() if one.id == person.id)
+        return Invited(person=listed, link=f"/login#{token}", new_account=created)
 
     @app.get("/api/usage")
     def my_usage(user: Me, store: Mine) -> budget.Usage:

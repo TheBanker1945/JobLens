@@ -43,6 +43,7 @@ from joblens.storage.base import (
     KEEP_ORIGINAL,
     CVRecord,
     Job,
+    Person,
     ProviderKey,
     RunSummary,
     User,
@@ -218,6 +219,52 @@ class Database:
                 (_hash(token), _id(user_id, "user"), valid_for),
             )
         return token
+
+    def invite(
+        self,
+        email: str,
+        *,
+        display_name: str | None = None,
+        locale: str | None = None,
+    ) -> tuple[User, str, bool]:
+        """An account for `email` if there is none, and a new login link.
+
+        Returns the person, the link's token and whether the account is new.
+        A new account is a tester; the owner is made with `db.py set-role`,
+        never from a page. An existing account keeps its name and language.
+
+        One waiting link per person: a new link replaces any unused one, so a
+        link sent to the wrong chat stops working once its replacement is made.
+        """
+        user, created = self.user_by_email(email), False
+        if user is None:
+            try:
+                user = self.create_user(
+                    email=email, display_name=display_name, locale=locale
+                )
+                created = True
+            except ValueError:  # made by a second click in the same instant
+                user = self.user_by_email(email)
+        with self.connect() as conn:
+            conn.execute(
+                "DELETE FROM login_links WHERE user_id = %s AND used_at IS NULL",
+                (_id(user.id, "user"),),
+            )
+        return user, self.create_login_link(user.id), created
+
+    def people(self) -> list[Person]:
+        """Every account, newest first, with whether a link is waiting and
+        whether a session still works: the owner's invite list (7.9.1)."""
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT u.id, u.email, u.display_name, u.role, u.created_at, "
+                "(SELECT max(l.expires_at) FROM login_links l WHERE l.user_id = u.id "
+                " AND l.used_at IS NULL AND l.expires_at > now()) AS link_until, "
+                "(SELECT max(s.created_at) FROM sessions s WHERE s.user_id = u.id "
+                " AND s.expires_at > now()) AS signed_in_at "
+                "FROM users u ORDER BY u.created_at DESC"
+            ).fetchall()
+        return [Person.model_validate(row | {"id": str(row["id"])}) for row in rows]
 
     def redeem_login_link(
         self, token: str, session_for: timedelta = SESSION_VALID

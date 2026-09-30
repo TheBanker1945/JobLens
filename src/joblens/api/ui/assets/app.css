@@ -386,6 +386,16 @@ pre.sent {
   .settings-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* inviting people (7.9.1): the link, shown once, and who has an account */
+.invite-link .input { font: 13px ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.person-who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.person-end { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.person .button { height: 36px; padding: 0 14px; font-size: 14px; }
+@media (max-width: 720px) {
+  .person { flex-direction: column; align-items: flex-start; }
+  .person-end { justify-content: flex-start; }
+}
+
 /* phone polish (7.7.4): long menu words (Tableau de bord, Correspondances,
    Mein Lebenslauf) wrap under their icon instead of running into the next */
 @media (max-width: 720px) {

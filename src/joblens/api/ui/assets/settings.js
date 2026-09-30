@@ -4,18 +4,24 @@
 // Nothing here is new on the server: PATCH /api/me, the routes for an own key
 // (7.6: /api/ai, /api/ai/providers, /api/usage), and export and delete (7.5).
 // An own key goes in once and never comes back out: the page only ever sees
-// its last four characters.
+// its last four characters. The owner also gets the nightly switch (7.8.5)
+// and invites (7.9.1).
 
 import { api, ApiError } from "./api.js";
 import { byId, fill, h, show } from "./dom.js";
 import { ENDONYMS, setUpFrame } from "./frame.js";
-import { formatDate, formatMoney, loadLanguage, t, translate } from "./i18n.js";
+import { formatDate, formatMoney, formatNumber, loadLanguage, t, translate } from "./i18n.js";
 
 // What JobLens has measured (llm/presets.py MEASURED), in the page's language.
 const MEASURED = {
   "gemini/gemini-3.8-flash": "settings.measured.default",
   "ollama/qwen3:8b": "settings.measured.local",
 };
+// Up here, not beside the code that uses them: the page runs from the top as
+// soon as it loads, and a constant further down does not exist yet by then.
+const DATE = { day: "numeric", month: "long" };
+// An e-mail as the server checks it (api/app.py Invite), said in your language.
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 let me = null;
 let providers = [];
@@ -32,7 +38,10 @@ try {
     byId("delete").disabled = !byId("delete-sure").checked;
   });
   byId("delete").addEventListener("click", deleteEverything);
-  if (me.role === "owner") await showNightly();
+  if (me.role === "owner") {
+    await showNightly();
+    await showInvites();
+  }
   providers = await api("/api/ai/providers");
   fillProviders();
   byId("provider").addEventListener("change", () => providerChanged());
@@ -227,6 +236,108 @@ async function showNightly() {
     }
   });
   show(byId("owner"));
+}
+
+// -- inviting people (7.9.1) ----------------------------------------------------
+//
+// The server answers with the link's path ("/login#..."): this page knows its
+// own address, the server behind Cloud Run's proxy is not sure of it. The link
+// is shown once -- only its hash is kept -- so it stays on screen until the
+// next one is made.
+
+async function showInvites() {
+  const offered = (document.querySelector('meta[name="joblens-languages"]')?.content || "en").split(",");
+  fill(byId("invite-language"),
+    h("option", { value: "" }, t("settings.inviteBrowser")),
+    ...offered.map((code) => h("option", { value: code }, ENDONYMS[code] || code)),
+  );
+  byId("invite").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = byId("invite-email").value.trim();
+    if (!EMAIL.test(email)) {
+      inviteError(t("settings.inviteBadEmail"));
+      byId("invite-email").focus();
+      return;
+    }
+    const sent = await invite({
+      email,
+      display_name: byId("invite-name").value.trim() || null,
+      locale: byId("invite-language").value || null,
+    }, byId("invite-make"));
+    if (sent) {
+      byId("invite-email").value = "";
+      byId("invite-name").value = "";
+      byId("invite-language").value = "";
+    }
+  });
+  byId("invite-copy").addEventListener("click", copyLink);
+  drawPeople(await api("/api/admin/people"));
+}
+
+async function invite(body, button) {
+  inviteError(null);
+  button.disabled = true;
+  try {
+    const made = await api("/api/admin/invites", { method: "POST", json: body });
+    const email = made.person.email;
+    byId("invite-said").textContent = made.new_account
+      ? t("settings.inviteNew", { email })
+      : t("settings.inviteAgain", { email });
+    byId("invite-url").value = window.location.origin + made.link;
+    byId("invite-copy").textContent = t("settings.copy");
+    show(byId("invite-link"));
+    drawPeople(await api("/api/admin/people"));
+    byId("invite-url").focus();
+    byId("invite-url").select();
+    return true;
+  } catch (error) {
+    inviteError(error instanceof ApiError && error.status === 422
+      ? t("settings.inviteBadEmail")
+      : errorText(error));
+    return false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyLink() {
+  const box = byId("invite-url");
+  try {
+    await navigator.clipboard.writeText(box.value);
+    byId("invite-copy").textContent = t("settings.copied");
+  } catch {
+    box.focus();
+    box.select();
+    byId("invite-copy").textContent = t("settings.copyManual");
+  }
+}
+
+function drawPeople(people) {
+  fill(byId("people"), ...people.map((person) => {
+    const status = person.signed_in_at
+      ? h("span", { class: "badge badge-strong" },
+        t("settings.peopleIn", { date: formatDate(person.signed_in_at, DATE) }))
+      : person.link_until
+        ? h("span", { class: "badge badge-weak" },
+          t("settings.peopleWaiting", { date: formatDate(person.link_until, DATE) }))
+        : h("span", { class: "badge badge-possible" }, t("settings.peopleNeedsLink"));
+    const button = h("button", { type: "button", class: "button button-outline" },
+      t("settings.peopleNewLink"));
+    button.addEventListener("click", () => invite({ email: person.email }, button));
+    return h("li", { class: "history-row person" },
+      h("span", { class: "person-who" },
+        h("strong", {}, person.display_name || person.email),
+        person.display_name && h("span", { class: "muted" }, person.email),
+        person.id === me.id && h("span", { class: "muted" }, t("settings.peopleYou")),
+      ),
+      h("span", { class: "person-end" }, status, button),
+    );
+  }));
+}
+
+function inviteError(text) {
+  byId("invite-error").textContent = text || "";
+  show(byId("invite-error"), Boolean(text));
 }
 
 // -- your data ------------------------------------------------------------------

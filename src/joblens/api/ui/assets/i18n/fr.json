@@ -317,5 +317,26 @@
   "settings.nightlyHint": "Si c'est activé, JobLens récupère chaque nuit à 3 h (heure néerlandaise) de nouvelles offres depuis toutes les sources, Indeed compris, et les rend consultables. Si c'est désactivé, rien n'est récupéré et les offres déjà présentes restent. Une mise à jour déjà commencée va jusqu'au bout dans les deux cas.",
   "settings.nightlyOn": "Récupérer de nouvelles offres chaque nuit",
   "settings.nightlyLast": "Dernière mise à jour : {date}, {count} offres.",
-  "settings.nightlyNever": "Aucune mise à jour n'est encore arrivée."
+  "settings.nightlyNever": "Aucune mise à jour n'est encore arrivée.",
+
+  "settings.invite": "Inviter quelqu'un",
+  "settings.inviteHint": "Cette personne reçoit un compte de testeur, et toi un lien de connexion à lui envoyer toi-même, par WhatsApp, e-mail ou comme tu veux. Il fonctionne une fois, pendant 7 jours. JobLens n'en garde qu'une empreinte (hash), alors copie-le maintenant.",
+  "settings.inviteEmail": "Son adresse e-mail",
+  "settings.inviteName": "Son nom (facultatif)",
+  "settings.inviteLanguage": "Sa langue",
+  "settings.inviteBrowser": "Celle de son navigateur",
+  "settings.inviteMake": "Créer un lien d'invitation",
+  "settings.inviteBadEmail": "Ça ne ressemble pas à une adresse e-mail.",
+  "settings.inviteNew": "Nouveau compte pour {email}. Envoie-lui ce lien ; il n'est affiché que maintenant.",
+  "settings.inviteAgain": "Nouveau lien pour {email} ; le précédent ne fonctionne plus. Envoie-lui ce lien ; il n'est affiché que maintenant.",
+  "settings.inviteUrl": "Lien de connexion",
+  "settings.copy": "Copier le lien",
+  "settings.copied": "Copié",
+  "settings.copyManual": "Sélectionné : copie-le avec Ctrl+C",
+  "settings.people": "Personnes avec un compte",
+  "settings.peopleIn": "Connexion le {date}",
+  "settings.peopleWaiting": "Lien en attente, jusqu'au {date}",
+  "settings.peopleNeedsLink": "A besoin d'un nouveau lien",
+  "settings.peopleNewLink": "Nouveau lien",
+  "settings.peopleYou": "toi"
 }

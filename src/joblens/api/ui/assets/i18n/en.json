@@ -317,5 +317,26 @@
   "settings.nightlyHint": "When on, JobLens fetches new vacancies every night at 03:00 (Dutch time) from every source, Indeed included, and makes them searchable. When off, nothing is fetched and the vacancies already there stay. A run that has started finishes either way.",
   "settings.nightlyOn": "Fetch new vacancies every night",
   "settings.nightlyLast": "Last update: {date}, {count} vacancies.",
-  "settings.nightlyNever": "No update has arrived yet."
+  "settings.nightlyNever": "No update has arrived yet.",
+
+  "settings.invite": "Invite someone",
+  "settings.inviteHint": "They get an account as a tester, and you get a login link to send them yourself, by WhatsApp, e-mail or however you like. It works once, for 7 days. JobLens keeps only a hash of it, so copy it now.",
+  "settings.inviteEmail": "Their e-mail",
+  "settings.inviteName": "Their name (optional)",
+  "settings.inviteLanguage": "Their language",
+  "settings.inviteBrowser": "From their browser",
+  "settings.inviteMake": "Make an invite link",
+  "settings.inviteBadEmail": "That doesn't look like an e-mail address.",
+  "settings.inviteNew": "New account for {email}. Send them this link; it is shown only now.",
+  "settings.inviteAgain": "New link for {email}; the one before it no longer works. Send them this link; it is shown only now.",
+  "settings.inviteUrl": "Login link",
+  "settings.copy": "Copy link",
+  "settings.copied": "Copied",
+  "settings.copyManual": "Selected: copy it with Ctrl+C",
+  "settings.people": "People with an account",
+  "settings.peopleIn": "Signed in {date}",
+  "settings.peopleWaiting": "Link waiting, until {date}",
+  "settings.peopleNeedsLink": "Needs a new link",
+  "settings.peopleNewLink": "New link",
+  "settings.peopleYou": "you"
 }
