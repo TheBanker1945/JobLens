@@ -502,5 +502,15 @@
   "admin.refusingUntil": "pas interrogé avant le {date}",
   "admin.strikes.zero": "pas refusé",
   "admin.strikes.one": "refusé une fois",
-  "admin.strikes.other": "refusé {n} fois d'affilée"
+  "admin.strikes.other": "refusé {n} fois d'affilée",
+  "admin.runHint": "Collecter maintenant interroge tout de suite chaque source, même si l'interrupteur nocturne est coupé, puis lit et publie ce qui est nouveau. Cela prend un moment ; cette page le suit.",
+  "admin.runNow": "Collecter maintenant",
+  "admin.runIndex": "Indexer et publier seulement",
+  "admin.runStop": "Arrêter cette exécution",
+  "admin.runStopSure": "Arrêter l'exécution en cours ? Ce qu'elle a collecté jusqu'ici n'est pas gardé.",
+  "admin.runStarting": "Démarrage : l'exécution apparaît ici d'ici une minute ou deux.",
+  "admin.runLocal": "Les exécutions se lancent depuis le JobLens hébergé : celui-ci n'a pas de tâche nocturne à lancer.",
+  "admin.runOne": "Collecter seulement {source}",
+  "admin.onlySource": "seulement {source}",
+  "admin.runStopping": "Arrêt en cours : Cloud Run termine l'exécution en quelques secondes."
 }

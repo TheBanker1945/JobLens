@@ -502,5 +502,15 @@
   "admin.refusingUntil": "not asked until {date}",
   "admin.strikes.zero": "not refused",
   "admin.strikes.one": "refused once",
-  "admin.strikes.other": "refused {n} times in a row"
+  "admin.strikes.other": "refused {n} times in a row",
+  "admin.runHint": "Fetch now asks every source now, even while the nightly switch is off, then reads and publishes what is new. It takes a while; this page follows it.",
+  "admin.runNow": "Fetch now",
+  "admin.runIndex": "Only index and publish",
+  "admin.runStop": "Stop this run",
+  "admin.runStopSure": "Stop the run that is going? What it fetched so far is not kept.",
+  "admin.runStarting": "Starting: the run shows up here within a minute or two.",
+  "admin.runLocal": "Runs are started from the hosted JobLens: this one has no nightly job to start.",
+  "admin.runOne": "Fetch only {source}",
+  "admin.onlySource": "only {source}",
+  "admin.runStopping": "Stopping the run: Cloud Run ends it within a few seconds."
 }

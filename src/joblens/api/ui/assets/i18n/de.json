@@ -502,5 +502,15 @@
   "admin.refusingUntil": "nicht gefragt bis {date}",
   "admin.strikes.zero": "nicht abgelehnt",
   "admin.strikes.one": "einmal abgelehnt",
-  "admin.strikes.other": "{n}-mal in Folge abgelehnt"
+  "admin.strikes.other": "{n}-mal in Folge abgelehnt",
+  "admin.runHint": "Jetzt abrufen fragt sofort jede Quelle, auch wenn der nächtliche Schalter aus ist, und liest und veröffentlicht dann, was neu ist. Das dauert eine Weile; diese Seite verfolgt es.",
+  "admin.runNow": "Jetzt abrufen",
+  "admin.runIndex": "Nur indexieren und veröffentlichen",
+  "admin.runStop": "Diesen Lauf stoppen",
+  "admin.runStopSure": "Den laufenden Lauf stoppen? Was er bisher abgerufen hat, wird nicht behalten.",
+  "admin.runStarting": "Wird gestartet: Der Lauf erscheint hier in ein, zwei Minuten.",
+  "admin.runLocal": "Läufe startest du im gehosteten JobLens: Dieses hat keinen nächtlichen Job zum Starten.",
+  "admin.runOne": "Nur {source} abrufen",
+  "admin.onlySource": "nur {source}",
+  "admin.runStopping": "Der Lauf wird gestoppt: Cloud Run beendet ihn in wenigen Sekunden."
 }

@@ -501,6 +501,8 @@ pre.sent {
 .run-facts { margin: 0; font-size: 13px; color: var(--muted); }
 .run details summary { font-size: 13px; font-weight: 600; color: var(--danger); cursor: pointer; }
 .refusal { display: flex; flex-direction: column; gap: 2px; }
+.run-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.fetch-one { height: 36px; padding: 0 14px; font-size: 14px; }
 .board-status { margin-top: 4px; font-weight: 500; color: var(--muted); }
 .board-status .badge { white-space: normal; }
 .phone-only { display: none; }

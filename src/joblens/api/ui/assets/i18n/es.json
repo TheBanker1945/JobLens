@@ -502,5 +502,15 @@
   "admin.refusingUntil": "sin consultar hasta el {date}",
   "admin.strikes.zero": "sin rechazos",
   "admin.strikes.one": "rechazado una vez",
-  "admin.strikes.other": "rechazado {n} veces seguidas"
+  "admin.strikes.other": "rechazado {n} veces seguidas",
+  "admin.runHint": "Recoger ahora consulta enseguida cada fuente, aunque el interruptor nocturno esté apagado, y luego lee y publica lo nuevo. Tarda un rato; esta página lo sigue.",
+  "admin.runNow": "Recoger ahora",
+  "admin.runIndex": "Solo indexar y publicar",
+  "admin.runStop": "Detener esta ejecución",
+  "admin.runStopSure": "¿Detener la ejecución en marcha? Lo que ha recogido hasta ahora no se guarda.",
+  "admin.runStarting": "Arrancando: la ejecución aparece aquí en un minuto o dos.",
+  "admin.runLocal": "Las ejecuciones se inician desde el JobLens alojado: este no tiene una tarea nocturna que iniciar.",
+  "admin.runOne": "Recoger solo {source}",
+  "admin.onlySource": "solo {source}",
+  "admin.runStopping": "Deteniendo la ejecución: Cloud Run la termina en unos segundos."
 }

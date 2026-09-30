@@ -271,6 +271,33 @@ command") -- taking the lock with it, and making the unlock at the end fail.
 The lock's connection now asks `SELECT 1` every minute from a thread, and an
 unlock on a lost connection is let go.
 
+**7.10.2, built.** On the admin page: "Fetch now", "Only index and
+publish", "Fetch only <source>" in every opened source, and "Stop this run"
+while one is going. The app starts `joblens-nightly` through the Cloud Run
+Admin API (`cloud/jobs.py`, httpx and the metadata server's token, as the
+bucket is read) with `--force --by page` and `--no-fetch` or `--source X`:
+forced, because the owner asked, whatever the nightly switch says. A run takes
+about a minute to begin, so the app notes the request (`nightly_requested`)
+and the page says "starting" until the run writes its own row; after 10
+minutes without one, the button works again. One run at a time: the app
+refuses a start while a run is going or starting (and the job's lock would
+refuse a second anyway). Stop cancels the execution by the name the job wrote
+down for itself (`CLOUD_RUN_EXECUTION`, migration 0009); the job writes its
+bucket only at the very end, so a stopped run leaves nothing half-written and
+keeps nothing it fetched, and the page lists it as "stopped before it
+finished". Where no job is configured (`JOBLENS_NIGHTLY_JOB` unset, as on a
+laptop) the page says runs start from the hosted JobLens.
+
+To switch it on (needs Mahdi's go-ahead, nothing here does it by itself):
+
+```
+gcloud run jobs add-iam-policy-binding joblens-nightly --region europe-west4 \
+  --member serviceAccount:joblens-run@gen-lang-client-0860584471.iam.gserviceaccount.com \
+  --role roles/run.jobsExecutorWithOverrides
+gcloud run services update joblens --region europe-west4 \
+  --update-env-vars JOBLENS_NIGHTLY_JOB=projects/gen-lang-client-0860584471/locations/europe-west4/jobs/joblens-nightly
+```
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

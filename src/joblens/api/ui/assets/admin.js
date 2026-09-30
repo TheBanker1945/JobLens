@@ -1,6 +1,7 @@
 // The owner's admin page (7.10.1): every vacancy source and what it holds,
 // what each nightly run did, the sites that are refusing JobLens, the nightly
-// switch (7.8.5) and invites (7.9.1), both moved here from settings.
+// switch (7.8.5) and invites (7.9.1), both moved here from settings. And
+// (7.10.2) starting a run now, one source only, or stopping the one going.
 //
 // The numbers come from the nightly job itself: at the end of every run it
 // counts the sources from its files and stores that with the run
@@ -29,9 +30,15 @@ const DATE = { day: "numeric", month: "long" };
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const CHEVRON = "M9 6l6 6-6 6";
 const POLL = 30_000; // while a run is going, look again this often
+const POLL_STARTING = 10_000; // and while one is starting, more often
 
 let me = null;
 let wasRunning = false;
+let canStart = false; // this server can start and stop the job (7.10.2)
+let busy = false; // a run is going or starting: one at a time
+let polling = null;
+let shownGoing = null; // the run on screen as going
+let stopping = null; // the execution Stop was pressed for
 
 await loadLanguage();
 translate();
@@ -40,7 +47,13 @@ try {
   me = await api("/api/me");
   if (me.role !== "owner") window.location.replace("/");
   setUpFrame("/admin", me, { onError: (e) => say(errorText(e)) });
-  await Promise.all([showSources(), showRuns(), showNightly(), showInvites()]);
+  byId("run-now").addEventListener("click", () => startRun({}));
+  byId("run-index").addEventListener("click", () => startRun({ fetch: false }));
+  byId("run-stop").addEventListener("click", stopRun);
+  // The runs first: whether a source gets its "Fetch only" button depends on
+  // whether this server can start the job at all.
+  await showRuns();
+  await Promise.all([showSources(), showNightly(), showInvites()]);
 } catch (error) {
   say(errorText(error));
 }
@@ -125,6 +138,13 @@ function badges(one) {
 
 function detailRows(one) {
   const rows = [];
+  if (canStart && one.enabled) {
+    const button = h("button", { type: "button", class: "button button-outline fetch-one" },
+      t("admin.runOne", { source: nameOf(one.source) }));
+    button.disabled = busy;
+    button.addEventListener("click", () => startRun({ source: one.source }));
+    rows.push(h("tr", { class: "board-note" }, h("td", { colspan: 7 }, button)));
+  }
   if (one.problems.length) {
     rows.push(h("tr", { class: "board-note" },
       h("td", { colspan: 7 }, h("ul", { class: "problems" },
@@ -178,20 +198,77 @@ function number(n, extra = "") {
 // -- the nightly runs ------------------------------------------------------------
 
 async function showRuns() {
-  const { running, runs } = await api("/api/admin/runs");
+  await drawRuns(await api("/api/admin/runs"));
+}
+
+async function drawRuns({ running, runs, can_start: able, starting }) {
+  canStart = able;
+  busy = running || Boolean(starting);
   const fetched = runs.find((run) => run.new_vacancies !== null);
   byId("total-new").textContent = fetched ? formatNumber(fetched.new_vacancies) : "–";
   const going = running ? runs.find((run) => run.finished_at === null) : null;
-  byId("runs-state").textContent = going
-    ? t("admin.running", { time: formatDate(going.started_at, TIME) })
-    : runs.length ? t("admin.runsHint") : t("admin.runsNone");
+  shownGoing = going;
+  if (!going) stopping = null;
+  // Cloud Run takes a few seconds to end a cancelled run: until it has, say
+  // so, rather than offer Stop again.
+  const ending = Boolean(going) && going.execution === stopping;
+  byId("runs-state").textContent = ending
+    ? t("admin.runStopping")
+    : going ? t("admin.running", { time: formatDate(going.started_at, TIME) })
+      : starting ? t("admin.runStarting")
+        : runs.length ? t("admin.runsHint") : t("admin.runsNone");
   fill(byId("runs"), ...runs.map((run) => runItem(run, run === going)));
 
-  // While a run is going, look again now and then; when it has just ended,
-  // its numbers are new too.
+  show(byId("run-controls"), able);
+  show(byId("run-local"), !able);
+  byId("run-now").disabled = busy;
+  byId("run-index").disabled = busy;
+  for (const button of document.querySelectorAll(".fetch-one")) button.disabled = busy;
+  const stop = byId("run-stop");
+  show(stop, Boolean(going?.execution) && able && !ending);
+  stop.disabled = false;
+
+  // While a run is starting or going, look again now and then; when it has
+  // just ended, its numbers are new too.
   if (wasRunning && !running) await showSources();
   wasRunning = running;
-  if (running) setTimeout(() => showRuns().catch((e) => say(errorText(e))), POLL);
+  clearTimeout(polling);
+  if (busy) {
+    polling = setTimeout(() => showRuns().catch((e) => say(errorText(e))),
+      (starting && !running) || ending ? POLL_STARTING : POLL);
+  }
+}
+
+// Start the job now (7.10.2): everything, only index and publish, or one
+// source. Cloud Run takes about a minute to begin; until the run writes its
+// own row, the page says it is starting.
+async function startRun(body) {
+  say(null);
+  busy = true;
+  for (const button of document.querySelectorAll("#run-now, #run-index, .fetch-one")) {
+    button.disabled = true;
+  }
+  try {
+    await drawRuns(await api("/api/admin/runs", { method: "POST", json: body }));
+    byId("runs-title").scrollIntoView({ block: "start", behavior: "smooth" });
+  } catch (error) {
+    say(errorText(error));
+    await showRuns().catch(() => {});
+  }
+}
+
+async function stopRun() {
+  if (!window.confirm(t("admin.runStopSure"))) return;
+  say(null);
+  byId("run-stop").disabled = true;
+  stopping = shownGoing?.execution ?? null;
+  try {
+    await drawRuns(await api("/api/admin/runs/stop", { method: "POST" }));
+  } catch (error) {
+    stopping = null;
+    say(errorText(error));
+    byId("run-stop").disabled = false;
+  }
 }
 
 function runItem(run, going) {
@@ -218,6 +295,8 @@ function runItem(run, going) {
       h("strong", {}, formatDate(run.started_at, WHEN)),
       h("span", { class: "badge badge-weak" }, t(`admin.trigger.${run.trigger}`)),
       !run.fetched && h("span", { class: "badge badge-weak" }, t("admin.noFetch")),
+      run.source && h("span", { class: "badge badge-weak" },
+        t("admin.onlySource", { source: nameOf(run.source) })),
       state,
     ),
     facts.length ? h("p", { class: "run-facts" }, facts.join(" · ")) : null,

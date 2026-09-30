@@ -4033,3 +4033,55 @@ longest word -- so on a phone the table keeps New, Stored and In JobLens, and
 those words may break.
 
 986 tests. No new dependency.
+
+## 7.10.2 — Run now, stop, and one source at a time
+
+The second step of the admin page: the scrape button Mahdi asked for, and
+the two he chose on top of it -- stopping a run, and fetching one source.
+
+**What the owner sees.** In "Nightly runs": "Fetch now" and "Only index and
+publish". In every opened source: "Fetch only Indeed" (or Greenhouse, ...).
+Pressed, the buttons grey out and the page says "Starting: the run shows up
+here within a minute or two"; then "A run is going, since 14:02" and a "Stop
+this run" button, which asks first. The run appears in the history as "from
+this page", with "only Indeed" when it was one source.
+
+**How the button reaches the job.** The web app and the nightly job are two
+separate Cloud Run resources. The app asks Cloud Run's Admin API to run the
+job (`POST .../jobs/joblens-nightly:run`) with arguments of its own:
+`--force --by page`, plus `--no-fetch` or `--source indeed`. The request
+carries a token from the metadata server -- the same way the job reads its
+bucket -- so there is no key to keep anywhere. And the app's account may do
+this one thing: `roles/run.jobsExecutorWithOverrides` on that one job, which
+is exactly run, run with arguments, and cancel.
+
+**Choices worth knowing.**
+- *"Starting" is written down, not guessed.* Cloud Run takes about a minute
+  to start the job's container, and until then the job has written nothing.
+  The app notes when it asked; the page says "starting" until a run row newer
+  than that appears, or ten minutes pass (a start that never came must not
+  lock the button for ever).
+- *The job names itself.* Cloud Run's reference does not promise which
+  execution a run call created, so the app does not rely on its answer. Cloud
+  Run tells every execution its own name (`CLOUD_RUN_EXECUTION`), the job
+  writes it into its row, and Stop cancels that name.
+- *Stop keeps nothing.* The job writes its files back to the bucket only at
+  the very end. A cancelled run is killed before that, so the bucket keeps
+  the last complete state: no half-written vacancy file, and nothing the
+  stopped run fetched. The page already had a word for such a run: "stopped
+  before it finished".
+- *Forced, and the switch still means what it meant.* A run from the page
+  ignores the nightly switch -- the owner asked for it. The switch keeps
+  deciding only what Cloud Scheduler's start does.
+- *Rejected: running the fetch inside the web app.* It would scrape while
+  people use the site (CLAUDE.md: never), on a server sized for requests, and
+  a restart would kill it halfway.
+
+**Tested without Google.** The routes run against a fake job (who may start,
+which arguments, one run at a time, Cloud Run's refusal passed on in its own
+words); the client against a mocked Cloud Run (the URL, the body, the bearer
+token, names that are not names refused); the job's argument parsing on its
+own.
+
+1004 tests. No new dependency. Not live until the two commands in
+docs/web-app-phase-7.md (7.10.2) are run.

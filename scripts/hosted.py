@@ -18,6 +18,8 @@ Settings (docs/hosting-phase-7.8.md):
   JOBLENS_SECRET_KEY  encrypts own API keys; without it own keys are off
   JOBLENS_TESTER_MONTHLY_USD, JOBLENS_OPERATOR_MONTHLY_USD   (optional)
   JOBLENS_OPERATOR, JOBLENS_CONTACT   who runs it, for the privacy page
+  JOBLENS_NIGHTLY_JOB the Cloud Run job the admin page starts and stops,
+                      projects/PROJECT/locations/REGION/jobs/JOB (optional)
   PORT                set by Cloud Run; 8080 otherwise
 
 Cookies are Secure unless every host in JOBLENS_HOSTS is this machine, which
@@ -37,6 +39,7 @@ from pathlib import Path
 import uvicorn
 
 from joblens.api import AppConfig, create_app
+from joblens.cloud.jobs import NightlyJob
 from joblens.config import load_llm_settings
 from joblens.embeddings.store import SQLiteVectors, cache_path
 from joblens.service import Models
@@ -102,6 +105,7 @@ def main() -> int:
         purge_every=timedelta(hours=6),
         operator=os.environ.get("JOBLENS_OPERATOR") or None,
         contact=os.environ.get("JOBLENS_CONTACT") or None,
+        nightly_job=NightlyJob.from_env(),  # None: the page cannot start runs
     )
     app = create_app(config)
     # The nightly job publishes a new set of vacancies (7.8.5): pick it up

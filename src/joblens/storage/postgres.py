@@ -65,6 +65,10 @@ SESSION_VALID = timedelta(days=30)
 NIGHTLY_LOCK = 70_200_003
 # What the admin page lists of past runs (7.10.1): older ones are deleted.
 NIGHTLY_KEPT = timedelta(days=90)
+# A run the admin page asked for shows as starting until its row appears, or
+# for this long: Cloud Run starts one in about a minute, and one that never
+# came must not block the button for ever (7.10.2).
+NIGHTLY_STARTING = timedelta(minutes=10)
 
 
 class Database:
@@ -377,7 +381,14 @@ class Database:
 
     # -- what each nightly run did (7.10.1) ------------------------------------
 
-    def start_nightly(self, trigger: str, *, fetch: bool) -> int:
+    def start_nightly(
+        self,
+        trigger: str,
+        *,
+        fetch: bool,
+        source: str | None = None,
+        execution: str | None = None,
+    ) -> int:
         """A row for a run that is starting; returns its id. Runs older than
         NIGHTLY_KEPT are deleted at the same time."""
         with self.connect() as conn:
@@ -386,11 +397,35 @@ class Database:
                 (NIGHTLY_KEPT,),
             )
             row = conn.execute(
-                "INSERT INTO nightly_runs (trigger, fetched) VALUES (%s, %s) "
-                "RETURNING id",
-                (trigger, fetch),
+                "INSERT INTO nightly_runs (trigger, fetched, source, execution) "
+                "VALUES (%s, %s, %s, %s) RETURNING id",
+                (trigger, fetch, source, execution),
             ).fetchone()
         return row["id"]
+
+    def request_nightly(self) -> datetime:
+        """The admin page asked Cloud Run for a run (7.10.2): noted, so the
+        page can say it is starting until the run writes its own row."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "INSERT INTO app_settings (key, value) VALUES "
+                "('nightly_requested', '{}') ON CONFLICT (key) DO UPDATE "
+                "SET updated_at = now() RETURNING updated_at"
+            ).fetchone()
+        return row["updated_at"]
+
+    def nightly_requested(self) -> datetime | None:
+        """When the page asked for a run that has not started yet, if it did
+        within NIGHTLY_STARTING; None otherwise."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT s.updated_at FROM app_settings s "
+                "WHERE s.key = 'nightly_requested' AND s.updated_at > now() - %s "
+                "AND NOT EXISTS (SELECT 1 FROM nightly_runs r "
+                "WHERE r.started_at >= s.updated_at)",
+                (NIGHTLY_STARTING,),
+            ).fetchone()
+        return row["updated_at"] if row else None
 
     def finish_nightly(
         self,
@@ -428,7 +463,8 @@ class Database:
         with self.connect() as conn:
             rows = conn.execute(
                 "SELECT id, started_at, finished_at, trigger, fetched, steps, "
-                "new_vacancies, problems, in_joblens FROM nightly_runs "
+                "new_vacancies, problems, in_joblens, source, execution "
+                "FROM nightly_runs "
                 "ORDER BY started_at DESC, id DESC LIMIT %s",
                 (limit,),
             ).fetchall()

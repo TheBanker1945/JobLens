@@ -44,6 +44,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
 
+import httpx
 from fastapi import (
     Depends,
     FastAPI,
@@ -57,10 +58,11 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, APIKeyHeader
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from joblens.api import language, views
 from joblens.api.runner import Runner, ThreadRunner
+from joblens.cloud.jobs import NightlyJob, refusal
 from joblens.config import LLMSettings
 from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
@@ -87,7 +89,7 @@ from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.marks import MarkRefused, NotInRun, mark
 from joblens.service.matching import ChatFactory, EmbedFactory, VectorsFactory
-from joblens.sources.overview import Overview
+from joblens.sources.overview import SOURCES, Overview
 from joblens.storage import (
     Database,
     Job,
@@ -148,6 +150,9 @@ class AppConfig:
     # Who runs this JobLens and how to reach them: the privacy page says so.
     operator: str | None = None
     contact: str | None = None
+    # The Cloud Run job the admin page starts and stops (7.10.2); None where
+    # there is none to start (this machine), and the page says so.
+    nightly_job: NightlyJob | None = None
 
 
 class MatchAsk(BaseModel):
@@ -205,6 +210,37 @@ class Sources(BaseModel):
 class NightlyRuns(BaseModel):
     running: bool  # a run holds the one-run-at-a-time lock right now
     runs: list[NightlyRun]  # newest first; an unfinished one not running was cut off
+    can_start: bool  # this server can start and stop the job (7.10.2)
+    starting: datetime | None  # asked for then, and not yet begun
+
+
+class RunAsk(BaseModel):
+    """A run started from the admin page (7.10.2): everything, only index and
+    publish, or one source fetched and then everything indexed and published."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fetch: bool = Field(True, description="false: only index and publish")
+    source: str | None = Field(None, description="fetch only this source")
+
+    @model_validator(mode="after")
+    def one_source_is_a_fetch(self) -> "RunAsk":
+        if self.source is not None:
+            if self.source not in SOURCES:
+                raise ValueError(f"no source {self.source!r}")
+            if not self.fetch:
+                raise ValueError("a source is only for a run that fetches")
+        return self
+
+    def args(self) -> list[str]:
+        """scripts/nightly.py's arguments: --force, because the owner asked,
+        whatever the nightly switch says."""
+        args = ["--force", "--by", "page"]
+        if not self.fetch:
+            args.append("--no-fetch")
+        if self.source:
+            args += ["--source", self.source]
+        return args
 
 
 class Invite(BaseModel):
@@ -799,14 +835,60 @@ def create_app(config: AppConfig) -> FastAPI:
             return None
         return Sources(as_of=seen[0], overview=Overview.model_validate(seen[1]))
 
-    @app.get("/api/admin/runs")
-    def nightly_runs(user: Me) -> NightlyRuns:
-        """The last 20 nightly runs, and whether one is going now."""
-        owner_only(user)
+    def runs_state() -> NightlyRuns:
         return NightlyRuns(
             running=config.database.nightly_running(),
             runs=config.database.nightly_runs(),
+            can_start=config.nightly_job is not None,
+            starting=config.database.nightly_requested(),
         )
+
+    def the_job() -> NightlyJob:
+        if config.nightly_job is None:
+            raise HTTPException(
+                503, "This JobLens has no nightly job to start: that is the hosted one."
+            )
+        return config.nightly_job
+
+    @app.get("/api/admin/runs")
+    def nightly_runs(user: Me) -> NightlyRuns:
+        """The last 20 nightly runs, whether one is going now, and whether one
+        was asked for that has not begun yet."""
+        owner_only(user)
+        return runs_state()
+
+    @app.post("/api/admin/runs", status_code=202)
+    def start_run(user: Me, given: RunAsk) -> NightlyRuns:
+        """Start the nightly job now, even while the switch is off. It takes
+        about a minute to begin; one run at a time, so not while one is going
+        or starting."""
+        owner_only(user)
+        job = the_job()
+        state = runs_state()
+        if state.running or state.starting:
+            raise HTTPException(409, "A run is already going or starting.")
+        try:
+            job.start(given.args())
+        except httpx.HTTPError as err:
+            raise HTTPException(502, refusal(err)) from err
+        config.database.request_nightly()
+        return runs_state()
+
+    @app.post("/api/admin/runs/stop", status_code=202)
+    def stop_run(user: Me) -> NightlyRuns:
+        """Stop the run that is going. What it fetched is not kept: the job
+        writes its bucket only at the end."""
+        owner_only(user)
+        job = the_job()
+        state = runs_state()
+        going = next((run for run in state.runs if run.finished_at is None), None)
+        if not state.running or going is None or going.execution is None:
+            raise HTTPException(409, "No run is going that can be stopped from here.")
+        try:
+            job.stop(going.execution)
+        except httpx.HTTPError as err:
+            raise HTTPException(502, refusal(err)) from err
+        return runs_state()
 
     # -- inviting people (7.9.1) -------------------------------------------------
 
