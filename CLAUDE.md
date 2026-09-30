@@ -108,8 +108,10 @@ conceptually, not just have working code.
   service calls; routes are plain `def` (blocking clients) and hold no logic.
   It refuses a foreign Host, and every non-GET without `X-JobLens: 1` (the CSRF
   guard, with SameSite=Lax cookies). Signing in (7.5) is invite-only: owner and
-  tester roles, one-time login links (7 days) made by `scripts/db.py invite`,
-  30-day sessions in an HttpOnly cookie, and only SHA-256 hashes of links and
+  tester roles, one-time login links (7 days) made by `scripts/db.py invite`
+  or the owner's Settings page (7.9.1; a page makes testers only, and a new
+  link replaces one not yet used), 30-day sessions in an HttpOnly cookie, and
+  only SHA-256 hashes of links and
   sessions in the database. The token sits after `#` in a link so it never
   reaches a server log, and opening a link shows a button rather than signing
   in (chat previews would use it up). Cookies must be Secure anywhere but

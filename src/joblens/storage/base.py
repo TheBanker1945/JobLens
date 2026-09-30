@@ -116,6 +116,23 @@ class User(BaseModel):
         return self.role == "owner"
 
 
+class Person(BaseModel):
+    """An account as the owner's invite list shows it (7.9.1).
+
+    Read from links and sessions, which are deleted once past their date, so
+    `signed_in_at` is the start of a session that still works -- not "ever
+    signed in" -- and a person with neither needs a new link to get in.
+    """
+
+    id: str
+    email: str | None
+    display_name: str | None
+    role: str
+    created_at: datetime
+    link_until: datetime | None  # an unused link that still works, until then
+    signed_in_at: datetime | None  # the newest session that still works
+
+
 class CVRecord(BaseModel):
     """A CV as the app keeps it. The uploaded file is kept apart (`original`)."""
 

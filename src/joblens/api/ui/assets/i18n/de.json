@@ -317,5 +317,26 @@
   "settings.nightlyHint": "Ist das an, holt JobLens jede Nacht um 03:00 Uhr (niederländische Zeit) neue Stellen aus allen Quellen, Indeed eingeschlossen, und macht sie durchsuchbar. Ist es aus, wird nichts geholt, und die vorhandenen Stellen bleiben. Ein Lauf, der schon begonnen hat, wird in beiden Fällen zu Ende geführt.",
   "settings.nightlyOn": "Jede Nacht neue Stellen holen",
   "settings.nightlyLast": "Letzte Aktualisierung: {date}, {count} Stellen.",
-  "settings.nightlyNever": "Es ist noch keine Aktualisierung eingetroffen."
+  "settings.nightlyNever": "Es ist noch keine Aktualisierung eingetroffen.",
+
+  "settings.invite": "Jemanden einladen",
+  "settings.inviteHint": "Die Person bekommt ein Konto als Tester, und du einen Anmeldelink, den du selbst schickst, per WhatsApp, E-Mail oder wie du willst. Er funktioniert einmal, 7 Tage lang. JobLens speichert nur einen Hash davon, also kopiere ihn jetzt.",
+  "settings.inviteEmail": "Ihre E-Mail-Adresse",
+  "settings.inviteName": "Ihr Name (optional)",
+  "settings.inviteLanguage": "Ihre Sprache",
+  "settings.inviteBrowser": "Wie ihr Browser",
+  "settings.inviteMake": "Einladungslink erstellen",
+  "settings.inviteBadEmail": "Das sieht nicht nach einer E-Mail-Adresse aus.",
+  "settings.inviteNew": "Neues Konto für {email}. Schick diesen Link; er wird nur jetzt angezeigt.",
+  "settings.inviteAgain": "Neuer Link für {email}; der vorherige funktioniert nicht mehr. Schick diesen Link; er wird nur jetzt angezeigt.",
+  "settings.inviteUrl": "Anmeldelink",
+  "settings.copy": "Link kopieren",
+  "settings.copied": "Kopiert",
+  "settings.copyManual": "Markiert: mit Strg+C kopieren",
+  "settings.people": "Personen mit Konto",
+  "settings.peopleIn": "Angemeldet am {date}",
+  "settings.peopleWaiting": "Link wartet, bis {date}",
+  "settings.peopleNeedsLink": "Braucht einen neuen Link",
+  "settings.peopleNewLink": "Neuer Link",
+  "settings.peopleYou": "du"
 }

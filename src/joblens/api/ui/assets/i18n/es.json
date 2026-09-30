@@ -317,5 +317,26 @@
   "settings.nightlyHint": "Si está activado, JobLens trae cada noche a las 03:00 (hora neerlandesa) vacantes nuevas de todas las fuentes, Indeed incluido, y las hace buscables. Si está desactivado, no se trae nada y las vacantes que ya hay se quedan. Una actualización que ya ha empezado termina en ambos casos.",
   "settings.nightlyOn": "Traer vacantes nuevas cada noche",
   "settings.nightlyLast": "Última actualización: {date}, {count} vacantes.",
-  "settings.nightlyNever": "Todavía no ha llegado ninguna actualización."
+  "settings.nightlyNever": "Todavía no ha llegado ninguna actualización.",
+
+  "settings.invite": "Invitar a alguien",
+  "settings.inviteHint": "Esa persona recibe una cuenta de tester, y tú un enlace de acceso para que se lo envíes por WhatsApp, correo o como quieras. Funciona una vez, durante 7 días. JobLens solo guarda un hash del enlace, así que cópialo ahora.",
+  "settings.inviteEmail": "Su correo electrónico",
+  "settings.inviteName": "Su nombre (opcional)",
+  "settings.inviteLanguage": "Su idioma",
+  "settings.inviteBrowser": "El de su navegador",
+  "settings.inviteMake": "Crear enlace de invitación",
+  "settings.inviteBadEmail": "Eso no parece una dirección de correo.",
+  "settings.inviteNew": "Cuenta nueva para {email}. Envíale este enlace; solo se muestra ahora.",
+  "settings.inviteAgain": "Enlace nuevo para {email}; el anterior ya no funciona. Envíale este enlace; solo se muestra ahora.",
+  "settings.inviteUrl": "Enlace de acceso",
+  "settings.copy": "Copiar enlace",
+  "settings.copied": "Copiado",
+  "settings.copyManual": "Seleccionado: cópialo con Ctrl+C",
+  "settings.people": "Personas con cuenta",
+  "settings.peopleIn": "Sesión iniciada el {date}",
+  "settings.peopleWaiting": "Enlace pendiente, hasta el {date}",
+  "settings.peopleNeedsLink": "Necesita un enlace nuevo",
+  "settings.peopleNewLink": "Enlace nuevo",
+  "settings.peopleYou": "tú"
 }

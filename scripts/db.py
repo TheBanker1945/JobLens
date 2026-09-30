@@ -21,7 +21,9 @@ using the files in data/raw/; `serve.py --db EMAIL` shows an account's runs.
 **Signing in is invite-only (7.5).** `invite` makes an account (a tester,
 unless --owner) and prints a login link; send it to them however you like. The
 link works once, within 7 days, and gives a 30-day session; `login-link` makes a
-new one. The links point at JOBLENS_BASE_URL (default http://127.0.0.1:8001).
+new one, and a new link replaces one that was not used yet. The links point at
+JOBLENS_BASE_URL (default http://127.0.0.1:8001). The owner can do the same
+from the settings page (7.9.1), which also shows who has signed in.
 
 `import` copies this laptop's runs (data/raw/cv-runs/) and a real CV's labels
 (data/raw/cv-labels/) into one account, and can be run again: what is already
@@ -126,20 +128,24 @@ def create_user(database: Database, args) -> int:
 
 
 def invite(database: Database, args) -> int:
-    """An account if there is none, and a login link either way."""
-    user = database.user_by_email(args.email)
-    if user is None:
-        create_user(database, args)
-        user = database.user_by_email(args.email)
-    return print_link(database, user)
+    """An account if there is none, and a login link either way: what the
+    owner's settings page does too (7.9.1)."""
+    user, token, created = database.invite(
+        args.email, display_name=args.name, locale=args.locale
+    )
+    if created:
+        if args.owner:
+            user = database.set_role(user.id, "owner")
+        print(f"created {user.email} as {user.role}  ({user.id})")
+    return print_link(user, token)
 
 
 def login_link(database: Database, args) -> int:
-    user = database.user_by_email(args.email)
-    if user is None:
+    if database.user_by_email(args.email) is None:
         print(f"No account for {args.email}: invite them first.")
         return 1
-    return print_link(database, user)
+    user, token, _ = database.invite(args.email)
+    return print_link(user, token)
 
 
 def new_secret(database: Database | None, args) -> int:
@@ -158,9 +164,8 @@ def set_role(database: Database, args) -> int:
     return 0
 
 
-def print_link(database: Database, user) -> int:
+def print_link(user, token: str) -> int:
     base = os.environ.get("JOBLENS_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-    token = database.create_login_link(user.id)
     print(
         f"login link for {user.email} (works once, for 7 days):\n"
         f"  {base}/login#{token}\n"

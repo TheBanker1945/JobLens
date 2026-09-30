@@ -3811,3 +3811,56 @@ after: a server whose database is newer than its code refuses to start.
   for four minutes. A test ends the pool's connection from the server side,
   the way Neon does, and the next request works. Without the check the same
   test fails.
+
+## 7.9.1 — Inviting people from the site
+
+Mahdi's brief (2026-09-30) redesigns the way in for testers: an invite made on
+the site itself, then an onboarding that asks one question at a time, as
+AIApply does, "with a twist". He chose the order: invites first. The decisions
+and what AIApply does are in docs/web-app-phase-7.md (7.9).
+
+**What it does.** Settings -> For you, the owner -> Invite someone. You type
+an e-mail (a name and a language if you like), press the button, and get a
+link to copy and send yourself. Under it, every account: who is signed in,
+whose link is still waiting and until when, and who needs a new one, each with
+a "New link" button. It is the same thing `db.py invite` did, from the page:
+`Database.invite` makes a tester if there is no account and a login link
+either way, and both the script and the page now call it.
+
+**How the data flows.** The page sends `POST /api/admin/invites` (owner only,
+403 for anyone else). The server makes the account, deletes any link of theirs
+that was never used, makes a new one, keeps its SHA-256 and answers with
+`/login#<token>`: the one moment the token exists outside the person's hands.
+The page puts `window.location.origin` in front of it. `GET /api/admin/people`
+reads the list from the links and sessions tables: a session that still works
+is "signed in", an unused link that has not expired is "waiting". Both are
+deleted once past their date (7.8.3's purge), so the list says what is true
+now, not what ever happened.
+
+**Why the path and not the whole link.** The rejected alternative: the server
+builds the full address. Behind Cloud Run the request reaches the app from the
+proxy, over plain http, so the server would print `http://` unless it is told
+to trust the proxy's headers, or a JOBLENS_BASE_URL is kept equal to the real
+address by hand. The page already knows its address, for certain.
+
+**Why a new link kills the old one.** A link pasted into the wrong chat should
+stop working the moment you make its replacement. One waiting link per person
+also keeps the list honest: "waiting until 7 October" is the only link there
+is. A page can only make testers. A request that asks for a role is refused
+(422, extra fields forbidden) rather than quietly ignored, which is what the
+first version did: the test for it failed, and that was the finding.
+
+**What the browser walk found that 963 tests did not.** A walk drives the real
+page in headless Chrome over its DevTools protocol: sign in through the login
+page's button, open Settings, make an invite. The list was empty on the first
+view, with "Cannot access 'DATE' before initialization". The page's start-up
+code runs from the top as the module loads and calls `showInvites()` before
+the module has reached the `const` it needs, which sits further down. A module
+starts with its code, so its constants go at the top. The same page had a
+second, older gap: the nightly card used `formatNumber` without importing it,
+so on the live site, where the card has a date, the owner's Settings would stop
+there and the AI section would never load. Both are fixed; the walk after the fix
+shows no errors.
+
+9 new tests; 963 in all. No new dependency (the walk's websocket client ran
+through `uv run --with`, outside the project).

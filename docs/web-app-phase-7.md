@@ -99,6 +99,7 @@ for it.
 | 6 | bring your own AI: encrypted keys, test connection, measured models, the tester freemium quota | `feat/7.6-byo-ai` |
 | 7 | the user-facing UI: style questions, 2-3 mockups, Mahdi picks, then build; five languages | `feat/7.7-ui` |
 | 8 | hosting: container, hosted database and storage, secrets, scheduled fetching, privacy notice, delete-my-data, cost caps | `feat/7.8-hosting` |
+| 9 | onboarding and invites: invite from the site, one question at a time | `feat/7.9.1-invites`, `feat/7.9.2-questions`, `feat/7.9.3-flow` |
 
 From 7.2 on everything is designed as if there is no persistent disk, which
 keeps every host open.
@@ -145,6 +146,53 @@ the top menu becomes a bottom bar. The matches page shows every vacancy a
 match read and those the answers moved out of the shortlist; a mark there is
 the same `Decision` the viewer (4.4) writes, with a required reason, so the
 evals read a tester's marks the way they read Mahdi's.
+
+## Onboarding and invites (7.9)
+
+Mahdi's brief (2026-09-30), in his words: invite links he can make "through my
+own website"; then an onboarding that starts with "uploading the CV, asking
+questions one by one just like how AIapply is doing", "but with a twist";
+"a single page with a single question at a time and a list to chose from, same
+design choises we currently have, and with a bar above the question that fills
+up the more questions you anqser", with the option "to skip a question"; and
+the answers still to be given or changed "through the dashboard itself".
+
+**What AIApply does**, read on 2026-09-30 from the strings its public
+/product page ships (no account was made): a flow that asks about the person
+first (work status, how they search, for how long), then the CV, which it says
+"auto-fills" what follows (roles, level, salary, type of work, remote or
+on-site, cities, companies to avoid), then a summary to approve. About ten
+screens in between are sales copy ("the job market got brutal"). The look: a
+bar split into one segment per phase, one big question, answers as large
+tappable cards (a checkbox when several may be picked), and a bar at the bottom
+with Skip and Continue.
+
+A clickable mockup in style A was shown (claude.ai artifact, private), with
+three candidate twists to switch on and off. Mahdi's answers, 2026-09-30:
+
+| question | answer |
+|---|---|
+| which twist | **"What this changes"** only: one line per question saying how the answer moves the matches, or that it does not yet. Not the counts from our own vacancies, not hints from the CV. |
+| work status and "what are you looking for" | **saved only**: stored and changeable, said to be unused, left out of a run's stamp; measured before they may act |
+| the answers to "what are you looking for" | AIApply's seven (his pasted list did not arrive) |
+| order | invites first (7.9.1), then the questions (7.9.2), then the flow (7.9.3) |
+
+"Type of work" (AIApply: full-time, part-time, contract, internship) is asked
+as two questions, contract and hours, because the preferences and the Dutch
+vacancies keep them apart: full-time is a number of hours, not a contract. The
+one-page form stays, for changing answers; the flow is for the first visit and
+for the questions left open.
+
+**7.9.1, built.** Settings -> For you, the owner -> Invite someone: an e-mail,
+optionally a name and a language, and a link shown once (only its hash is
+kept), with Copy. Below it every account, newest first: signed in (a session
+that still works), a link waiting (until when), or needs a new link, with a
+"New link" button. The server answers with the path (`/login#...`) and the page
+puts its own address in front: behind Cloud Run's proxy the server is not sure
+of its own. A new link replaces one not yet used (`Database.invite`, also what
+`db.py invite` and `login-link` do now), so a link sent to the wrong chat dies
+when its replacement is made. A page can only make testers; an owner is still
+made with `db.py set-role`, and an invite asking for a role is refused.
 
 ## Open questions from 7.3 (for Mahdi)
 

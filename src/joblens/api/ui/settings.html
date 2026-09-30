@@ -79,6 +79,37 @@
 <p class="muted" data-i18n="settings.nightlyHint">Every night at 03:00, new vacancies from every source.</p>
 <label class="check"><input type="checkbox" id="nightly"> <span data-i18n="settings.nightlyOn">Fetch new vacancies every night</span></label>
 <p id="nightly-state" class="muted" role="status" aria-live="polite"></p>
+<form id="invite" class="stack bring" novalidate>
+<h3 class="subhead" data-i18n="settings.invite">Invite someone</h3>
+<p class="muted" data-i18n="settings.inviteHint">They get an account as a tester, and you get a login link to send them yourself.</p>
+<div class="settings-grid">
+<div class="field field-wide">
+<label for="invite-email" data-i18n="settings.inviteEmail">E-mail</label>
+<input id="invite-email" class="input" type="email" maxlength="254" autocomplete="off" spellcheck="false" aria-describedby="invite-error">
+</div>
+<div class="field">
+<label for="invite-name" data-i18n="settings.inviteName">Name (optional)</label>
+<input id="invite-name" class="input" maxlength="80" autocomplete="off">
+</div>
+<div class="field">
+<label for="invite-language" data-i18n="settings.inviteLanguage">Language</label>
+<select id="invite-language" class="input"></select>
+</div>
+</div>
+<span id="invite-error" class="field-error" role="alert" hidden></span>
+<div class="form-foot">
+<button type="submit" id="invite-make" class="button button-primary" data-i18n="settings.inviteMake">Make an invite link</button>
+</div>
+</form>
+<div id="invite-link" class="success invite-link" role="status" aria-live="polite" hidden>
+<p id="invite-said"></p>
+<input id="invite-url" class="input" readonly spellcheck="false" data-i18n-attr="aria-label:settings.inviteUrl">
+<div><button type="button" id="invite-copy" class="button button-outline" data-i18n="settings.copy">Copy link</button></div>
+</div>
+<div class="stack bring">
+<h3 class="subhead" data-i18n="settings.people">People with an account</h3>
+<ul id="people" class="plain-list"></ul>
+</div>
 </section>
 
 <section class="card" aria-labelledby="data-title">
