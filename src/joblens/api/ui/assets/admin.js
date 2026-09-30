@@ -31,6 +31,10 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const CHEVRON = "M9 6l6 6-6 6";
 const POLL = 30_000; // while a run is going, look again this often
 const POLL_STARTING = 10_000; // and while one is starting, more often
+// Two runs a day at least this many hours apart: cloud/schedule.py MIN_GAP
+// decides, this only says it sooner (tests/test_schedule.py keeps them equal).
+const MIN_GAP = 6;
+const DUTCH = "Europe/Amsterdam"; // the schedule's hours are Dutch time
 
 let me = null;
 let wasRunning = false;
@@ -308,11 +312,15 @@ function runItem(run, going) {
   );
 }
 
-// -- the nightly switch (7.8.5) ----------------------------------------------------
+// -- the switch (7.8.5) and the schedule (7.10.3) ------------------------------------
+//
+// Cloud Scheduler starts the job every hour; it runs only while switched on,
+// in an hour of this schedule (cloud/schedule.py). Hours are Dutch time, so
+// the next run is shown in Dutch time too, wherever the owner's browser is.
 
 async function showNightly() {
   const box = byId("nightly");
-  const draw = (state) => {
+  const draw = (state, { form = false } = {}) => {
     box.checked = state.enabled;
     byId("nightly-state").textContent = state.published_at
       ? t("admin.nightlyLast", {
@@ -322,8 +330,13 @@ async function showNightly() {
           count: formatNumber(state.vacancies),
         })
       : t("admin.nightlyNever");
+    byId("nightly-next").textContent = state.next_run
+      ? t("admin.nextRun", { date: formatDate(state.next_run, { ...WHEN, timeZone: DUTCH }) })
+      : t("admin.nextOff");
+    if (form) fillSchedule(state.schedule);
   };
-  draw(await api("/api/admin/nightly"));
+  buildSchedule();
+  draw(await api("/api/admin/nightly"), { form: true });
   box.addEventListener("change", async () => {
     box.disabled = true;
     try {
@@ -335,6 +348,65 @@ async function showNightly() {
       box.disabled = false;
     }
   });
+  byId("schedule").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    scheduleError(null);
+    byId("schedule-saved").textContent = "";
+    const days = [...document.querySelectorAll("#schedule-days input:checked")]
+      .map((input) => Number(input.value));
+    const hours = [byId("schedule-first").value, byId("schedule-second").value]
+      .filter((value) => value !== "").map(Number);
+    if (!days.length) return scheduleError(t("admin.scheduleNoDay"));
+    if (hours.length === 2) {
+      const apart = Math.abs(hours[0] - hours[1]);
+      if (Math.min(apart, 24 - apart) < MIN_GAP) return scheduleError(t("admin.scheduleGap"));
+    }
+    const button = byId("schedule-save");
+    button.disabled = true;
+    try {
+      draw(await api("/api/admin/schedule", { method: "PUT", json: { days, hours } }),
+        { form: true });
+      byId("schedule-saved").textContent = t("admin.scheduleSaved");
+    } catch (error) {
+      scheduleError(error instanceof ApiError && error.status === 422
+        ? t("admin.scheduleGap")
+        : errorText(error));
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+// Weekdays in the page's language (Monday first, as the server counts them),
+// and the 24 hours; the second hour may be left empty.
+function buildSchedule() {
+  const lang = document.documentElement.lang;
+  const weekday = new Intl.DateTimeFormat(lang, { weekday: "long", timeZone: "UTC" });
+  fill(byId("schedule-days"), ...[0, 1, 2, 3, 4, 5, 6].map((day) =>
+    // 5 January 2026 was a Monday.
+    h("label", { class: "choice" },
+      h("input", { type: "checkbox", value: day }),
+      weekday.format(new Date(Date.UTC(2026, 0, 5 + day)))),
+  ));
+  const hours = [...Array(24).keys()].map((hour) =>
+    h("option", { value: hour }, `${String(hour).padStart(2, "0")}:00`));
+  fill(byId("schedule-first"), ...hours);
+  fill(byId("schedule-second"),
+    h("option", { value: "" }, t("admin.scheduleNoSecond")),
+    ...hours.map((option) => option.cloneNode(true)));
+}
+
+function fillSchedule(schedule) {
+  for (const input of document.querySelectorAll("#schedule-days input")) {
+    input.checked = schedule.days.includes(Number(input.value));
+  }
+  byId("schedule-first").value = String(schedule.hours[0]);
+  byId("schedule-second").value = schedule.hours[1] === undefined ? "" : String(schedule.hours[1]);
+}
+
+function scheduleError(text) {
+  byId("schedule-error").textContent = text || "";
+  show(byId("schedule-error"), Boolean(text));
 }
 
 // -- inviting people (7.9.1) -------------------------------------------------------

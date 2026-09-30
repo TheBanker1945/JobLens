@@ -298,6 +298,28 @@ gcloud run services update joblens --region europe-west4 \
   --update-env-vars JOBLENS_NIGHTLY_JOB=projects/gen-lang-client-0860584471/locations/europe-west4/jobs/joblens-nightly
 ```
 
+**7.10.3, built.** The switch's card is now "Automatic vacancy update": the
+switch, and under it the days (Monday to Sunday) and one or two hours, Dutch
+time, with "Next run: Wed 30 Sep, 18:00". The schedule is a pydantic model
+(`cloud/schedule.py`) kept in `app_settings` ('nightly_schedule'); missing,
+it is every day at 03:00 -- what Cloud Scheduler did before. Two hours must be
+at least 6 apart, round the clock (22:00 and 02:00 are 4): every run asks
+every site again. Cloud Scheduler becomes an hourly wake-up; `nightly.py`'s
+`should_run` lets a start through only with `--force`, or with the switch on,
+in a scheduled hour (Dutch time, so the clock change needs nothing), and when
+no run began in that hour yet (Cloud Scheduler once delivered a start twice).
+A start that finds nothing due leaves before touching the bucket.
+
+**The order matters when this goes live.** Cloud Scheduler may start the job
+every hour only once the job's image knows the schedule: the image running
+now would fetch every hour while the switch is on. So: rebuild and update the
+job, deploy the app, and only then
+
+```
+gcloud scheduler jobs update http joblens-nightly --location europe-west4 \
+  --schedule "0 * * * *"
+```
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

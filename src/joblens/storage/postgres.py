@@ -37,6 +37,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
+from joblens.cloud.schedule import Schedule
 from joblens.cv.read import CVFile
 from joblens.cv.runs import RunRecord, digest
 from joblens.cv.schema import CVProfile
@@ -371,6 +372,35 @@ class Database:
                         conn.execute("SELECT pg_advisory_unlock(%s)", (NIGHTLY_LOCK,))
                     except psycopg.Error:
                         pass  # the connection is gone, and the lock with it
+
+    def nightly_schedule(self) -> Schedule:
+        """When the job fetches by itself (7.10.3); a missing row is the
+        default, every day at 03:00 -- what Cloud Scheduler did before."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM app_settings WHERE key = 'nightly_schedule'"
+            ).fetchone()
+        return Schedule.model_validate(row["value"]) if row else Schedule()
+
+    def set_nightly_schedule(self, schedule: Schedule) -> None:
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT INTO app_settings (key, value) VALUES ('nightly_schedule', %s) "
+                "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, "
+                "updated_at = now()",
+                (Jsonb(schedule.model_dump()),),
+            )
+
+    def nightly_started_since(self, since: datetime) -> bool:
+        """Whether a run began at or after `since`: the hourly start's check
+        that this hour's run has not happened already."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT EXISTS (SELECT 1 FROM nightly_runs WHERE started_at >= %s) "
+                "AS started",
+                (since,),
+            ).fetchone()
+        return row["started"]
 
     def nightly_switched_at(self) -> datetime | None:
         with self.connect() as conn:

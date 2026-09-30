@@ -324,7 +324,10 @@ conceptually, not just have working code.
   in the cloud, not on a laptop (Mahdi: "everything should be cloud based",
   JobSpy/Indeed included, tried from a datacenter): Cloud Run job
   `joblens-nightly` (scripts/nightly.py, the Dockerfile's `nightly` stage)
-  started by Cloud Scheduler at 03:00 Europe/Amsterdam, fetch -> index ->
+  started by Cloud Scheduler every hour, running only in an hour of the
+  owner's schedule (7.10.3, cloud/schedule.py, app_settings
+  'nightly_schedule': weekdays and one or two hours at least 6 apart, Dutch
+  time, default every day 03:00) and once per hour, fetch -> index ->
   publish to Neon. Its disk is the bucket `joblens-state-883656455192`
   (europe-west4, versioned 30 days): vacancy state only, by the allow-list in
   src/joblens/cloud/state.py -- a CV, label or run never goes there. The job

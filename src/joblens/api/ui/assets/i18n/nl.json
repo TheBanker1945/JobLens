@@ -407,9 +407,9 @@
   "privacy.why.title": "Waarom",
   "privacy.why.text": "JobLens gebruikt je gegevens alleen om je te geven waar je om vroeg: je cv met vacatures vergelijken (AVG, artikel 6 lid 1 onder b).",
 
-  "admin.nightly": "Nachtelijke vacature-update",
-  "admin.nightlyHint": "Staat dit aan, dan haalt JobLens elke nacht om 03:00 nieuwe vacatures op uit alle bronnen, Indeed ook, en maakt ze doorzoekbaar. Staat het uit, dan wordt er niets opgehaald en blijven de vacatures die er al zijn. Een run die al begonnen is, maakt het in beide gevallen af.",
-  "admin.nightlyOn": "Elke nacht nieuwe vacatures ophalen",
+  "admin.nightly": "Automatische vacature-update",
+  "admin.nightlyHint": "Staat dit aan, dan haalt JobLens op de tijden hieronder nieuwe vacatures op uit alle bronnen, Indeed ook, en maakt ze doorzoekbaar. Staat het uit, dan wordt er vanzelf niets opgehaald en blijven de vacatures die er al zijn; Nu ophalen werkt wel. Een run die al begonnen is, maakt het in beide gevallen af.",
+  "admin.nightlyOn": "Nieuwe vacatures ophalen volgens dit schema",
   "admin.nightlyLast": "Laatste update: {date}, {count} vacatures.",
   "admin.nightlyNever": "Er is nog geen update binnengekomen.",
 
@@ -512,5 +512,17 @@
   "admin.runLocal": "Runs start je vanuit de gehoste JobLens: deze heeft geen nachtelijke taak om te starten.",
   "admin.runOne": "Alleen {source} ophalen",
   "admin.onlySource": "alleen {source}",
-  "admin.runStopping": "De run wordt gestopt: Cloud Run beëindigt hem binnen een paar seconden."
+  "admin.runStopping": "De run wordt gestopt: Cloud Run beëindigt hem binnen een paar seconden.",
+  "admin.nextRun": "Volgende run: {date} (Nederlandse tijd).",
+  "admin.nextOff": "Uitgezet: er draait niets vanzelf.",
+  "admin.schedule": "Wanneer het ophaalt",
+  "admin.scheduleDays": "Dagen",
+  "admin.scheduleAt": "Om",
+  "admin.scheduleAlso": "En ook om (optioneel)",
+  "admin.scheduleNoSecond": "Eén keer per dag",
+  "admin.scheduleHint": "Nederlandse tijd. Twee runs per dag liggen minstens 6 uur uit elkaar: elke run vraagt elke site opnieuw.",
+  "admin.scheduleSave": "Schema opslaan",
+  "admin.scheduleSaved": "Opgeslagen.",
+  "admin.scheduleNoDay": "Kies minstens één dag.",
+  "admin.scheduleGap": "Twee runs per dag moeten minstens 6 uur uit elkaar liggen."
 }

@@ -4085,3 +4085,56 @@ own.
 
 1004 tests. No new dependency. Not live until the two commands in
 docs/web-app-phase-7.md (7.10.2) are run.
+
+## 7.10.3 — The schedule, kept in JobLens
+
+Mahdi asked for a way to set "a cron job for automatic fetching", and chose
+how: the schedule lives in JobLens, as weekdays and one or two hours a day,
+not as cron text and not in Cloud Scheduler.
+
+**What the owner sees.** The switch's card is now "Automatic vacancy
+update": the switch, then "When it fetches" -- Monday to Sunday as choices,
+"At 06:00" and "And also at 18:00 (optional)" -- and "Next run: Wed 30 Sep,
+18:00 (Dutch time)". Switched off, it says nothing runs by itself; Fetch now
+still works either way.
+
+**How it works: a dumb timer and a smart job.** Cloud Scheduler no longer
+knows when to fetch; it only wakes the job every hour. The job's first
+question (`should_run`) is whether this hour is a run: switched on, one of
+the owner's hours on one of the owner's days, and no run begun in this hour
+yet. Otherwise it leaves in seconds, before touching the bucket or any site.
+The schedule itself is a small pydantic model (`cloud/schedule.py`) in
+`app_settings`, the same table as the switch.
+
+**Choices worth knowing.**
+- *Why not let the page change Cloud Scheduler?* Cloud Scheduler cannot give
+  a right to one scheduler job; the app's account would need to edit every
+  scheduler job in the project, and to act as the account that starts the
+  job. The web app is the most exposed part of JobLens; it stays the account
+  that reads three secrets and starts one job. The cost: about 23 starts a day
+  that find nothing to do, each waking Neon for a few minutes.
+- *Dutch time, always.* The hours are Dutch hours, checked against the
+  current time converted to Europe/Amsterdam, so the change of clocks needs
+  nothing. "Next run" is found by stepping hour by hour in UTC: stepping in
+  Dutch wall time would count 02:00 twice, or never, on the night the clocks
+  change (a test crosses 25 October 2026).
+- *Six hours apart.* Two runs a day closer than that would ask every site
+  twice for almost nothing new. Midnight counts: 22:00 and 02:00 are four
+  hours apart and refused. The page says so before sending, in the owner's
+  language; the server decides, and a test keeps the two numbers equal.
+- *Once per hour.* Cloud Scheduler was seen delivering one start twice. The
+  lock stops two runs at once; "a run began this hour already" stops the
+  second delivery arriving after the first has finished.
+- *The default is yesterday's behaviour.* No schedule saved means every day
+  at 03:00, so nothing changes until the owner changes it.
+
+**The walk.** Weekdays at 06:00 and 08:00 were refused on the page ("at least
+6 hours apart"); 06:00 and 18:00 were saved, survived a reload, and with the
+switch on the page said "Next run: Wed, Sep 30, 06:00 PM (Dutch time)" --
+right, at four in the afternoon on a Wednesday.
+
+**One order to keep when it goes live.** The job's image running now does not
+know the schedule; started every hour with the switch on, it would fetch
+every hour. So the new image first, then Cloud Scheduler to hourly.
+
+1019 tests. No new dependency.

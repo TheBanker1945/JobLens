@@ -72,10 +72,34 @@
 </div>
 
 <section class="card" aria-labelledby="nightly-title">
-<h2 id="nightly-title" data-i18n="admin.nightly">Nightly vacancy update</h2>
-<p class="muted" data-i18n="admin.nightlyHint">Every night at 03:00, new vacancies from every source.</p>
-<label class="check"><input type="checkbox" id="nightly"> <span data-i18n="admin.nightlyOn">Fetch new vacancies every night</span></label>
+<h2 id="nightly-title" data-i18n="admin.nightly">Automatic vacancy update</h2>
+<p class="muted" data-i18n="admin.nightlyHint">When on, JobLens fetches new vacancies at the times below.</p>
+<label class="check"><input type="checkbox" id="nightly"> <span data-i18n="admin.nightlyOn">Fetch new vacancies on this schedule</span></label>
 <p id="nightly-state" class="muted" role="status" aria-live="polite"></p>
+<p id="nightly-next" class="muted" role="status" aria-live="polite"></p>
+<form id="schedule" class="stack bring" novalidate>
+<h3 class="subhead" data-i18n="admin.schedule">When it fetches</h3>
+<fieldset class="fieldset">
+<legend data-i18n="admin.scheduleDays">Days</legend>
+<div id="schedule-days" class="choices"></div>
+</fieldset>
+<div class="field-row">
+<div class="field">
+<label for="schedule-first" data-i18n="admin.scheduleAt">At</label>
+<select id="schedule-first" class="input" aria-describedby="schedule-hint"></select>
+</div>
+<div class="field">
+<label for="schedule-second" data-i18n="admin.scheduleAlso">And also at (optional)</label>
+<select id="schedule-second" class="input" aria-describedby="schedule-hint"></select>
+</div>
+</div>
+<span class="field-hint" id="schedule-hint" data-i18n="admin.scheduleHint">Dutch time. Two runs a day must be at least 6 hours apart.</span>
+<span id="schedule-error" class="field-error" role="alert" hidden></span>
+<div class="form-foot">
+<span id="schedule-saved" class="saved" role="status" aria-live="polite"></span>
+<button type="submit" id="schedule-save" class="button button-primary" data-i18n="admin.scheduleSave">Save the schedule</button>
+</div>
+</form>
 </section>
 
 <section class="card" aria-labelledby="invite-title">

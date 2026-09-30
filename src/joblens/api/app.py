@@ -63,6 +63,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from joblens.api import language, views
 from joblens.api.runner import Runner, ThreadRunner
 from joblens.cloud.jobs import NightlyJob, refusal
+from joblens.cloud.schedule import Schedule
 from joblens.config import LLMSettings
 from joblens.corpus import Corpus
 from joblens.cv.read import CVFile
@@ -196,6 +197,8 @@ class Nightly(BaseModel):
 
     enabled: bool
     switched_at: datetime | None  # when the switch was last flipped
+    schedule: Schedule  # when it fetches by itself, Dutch time (7.10.3)
+    next_run: datetime | None  # the next scheduled hour; None while switched off
     published_at: datetime | None  # when the last set of vacancies arrived
     vacancies: int | None  # how many it held
 
@@ -800,9 +803,13 @@ def create_app(config: AppConfig) -> FastAPI:
 
     def nightly_state() -> Nightly:
         summary = published.published_summary(config.database)
+        enabled = config.database.nightly_enabled()
+        schedule = config.database.nightly_schedule()
         return Nightly(
-            enabled=config.database.nightly_enabled(),
+            enabled=enabled,
             switched_at=config.database.nightly_switched_at(),
+            schedule=schedule,
+            next_run=schedule.next_after(datetime.now(UTC)) if enabled else None,
             published_at=summary[0] if summary else None,
             vacancies=summary[1] if summary else None,
         )
@@ -820,6 +827,15 @@ def create_app(config: AppConfig) -> FastAPI:
         finishes."""
         owner_only(user)
         config.database.set_nightly(given.enabled)
+        return nightly_state()
+
+    @app.put("/api/admin/schedule")
+    def set_schedule(user: Me, given: Schedule) -> Nightly:
+        """When the job fetches by itself: weekdays and one or two hours,
+        Dutch time, at least six hours apart. Cloud Scheduler starts the job
+        every hour; it runs in these hours only, and only while switched on."""
+        owner_only(user)
+        config.database.set_nightly_schedule(given)
         return nightly_state()
 
     # -- the admin page (7.10.1) ------------------------------------------------
