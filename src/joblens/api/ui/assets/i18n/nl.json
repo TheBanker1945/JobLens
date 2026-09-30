@@ -524,5 +524,16 @@
   "admin.scheduleSave": "Schema opslaan",
   "admin.scheduleSaved": "Opgeslagen.",
   "admin.scheduleNoDay": "Kies minstens één dag.",
-  "admin.scheduleGap": "Twee runs per dag moeten minstens 6 uur uit elkaar liggen."
+  "admin.scheduleGap": "Twee runs per dag moeten minstens 6 uur uit elkaar liggen.",
+  "admin.spend": "Wat het deze maand kostte",
+  "admin.spendHint": "Elke betaalde modelaanroep, naar wiens sleutel betaalde. Een tester mag {allowance} per maand uitgeven op de sleutel van JobLens, en alles daarop samen {cap}; een eigen sleutel heeft geen limiet.",
+  "admin.spendAll": "Sleutel van JobLens, iedereen: {spent} van {cap}. Bij de limiet worden testers zonder eigen sleutel gestopt tot volgende maand.",
+  "admin.spendYours": "Waarvan je eigen gebruik: {spent}. Dat telt ook mee voor de limiet.",
+  "admin.spendTester": "Sleutel van JobLens: {spent} van {allowance}",
+  "admin.spendOwner": "Sleutel van JobLens: {spent}, geen limiet voor jou",
+  "admin.spendOwn": "eigen sleutel: {spent}",
+  "admin.spendCalls.zero": "geen betaalde aanroepen",
+  "admin.spendCalls.one": "1 betaalde aanroep",
+  "admin.spendCalls.other": "{n} betaalde aanroepen",
+  "admin.ownKey": "eigen sleutel"
 }

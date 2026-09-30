@@ -524,5 +524,16 @@
   "admin.scheduleSave": "Enregistrer le planning",
   "admin.scheduleSaved": "Enregistré.",
   "admin.scheduleNoDay": "Choisis au moins un jour.",
-  "admin.scheduleGap": "Deux exécutions par jour doivent être espacées d'au moins 6 heures."
+  "admin.scheduleGap": "Deux exécutions par jour doivent être espacées d'au moins 6 heures.",
+  "admin.spend": "Ce que ça a coûté ce mois-ci",
+  "admin.spendHint": "Chaque appel payant à un modèle, selon la clé qui a payé. Un testeur peut dépenser {allowance} par mois sur la clé de JobLens, et tout ce qui passe par elle {cap} au total ; une clé personnelle n'a pas de limite.",
+  "admin.spendAll": "Clé de JobLens, tout le monde : {spent} sur {cap}. Au plafond, les testeurs sans clé personnelle sont arrêtés jusqu'au mois suivant.",
+  "admin.spendYours": "Dont ton propre usage : {spent}. Il compte aussi pour le plafond.",
+  "admin.spendTester": "Clé de JobLens : {spent} sur {allowance}",
+  "admin.spendOwner": "Clé de JobLens : {spent}, sans limite pour toi",
+  "admin.spendOwn": "clé personnelle : {spent}",
+  "admin.spendCalls.zero": "aucun appel payant",
+  "admin.spendCalls.one": "1 appel payant",
+  "admin.spendCalls.other": "{n} appels payants",
+  "admin.ownKey": "clé personnelle"
 }

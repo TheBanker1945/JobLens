@@ -11,7 +11,9 @@
 import { api, ApiError } from "./api.js";
 import { byId, fill, h, show } from "./dom.js";
 import { ENDONYMS, icon, setUpFrame } from "./frame.js";
-import { formatDate, formatNumber, loadLanguage, plural, t, translate } from "./i18n.js";
+import {
+  formatDate, formatMoney, formatNumber, loadLanguage, plural, t, translate,
+} from "./i18n.js";
 
 // Brand names stay as they are in every language; the two that are not brands
 // are words in the dictionaries.
@@ -57,7 +59,7 @@ try {
   // The runs first: whether a source gets its "Fetch only" button depends on
   // whether this server can start the job at all.
   await showRuns();
-  await Promise.all([showSources(), showNightly(), showInvites()]);
+  await Promise.all([showSources(), showNightly(), showSpend(), showInvites()]);
 } catch (error) {
   say(errorText(error));
 }
@@ -407,6 +409,58 @@ function fillSchedule(schedule) {
 function scheduleError(text) {
   byId("schedule-error").textContent = text || "";
   show(byId("schedule-error"), Boolean(text));
+}
+
+// -- what it cost this month (7.10.4) ------------------------------------------------
+//
+// Every paid model call is recorded with whose key paid (storage `usage`). A
+// tester has a monthly allowance on JobLens's key; everything on that key
+// together has a cap, and the check behind it (service/budget.py) counts the
+// owner's own use too -- so the page shows that part separately.
+
+async function showSpend() {
+  const spend = await api("/api/admin/spend");
+  const money = (usd) => formatMoney(usd, "USD");
+  byId("spend-month").textContent = formatDate(`${spend.month}-15T12:00:00Z`,
+    { month: "long", year: "numeric" });
+  byId("spend-hint").textContent = t("admin.spendHint", {
+    allowance: money(spend.tester_allowance_usd), cap: money(spend.operator_cap_usd),
+  });
+  fill(byId("spend-total"),
+    bar(spend.operator_usd, spend.operator_cap_usd),
+    h("p", { class: "muted" }, t("admin.spendAll", {
+      spent: money(spend.operator_usd), cap: money(spend.operator_cap_usd),
+    })),
+    spend.owner_usd > 0
+      && h("p", { class: "muted" }, t("admin.spendYours", { spent: money(spend.owner_usd) })),
+  );
+  fill(byId("spend-people"), ...spend.people.map((person) => {
+    const onJobLens = person.allowance_usd === null
+      ? t("admin.spendOwner", { spent: money(person.operator_usd) })
+      : t("admin.spendTester", {
+          spent: money(person.operator_usd), allowance: money(person.allowance_usd),
+        });
+    const facts = [onJobLens, plural("admin.spendCalls", person.calls)];
+    if (person.own_usd > 0) facts.splice(1, 0, t("admin.spendOwn", { spent: money(person.own_usd) }));
+    return h("li", { class: "history-row person spend-person" },
+      h("span", { class: "person-who" },
+        h("strong", {}, person.display_name || person.email),
+        person.display_name && h("span", { class: "muted" }, person.email),
+        person.id === me.id && h("span", { class: "muted" }, t("admin.peopleYou")),
+      ),
+      h("span", { class: "spend-end" },
+        person.own_key && h("span", { class: "badge badge-weak" }, t("admin.ownKey")),
+        person.allowance_usd !== null && bar(person.operator_usd, person.allowance_usd),
+        h("span", { class: "muted" }, facts.join(" · ")),
+      ),
+    );
+  }));
+}
+
+function bar(value, limit) {
+  const inside = h("div", { class: "bar-fill" });
+  inside.style.width = `${Math.min(100, limit > 0 ? (100 * value) / limit : 0)}%`;
+  return h("div", { class: "bar" }, inside);
 }
 
 // -- inviting people (7.9.1) -------------------------------------------------------

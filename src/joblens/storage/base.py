@@ -235,6 +235,19 @@ class ProviderKey(BaseModel):
     verified_at: datetime
 
 
+class Spend(BaseModel):
+    """What one account's paid model calls cost this month (7.10.4)."""
+
+    id: str
+    email: str | None
+    display_name: str | None
+    role: str
+    own_key: bool  # has an own key stored now
+    operator_usd: float  # on JobLens's key
+    own_usd: float  # on their own key (priced models only)
+    calls: int  # paid calls recorded, priced or not
+
+
 class NightlyRun(BaseModel):
     """One run of the nightly job, as the owner's admin page lists it (7.10.1)."""
 

@@ -524,5 +524,16 @@
   "admin.scheduleSave": "Guardar el horario",
   "admin.scheduleSaved": "Guardado.",
   "admin.scheduleNoDay": "Elige al menos un día.",
-  "admin.scheduleGap": "Dos ejecuciones al día deben estar separadas al menos 6 horas."
+  "admin.scheduleGap": "Dos ejecuciones al día deben estar separadas al menos 6 horas.",
+  "admin.spend": "Lo que costó este mes",
+  "admin.spendHint": "Cada llamada de pago a un modelo, según la clave que pagó. Un tester puede gastar {allowance} al mes con la clave de JobLens, y todo lo que pasa por ella {cap} en total; una clave propia no tiene límite.",
+  "admin.spendAll": "Clave de JobLens, todos: {spent} de {cap}. Al llegar al límite, los testers sin clave propia se detienen hasta el mes siguiente.",
+  "admin.spendYours": "De eso, tu propio uso: {spent}. También cuenta para el límite.",
+  "admin.spendTester": "Clave de JobLens: {spent} de {allowance}",
+  "admin.spendOwner": "Clave de JobLens: {spent}, sin límite para ti",
+  "admin.spendOwn": "clave propia: {spent}",
+  "admin.spendCalls.zero": "ninguna llamada de pago",
+  "admin.spendCalls.one": "1 llamada de pago",
+  "admin.spendCalls.other": "{n} llamadas de pago",
+  "admin.ownKey": "clave propia"
 }

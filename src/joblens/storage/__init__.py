@@ -10,6 +10,7 @@ from joblens.storage.base import (
     Person,
     ProviderKey,
     RunSummary,
+    Spend,
     Store,
     User,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "PostgresStore",
     "ProviderKey",
     "RunSummary",
+    "Spend",
     "Store",
     "User",
 ]

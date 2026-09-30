@@ -4138,3 +4138,28 @@ know the schedule; started every hour with the switch on, it would fetch
 every hour. So the new image first, then Cloud Scheduler to hourly.
 
 1019 tests. No new dependency.
+
+## 7.10.4 — What JobLens cost this month
+
+The last of the four extras Mahdi chose for the admin page: what testers
+spent.
+
+**What the owner sees.** "What it cost this month -- September 2026": a bar
+for JobLens's own key against the cap for everyone ($0.83 of $10.00), the
+owner's own part of it, and then every account: Tess, $0.61 of her $1.00 on
+JobLens's key, 17 paid calls; Sam, "own key", $0.15 on it; the owner, no limit.
+
+**How it works.** Every paid model call has been written to `usage` since 7.6,
+with its price and whose key paid. One query adds this month up per account
+(`spend_by_person`), and the page puts it beside the two limits the budget
+already knows. Nothing new decides anything: the total is the very number
+`budget.check` compares with the cap, and a test holds them equal.
+
+**Found on the way, left for Mahdi.** That check counts *everything* on
+JobLens's key towards the cap "for all testers" -- the owner's own matches
+too. So the owner using JobLens uses up the testers' shared $10. That is a
+money rule, so it is not changed here; the page shows the owner's part
+separately, and docs/web-app-phase-7.md asks whether the cap should count
+testers only.
+
+1022 tests. No new dependency.
