@@ -17,6 +17,7 @@ import {
   translate,
 } from "./i18n.js";
 import { followJob, isFollowing } from "./progress.js";
+import { ASKED, isAnswered, openQuestions } from "./questions.js";
 
 let data = null;
 let framed = false;
@@ -226,6 +227,15 @@ function renderWishes() {
     ...(chips.length
       ? chips.map((text) => h("span", { class: "chip" }, text))
       : [h("span", { class: "muted" }, t("wishes.none"))]),
+  );
+  // The guide's questions still open (7.9.3), and the way back to them: the
+  // same one-at-a-time flow, with only those.
+  const open = openQuestions(p, null, ASKED);
+  const total = ASKED.filter((q) => !q.needs || isAnswered({ id: q.needs }, p)).length;
+  fill(byId("wishes-open"),
+    h("p", { class: "muted" }, t("wishes.answered", { n: total - open.length, total })),
+    open.length > 0 && h("a", { class: "button button-outline", href: "/guide?open" },
+      t("wishes.answerOpen", { n: open.length })),
   );
 }
 

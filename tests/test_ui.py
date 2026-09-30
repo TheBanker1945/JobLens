@@ -17,6 +17,7 @@ from test_service_matching import JUDGEMENT, WISHLIST
 
 from joblens.api import language
 from joblens.api.app import UI
+from joblens.preferences import Preferences
 
 # -- which language ---------------------------------------------------------------
 
@@ -120,6 +121,17 @@ def test_no_script_can_write_null_or_false_into_a_page():
             assert ".replaceChildren(" not in script.read_text("utf-8"), script.name
 
 
+def test_the_guide_asks_every_preference_and_only_real_ones():
+    """The guide's questions (questions.js, 7.9.3) and the schema must not
+    drift apart: a new preference is a new question, and every question
+    stores into a field the server keeps. "hours" is one question for two."""
+    source = (UI / "assets" / "questions.js").read_text("utf-8")
+    asked = set(re.findall(r'\bid: "(\w+)"', source)) - {"cv", "hours"}
+    fields = set(Preferences.model_fields) - {"version", "hours_min", "hours_max"}
+    assert asked == fields
+    assert '"hours"' in source
+
+
 def test_no_script_puts_text_into_the_page_as_html():
     """Titles and quotes are scraped text: HTML from them would be code."""
     for script in (UI / "assets").glob("*.js"):
@@ -194,7 +206,8 @@ def test_a_new_account_starts_in_the_guide_until_it_is_done_or_skipped(
         after = http.get("/", follow_redirects=False)
 
     assert first.status_code == 303 and first.headers["location"] == "/guide"
-    assert guide.status_code == 200 and 'id="step-1"' in guide.text
+    assert guide.status_code == 200
+    assert 'id="question"' in guide.text and 'role="progressbar"' in guide.text
     assert refused.status_code == 422  # a guide is not un-done
     assert done.json()["onboarded_at"] is not None
     assert after.status_code == 200 and 'id="topbar"' in after.text

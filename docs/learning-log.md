@@ -3901,3 +3901,61 @@ live and are edited next to the preferences. The line between "acts" and
 readers.
 
 6 new tests; 969 in all. No new dependency.
+
+## 7.9.3 — The guide, one question at a time
+
+The last step of Mahdi's brief (2026-09-30): after the invite, "uploading the
+CV, asking questions one by one just like how AIapply is doing", a bar that
+fills, a way to skip, and the answers changeable later from the dashboard. The
+twist he chose is one line under every question: what this answer changes.
+
+**What a new tester sees.** The login link lands them in `/guide`: "Start with
+your CV", then fifteen questions, each on its own page with a list of large
+choices. Above it, the phase ("The job") and "Question 5 of 15 · skipped: 1"
+over a bar that fills. Below it, "What this changes: a vacancy that names
+another contract moves behind the rest; one that doesn't say costs nothing."
+At the bottom: Back, Skip this question, Continue. At the end, every answer in
+a list with Change or Answer, then their first match. "Finish later" in the top
+bar takes them to the dashboard, where "13 of 14 questions answered · Answer
+the open questions (1)" brings them back to only what is open.
+
+**How it works.** One table, `questions.js`, holds the questions: their texts,
+choices, and how each reads and writes the preferences document. The page
+keeps that document, and Continue puts it back whole (`PUT /api/preferences`)
+with the one answer changed, so the server needed nothing new: the same schema
+checks every answer, and a place it cannot find ("Atlantis") comes back as a
+422 the page says in the person's language, staying on that question. Because
+each answer is saved when it is given, leaving halfway loses nothing, and the
+one-page form always shows the same answers. The dashboard reads the same
+table to count what is open.
+
+**Choices worth knowing.**
+- *A single choice moves on by itself, but only after a click.* A radio group
+  answers arrow keys by choosing the next option; with auto-advance, a
+  keyboard user would be thrown to the next question on the first key press.
+  The page notes whether the last thing was a pointer or a key.
+- *Skipping never erases.* Skip on a question answered before keeps the
+  answer. Clearing one is the form's job, where it is visible.
+- *"Type of work" is two questions.* AIApply asks full-time, part-time,
+  contract, internship in one; here the contract and the hours stay apart, as
+  in the schema and the vacancies. The hours choices are ranges (36-40, 32-35,
+  up to 28) and the picked ones become one range: full-time plus four days
+  saves 32 to 40.
+- *Sectors are kept as the words chosen.* The judge reads them as written, so
+  a Dutch tester's "Gokken" stays "Gokken"; the form shows the same words.
+- *Rejected: a separate `/onboarding` page.* Rebuilding `/guide` keeps the
+  redirect for new accounts and "skipping sticks" (`onboarded_at`) as they
+  were.
+
+**The walk.** Headless Chrome, a throwaway database, a new tester: sign in
+through the real button, skip the CV, tap through the questions, try a place
+that does not exist, change an answer from the summary, finish, and come back
+through the dashboard's link; then a second tester who uploads a CV in the
+flow and starts the first match from the summary (the fake model scripted as
+the API tests script it). Both passed. The saved document afterwards held
+exactly what was picked: hours 32-40, hybrid (changed from the summary), Leiden,
+25 km, Acme BV, "Gambling" and "Fast fashion".
+
+A test now holds the table and the schema together: every preference field is
+a question, and every question is a real field. Adding a preference without a
+question fails it. 970 tests. No new dependency.

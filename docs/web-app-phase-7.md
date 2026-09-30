@@ -204,6 +204,22 @@ not move matches yet; there the goals question reads "Why are you looking?",
 because the page itself is titled "What are you looking for?". A later
 measurement decides whether they may act, as for any rule.
 
+**7.9.3, built.** `/guide` is now the flow: the CV, then fifteen questions
+one at a time (`ui/assets/questions.js`, one table), each a list of large
+choices, a bar above that fills with the position and counts what was skipped,
+and Back, Skip and Continue in a bar at the bottom. A single choice picked with
+a click moves on by itself; with the keyboard it waits for Continue, or the
+arrow keys would jump ahead. Each answer is saved on Continue by putting the
+whole preferences document, the way the form saves it, so nothing new on the
+server. Skipping never erases an earlier answer. A distance is passed by when
+there is no home to measure from. The end is a summary with Change or Answer on
+every row, then the first match. The dashboard's "What you're looking for"
+card says how many questions are answered and links to `/guide?open`, the same
+flow with only the open ones. "Type of work" is the contract and the hours
+questions; the hours choices (full-time 36-40, four days 32-35, part-time up to
+28) become one range. Sectors to skip are kept in the words chosen, in the
+person's language, because the judge reads them as written.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
