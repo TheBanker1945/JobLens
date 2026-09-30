@@ -271,9 +271,16 @@ def show(preferences: Preferences) -> None:
                 preferences.stretch_degree
             ],
         ),
+        # Saved only (7.9.2): answered on the web, read by no rule.
+        (
+            "work status *",
+            lambda: preferences.work_status.value if preferences.work_status else "",
+        ),
+        ("goals *", lambda: ", ".join(g.value for g in preferences.goals)),
     ]
     for label, value in lines:
         print(f"  {label:<16} {value() or '-'}")
+    print("  * saved only: moves nothing, and is not in the stamp")
     print(f"  (stamped on runs as {preferences.stamp()})")
 
 

@@ -16,6 +16,11 @@ const LANGUAGES = ["Dutch", "English", "German", "French", "Spanish"];
 const YEARS = [["", "prefs.years.none"], ["0", "prefs.years.0"], ["1", "prefs.years.1"],
   ["2", "prefs.years.2"], ["3", "prefs.years.3"], ["10", "prefs.years.any"]];
 const DEGREE = [["", "prefs.degree.none"], ["yes", "prefs.degree.yes"], ["no", "prefs.degree.no"]];
+// Saved only (preferences/schema.py SAVED_ONLY): kept, read by no rule yet.
+const STATUSES = [["", "prefs.status.none"], ["employed", "workStatus.employed"],
+  ["unemployed", "workStatus.unemployed"], ["self_employed", "workStatus.self_employed"],
+  ["student", "workStatus.student"]];
+export const GOALS = ["income_soon", "first_job", "extra_income", "balance", "secure", "step_up", "switch"];
 // The server's limits (preferences/schema.py), and what to say when one is crossed.
 const LIMITS = {
   max_distance_km: [1, 300, "prefs.error.distanceRange"],
@@ -101,6 +106,9 @@ export function preferencesForm(prefs, places = []) {
       {}, "prefs.commas"),
     radios("stretch_years", "prefs.years", YEARS, years),
     radios("stretch_degree", "prefs.degree", DEGREE, degree),
+    h("p", { class: "card-note prefs-wide" }, t("prefs.savedOnly")),
+    radios("work_status", "prefs.status", STATUSES, prefs.work_status || ""),
+    choices("goals", "prefs.goals", GOALS, (v) => t(`goal.${v}`), prefs.goals || []),
     datalist,
   );
 
@@ -140,6 +148,8 @@ export function preferencesForm(prefs, places = []) {
       avoid_sectors: list("avoid_sectors"),
       stretch_years: checked("stretch_years")[0] ? Number(checked("stretch_years")[0]) : null,
       stretch_degree: { yes: true, no: false }[checked("stretch_degree")[0]] ?? null,
+      work_status: checked("work_status")[0] || null,
+      goals: checked("goals"),
     };
     if (values.hours_min !== null && values.hours_max !== null && values.hours_min > values.hours_max) {
       problems.hours_max = "prefs.error.hours";

@@ -10,18 +10,24 @@ from joblens.preferences.prompt import for_judge
 from joblens.preferences.rerank import Reranked, rerank
 from joblens.preferences.schema import (
     PREFERENCES_VERSION,
+    SAVED_ONLY,
     Conflict,
+    Goal,
     Preferences,
     Seniority,
+    WorkStatus,
 )
 
 __all__ = [
     "PREFERENCES_VERSION",
+    "SAVED_ONLY",
     "Conflict",
     "Geo",
+    "Goal",
     "Preferences",
     "Reranked",
     "Seniority",
+    "WorkStatus",
     "for_judge",
     "rerank",
 ]

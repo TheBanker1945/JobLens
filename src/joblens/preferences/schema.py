@@ -12,6 +12,12 @@ apply when a vacancy asks more years or a higher degree than the CV shows.
 
 **Stated, never inferred.** Every value here is something the person answered.
 Nothing in JobLens writes to it from a pattern in their labels (CLAUDE.md).
+
+**Two answers are saved and do nothing (7.9.2).** Where someone is now (their
+work status) and what they are after (their goals) are asked in the onboarding
+and kept, but no rule reads them: Mahdi, 2026-09-30, "save only", until it is
+measured whether they help. They are left out of `is_empty` and `stamp`, so a
+run's record does not change for an answer that changed nothing.
 """
 
 import hashlib
@@ -42,6 +48,31 @@ class Seniority(StrEnum):
     LEAD = "lead"
 
 
+class WorkStatus(StrEnum):
+    """ "What's your current work status?" (7.9.2; AIApply's four answers)."""
+
+    EMPLOYED = "employed"
+    UNEMPLOYED = "unemployed"
+    SELF_EMPLOYED = "self_employed"  # or freelancing
+    STUDENT = "student"  # or looking for a first job
+
+
+class Goal(StrEnum):
+    """ "What are you looking for?" (7.9.2; AIApply's seven, Mahdi 2026-09-30)."""
+
+    INCOME_SOON = "income_soon"  # urgent income for the basics
+    FIRST_JOB = "first_job"  # a first full-time job
+    EXTRA_INCOME = "extra_income"
+    BALANCE = "balance"  # a better work-life balance
+    SECURE = "secure"  # a secure, long-term job in their field
+    STEP_UP = "step_up"  # a step up in their career
+    SWITCH = "switch"  # a switch to something new
+
+
+# Kept, and read by no rule (module docstring).
+SAVED_ONLY = frozenset({"work_status", "goals"})
+
+
 class Preferences(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -64,6 +95,9 @@ class Preferences(BaseModel):
     # Whether they apply when a vacancy asks a degree level (mbo, hbo, wo) the
     # CV does not show. None: not answered.
     stretch_degree: bool | None = None
+    # Saved only (module docstring): where they are now, what they are after.
+    work_status: WorkStatus | None = None
+    goals: list[Goal] = []
 
     @field_validator("languages")
     @classmethod
@@ -94,14 +128,21 @@ class Preferences(BaseModel):
         return self
 
     def is_empty(self) -> bool:
-        return self == Preferences()
+        """Nothing answered that moves a vacancy or reaches the judge."""
+        return self.model_dump(exclude=SAVED_ONLY) == Preferences().model_dump(
+            exclude=SAVED_ONLY
+        )
 
     def stamp(self) -> str:
         """What a run records: the rules' version and a digest of the answers.
-        "" when nothing was answered, so such a run reads like one before 7.3."""
+        "" when nothing was answered, so such a run reads like one before 7.3.
+        The saved-only answers are left out, so answers given before 7.9.2
+        keep the digest they had."""
         if self.is_empty():
             return ""
-        answers = json.dumps(self.model_dump(mode="json"), sort_keys=True)
+        answers = json.dumps(
+            self.model_dump(mode="json", exclude=SAVED_ONLY), sort_keys=True
+        )
         return (
             f"{PREFERENCES_VERSION}:{hashlib.sha256(answers.encode()).hexdigest()[:8]}"
         )
