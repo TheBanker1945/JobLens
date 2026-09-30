@@ -407,9 +407,9 @@
   "privacy.why.title": "Why",
   "privacy.why.text": "JobLens uses your data only to give you what you asked for: comparing your CV with vacancies (GDPR, article 6(1)(b)).",
 
-  "admin.nightly": "Nightly vacancy update",
-  "admin.nightlyHint": "When on, JobLens fetches new vacancies every night at 03:00 (Dutch time) from every source, Indeed included, and makes them searchable. When off, nothing is fetched and the vacancies already there stay. A run that has started finishes either way.",
-  "admin.nightlyOn": "Fetch new vacancies every night",
+  "admin.nightly": "Automatic vacancy update",
+  "admin.nightlyHint": "When on, JobLens fetches new vacancies from every source, Indeed included, at the times below, and makes them searchable. When off, nothing is fetched by itself and the vacancies already there stay; Fetch now still works. A run that has started finishes either way.",
+  "admin.nightlyOn": "Fetch new vacancies on this schedule",
   "admin.nightlyLast": "Last update: {date}, {count} vacancies.",
   "admin.nightlyNever": "No update has arrived yet.",
 
@@ -512,5 +512,17 @@
   "admin.runLocal": "Runs are started from the hosted JobLens: this one has no nightly job to start.",
   "admin.runOne": "Fetch only {source}",
   "admin.onlySource": "only {source}",
-  "admin.runStopping": "Stopping the run: Cloud Run ends it within a few seconds."
+  "admin.runStopping": "Stopping the run: Cloud Run ends it within a few seconds.",
+  "admin.nextRun": "Next run: {date} (Dutch time).",
+  "admin.nextOff": "Switched off: nothing runs by itself.",
+  "admin.schedule": "When it fetches",
+  "admin.scheduleDays": "Days",
+  "admin.scheduleAt": "At",
+  "admin.scheduleAlso": "And also at (optional)",
+  "admin.scheduleNoSecond": "Once a day",
+  "admin.scheduleHint": "Dutch time. Two runs a day must be at least 6 hours apart: each asks every site again.",
+  "admin.scheduleSave": "Save the schedule",
+  "admin.scheduleSaved": "Saved.",
+  "admin.scheduleNoDay": "Pick at least one day.",
+  "admin.scheduleGap": "Two runs a day must be at least 6 hours apart."
 }

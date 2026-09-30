@@ -407,9 +407,9 @@
   "privacy.why.title": "Warum",
   "privacy.why.text": "JobLens nutzt deine Daten nur, um dir zu geben, worum du gebeten hast: deinen Lebenslauf mit Stellen zu vergleichen (DSGVO, Artikel 6 Absatz 1 Buchstabe b).",
 
-  "admin.nightly": "Nächtliche Stellen-Aktualisierung",
-  "admin.nightlyHint": "Ist das an, holt JobLens jede Nacht um 03:00 Uhr (niederländische Zeit) neue Stellen aus allen Quellen, Indeed eingeschlossen, und macht sie durchsuchbar. Ist es aus, wird nichts geholt, und die vorhandenen Stellen bleiben. Ein Lauf, der schon begonnen hat, wird in beiden Fällen zu Ende geführt.",
-  "admin.nightlyOn": "Jede Nacht neue Stellen holen",
+  "admin.nightly": "Automatische Stellen-Aktualisierung",
+  "admin.nightlyHint": "Ist das an, holt JobLens zu den Zeiten unten neue Stellen aus allen Quellen, Indeed eingeschlossen, und macht sie durchsuchbar. Ist es aus, wird nichts von selbst geholt, und die vorhandenen Stellen bleiben; Jetzt abrufen funktioniert trotzdem. Ein Lauf, der schon begonnen hat, wird in beiden Fällen zu Ende geführt.",
+  "admin.nightlyOn": "Neue Stellen nach diesem Plan holen",
   "admin.nightlyLast": "Letzte Aktualisierung: {date}, {count} Stellen.",
   "admin.nightlyNever": "Es ist noch keine Aktualisierung eingetroffen.",
 
@@ -512,5 +512,17 @@
   "admin.runLocal": "Läufe startest du im gehosteten JobLens: Dieses hat keinen nächtlichen Job zum Starten.",
   "admin.runOne": "Nur {source} abrufen",
   "admin.onlySource": "nur {source}",
-  "admin.runStopping": "Der Lauf wird gestoppt: Cloud Run beendet ihn in wenigen Sekunden."
+  "admin.runStopping": "Der Lauf wird gestoppt: Cloud Run beendet ihn in wenigen Sekunden.",
+  "admin.nextRun": "Nächster Lauf: {date} (niederländische Zeit).",
+  "admin.nextOff": "Ausgeschaltet: Nichts läuft von selbst.",
+  "admin.schedule": "Wann abgerufen wird",
+  "admin.scheduleDays": "Tage",
+  "admin.scheduleAt": "Um",
+  "admin.scheduleAlso": "Und auch um (optional)",
+  "admin.scheduleNoSecond": "Einmal am Tag",
+  "admin.scheduleHint": "Niederländische Zeit. Zwei Läufe am Tag müssen mindestens 6 Stunden auseinanderliegen: Jeder fragt jede Seite erneut.",
+  "admin.scheduleSave": "Plan speichern",
+  "admin.scheduleSaved": "Gespeichert.",
+  "admin.scheduleNoDay": "Wähle mindestens einen Tag.",
+  "admin.scheduleGap": "Zwei Läufe am Tag müssen mindestens 6 Stunden auseinanderliegen."
 }

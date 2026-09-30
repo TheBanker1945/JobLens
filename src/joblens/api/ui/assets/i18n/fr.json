@@ -407,9 +407,9 @@
   "privacy.why.title": "Pourquoi",
   "privacy.why.text": "JobLens utilise tes données uniquement pour te donner ce que tu as demandé : comparer ton CV aux offres (RGPD, article 6, paragraphe 1, point b).",
 
-  "admin.nightly": "Mise à jour nocturne des offres",
-  "admin.nightlyHint": "Si c'est activé, JobLens récupère chaque nuit à 3 h (heure néerlandaise) de nouvelles offres depuis toutes les sources, Indeed compris, et les rend consultables. Si c'est désactivé, rien n'est récupéré et les offres déjà présentes restent. Une mise à jour déjà commencée va jusqu'au bout dans les deux cas.",
-  "admin.nightlyOn": "Récupérer de nouvelles offres chaque nuit",
+  "admin.nightly": "Mise à jour automatique des offres",
+  "admin.nightlyHint": "Activée, JobLens collecte les nouvelles offres de toutes les sources, Indeed compris, aux heures ci-dessous, et les rend consultables. Désactivée, rien n'est collecté tout seul et les offres déjà là restent ; Collecter maintenant fonctionne toujours. Une exécution déjà commencée va jusqu'au bout dans les deux cas.",
+  "admin.nightlyOn": "Collecter les nouvelles offres selon ce planning",
   "admin.nightlyLast": "Dernière mise à jour : {date}, {count} offres.",
   "admin.nightlyNever": "Aucune mise à jour n'est encore arrivée.",
 
@@ -512,5 +512,17 @@
   "admin.runLocal": "Les exécutions se lancent depuis le JobLens hébergé : celui-ci n'a pas de tâche nocturne à lancer.",
   "admin.runOne": "Collecter seulement {source}",
   "admin.onlySource": "seulement {source}",
-  "admin.runStopping": "Arrêt en cours : Cloud Run termine l'exécution en quelques secondes."
+  "admin.runStopping": "Arrêt en cours : Cloud Run termine l'exécution en quelques secondes.",
+  "admin.nextRun": "Prochaine exécution : {date} (heure néerlandaise).",
+  "admin.nextOff": "Désactivée : rien ne tourne tout seul.",
+  "admin.schedule": "Quand collecter",
+  "admin.scheduleDays": "Jours",
+  "admin.scheduleAt": "À",
+  "admin.scheduleAlso": "Et aussi à (facultatif)",
+  "admin.scheduleNoSecond": "Une fois par jour",
+  "admin.scheduleHint": "Heure néerlandaise. Deux exécutions par jour doivent être espacées d'au moins 6 heures : chacune interroge à nouveau chaque site.",
+  "admin.scheduleSave": "Enregistrer le planning",
+  "admin.scheduleSaved": "Enregistré.",
+  "admin.scheduleNoDay": "Choisis au moins un jour.",
+  "admin.scheduleGap": "Deux exécutions par jour doivent être espacées d'au moins 6 heures."
 }

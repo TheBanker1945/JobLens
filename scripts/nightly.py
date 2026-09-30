@@ -1,6 +1,6 @@
 """The nightly update in the cloud (7.8.5): fetch, index, publish, as a Cloud Run job.
 
-    python scripts/nightly.py           # Cloud Scheduler, every night at 03:00
+    python scripts/nightly.py           # Cloud Scheduler, every hour: runs when due
     python scripts/nightly.py --force   # a run by hand, even while switched off
     python scripts/nightly.py --force --no-fetch   # finish a night: index, publish
     python scripts/nightly.py --force --source indeed   # fetch one source only
@@ -42,6 +42,7 @@ from pathlib import Path
 
 import httpx
 
+from joblens.cloud.schedule import TZ
 from joblens.cloud.state import BucketState, metadata_token
 from joblens.embeddings.store import SQLiteVectors, cache_path
 from joblens.sources.boards import load_config
@@ -85,11 +86,7 @@ def main() -> int:
         print("JOBLENS_STATE_BUCKET is not set: the bucket holding the vacancy state.")
         return 1
     database = Database.from_env()
-    # The owner's switch (7.8.5), off by default: Cloud Scheduler starts this
-    # every night, and it asks no site at all while the switch is off. --force
-    # runs it anyway, for a run started by hand or from the admin page.
-    if not args.force and not database.nightly_enabled():
-        print("The nightly update is switched off (the admin page): nothing fetched.")
+    if not should_run(database, args, datetime.now(UTC)):
         database.close()
         return 0
     # One run at a time: Cloud Scheduler delivers a start at least once, and
@@ -108,6 +105,27 @@ def main() -> int:
             execution=os.environ.get("CLOUD_RUN_EXECUTION"),
         )
         return run(database, bucket, run_id, fetch=args.fetch, source=args.source)
+
+
+def should_run(database: Database, args: argparse.Namespace, now: datetime) -> bool:
+    """Whether this start is a run. Cloud Scheduler starts the job every hour
+    (7.10.3); it runs only with the owner's switch on (7.8.5, off by default),
+    in an hour of the owner's schedule, and once in that hour -- Cloud
+    Scheduler was seen delivering one start twice. --force (by hand, or from
+    the admin page) runs whatever the switch and the schedule say."""
+    if args.force:
+        return True
+    if not database.nightly_enabled():
+        print("The nightly update is switched off (the admin page): nothing fetched.")
+        return False
+    if not database.nightly_schedule().due(now):
+        print("Not an hour of the schedule (the admin page): nothing to do.")
+        return False
+    hour = now.astimezone(TZ).replace(minute=0, second=0, microsecond=0)
+    if database.nightly_started_since(hour):
+        print("This hour's run has started already: not starting a second one.")
+        return False
+    return True
 
 
 def run(

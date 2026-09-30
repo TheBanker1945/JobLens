@@ -407,9 +407,9 @@
   "privacy.why.title": "Por qué",
   "privacy.why.text": "JobLens usa tus datos solo para darte lo que pediste: comparar tu CV con vacantes (RGPD, artículo 6, apartado 1, letra b).",
 
-  "admin.nightly": "Actualización nocturna de vacantes",
-  "admin.nightlyHint": "Si está activado, JobLens trae cada noche a las 03:00 (hora neerlandesa) vacantes nuevas de todas las fuentes, Indeed incluido, y las hace buscables. Si está desactivado, no se trae nada y las vacantes que ya hay se quedan. Una actualización que ya ha empezado termina en ambos casos.",
-  "admin.nightlyOn": "Traer vacantes nuevas cada noche",
+  "admin.nightly": "Actualización automática de vacantes",
+  "admin.nightlyHint": "Si está activada, JobLens recoge vacantes nuevas de todas las fuentes, Indeed incluida, a las horas de abajo, y las hace buscables. Si está desactivada, no se recoge nada por sí solo y las vacantes que ya hay se quedan; Recoger ahora sigue funcionando. Una ejecución que ya ha empezado termina en ambos casos.",
+  "admin.nightlyOn": "Recoger vacantes nuevas según este horario",
   "admin.nightlyLast": "Última actualización: {date}, {count} vacantes.",
   "admin.nightlyNever": "Todavía no ha llegado ninguna actualización.",
 
@@ -512,5 +512,17 @@
   "admin.runLocal": "Las ejecuciones se inician desde el JobLens alojado: este no tiene una tarea nocturna que iniciar.",
   "admin.runOne": "Recoger solo {source}",
   "admin.onlySource": "solo {source}",
-  "admin.runStopping": "Deteniendo la ejecución: Cloud Run la termina en unos segundos."
+  "admin.runStopping": "Deteniendo la ejecución: Cloud Run la termina en unos segundos.",
+  "admin.nextRun": "Próxima ejecución: {date} (hora de los Países Bajos).",
+  "admin.nextOff": "Desactivada: nada se ejecuta por sí solo.",
+  "admin.schedule": "Cuándo recoge",
+  "admin.scheduleDays": "Días",
+  "admin.scheduleAt": "A las",
+  "admin.scheduleAlso": "Y también a las (opcional)",
+  "admin.scheduleNoSecond": "Una vez al día",
+  "admin.scheduleHint": "Hora de los Países Bajos. Dos ejecuciones al día deben estar separadas al menos 6 horas: cada una vuelve a consultar cada sitio.",
+  "admin.scheduleSave": "Guardar el horario",
+  "admin.scheduleSaved": "Guardado.",
+  "admin.scheduleNoDay": "Elige al menos un día.",
+  "admin.scheduleGap": "Dos ejecuciones al día deben estar separadas al menos 6 horas."
 }

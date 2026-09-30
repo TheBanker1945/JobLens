@@ -90,6 +90,8 @@ def test_only_the_owner_sees_and_flips_the_switch(database, people, tmp_path):
     assert first == {
         "enabled": False,
         "switched_at": None,
+        "schedule": {"days": [0, 1, 2, 3, 4, 5, 6], "hours": [3]},  # 7.10.3
+        "next_run": None,  # off: nothing runs by itself
         "published_at": None,
         "vacancies": None,
     }
