@@ -3864,3 +3864,40 @@ shows no errors.
 
 9 new tests; 963 in all. No new dependency (the walk's websocket client ran
 through `uv run --with`, outside the project).
+
+## 7.9.2 — Two questions that are saved and do nothing yet
+
+The onboarding (7.9.3) asks what AIApply asks first: "What's your current work
+status?" and "What are you looking for?". Nothing in matching can use either
+today, so Mahdi's answer (2026-09-30) was "save only".
+
+**What changed.** `Preferences` has two more answers, `work_status` (one of
+four) and `goals` (any of seven), stored in the same document as the rest. The
+one-page form asks them last, under a note that says they do not move matches
+yet. `scripts/preferences.py` shows them, marked "saved only".
+
+**How "saved only" is kept true.** Three places read preferences, and each is
+checked:
+- the re-ranking reads named fields (contract, hours, ...), so a new field
+  cannot reach it;
+- the judge's block is built from the stretch answers and sectors only; a test
+  checks the prompt is the same with or without the new answers;
+- `is_empty` and `stamp` looked at the whole document. They now leave out
+  `SAVED_ONLY`, so a person who only said "I'm a student" still counts as
+  having no preferences, and a run's stamp does not change for an answer that
+  changed nothing.
+
+**Why the stamp matters.** A run records `p2:<digest of the answers>`, and
+`compare_runs.py` uses it to tell "same rules" from "other rules". Had the new
+fields gone into the digest, every run after today would look as if its rules
+had changed. The test pins a digest computed with the schema as it was before
+(`git show origin/main:...schema.py`, loaded beside the new one): same answers,
+same `p2:88942661`, with or without a work status and goals.
+
+**Rejected:** a separate "about you" table. It would be cleaner on paper, but
+it means a migration, a second route and a second save for two answers that
+live and are edited next to the preferences. The line between "acts" and
+"saved only" is one frozenset in the schema, with tests at each of the three
+readers.
+
+6 new tests; 969 in all. No new dependency.

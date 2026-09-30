@@ -41,6 +41,44 @@ def test_the_stamp_names_the_rules_and_changes_with_the_answers():
     assert one.stamp() == Preferences.model_validate(one.model_dump()).stamp()
 
 
+SAVED = {"work_status": "student", "goals": ["first_job", "switch"]}
+
+
+def test_work_status_and_goals_are_kept_and_count_for_nothing():
+    """Mahdi, 2026-09-30: "save only" (7.9.2). Kept, but not a preference that
+    moves anything: no stamp, nothing for the judge."""
+    only = Preferences(**SAVED)
+
+    assert only.work_status == "student" and only.goals == ["first_job", "switch"]
+    assert only.is_empty() and only.stamp() == ""
+    assert for_judge(only) is None
+    assert for_judge(Preferences(stretch_years=2, **SAVED)) == for_judge(
+        Preferences(stretch_years=2)
+    )
+
+
+def test_answers_from_before_7_9_2_keep_their_stamp():
+    """Computed with the schema as it was on main before 7.9.2 (3d8a939): a
+    stored run and a new one with the same rules must still compare equal."""
+    answers = {
+        "contract_types": ["permanent"],
+        "home": "Utrecht",
+        "max_distance_km": 25,
+        "stretch_years": 2,
+    }
+    assert Preferences(**answers).stamp() == "p2:88942661"
+    assert Preferences(**answers, **SAVED).stamp() == "p2:88942661"
+
+
+@pytest.mark.parametrize(
+    "answers",
+    [{"work_status": "retired"}, {"goals": ["fame"]}, {"work_status": ""}],
+)
+def test_only_the_offered_status_and_goals_are_kept(answers):
+    with pytest.raises(ValidationError):
+        Preferences(**answers)
+
+
 @pytest.mark.parametrize(
     ("answers", "complaint"),
     [

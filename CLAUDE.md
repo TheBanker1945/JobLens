@@ -95,7 +95,9 @@ conceptually, not just have working code.
   one the prompt is 3.6 to the byte. A distance limit has a margin (p2,
   Mahdi 2026-09-29): a quarter more, at least 5 km (rerank.allowed_km); no
   other answer has one. PREFERENCES_VERSION ("p2") covers both
-  halves; bump it when either changes. Distance is straight-line km between
+  halves; bump it when either changes. Work status and goals (7.9.2) are
+  saved only (SAVED_ONLY): no rule reads them and they are outside is_empty
+  and stamp, until a measurement says they may act. Distance is straight-line km between
   PDOK place centroids (places_nl_coordinates.csv). Not measured on Mahdi's
   labels until he answers the questionnaire.
 - Matching a CV is a call, not a script: src/joblens/service/ (`rank`, then

@@ -238,6 +238,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 
 /* the preferences form */
 .prefs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 36px; row-gap: 22px; }
+.prefs-wide { grid-column: 1 / -1; }
 .fieldset { border: none; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .fieldset legend { font-size: 14px; font-weight: 700; color: var(--ink-2); padding: 0; margin-bottom: 10px; }
 .choices { display: flex; flex-wrap: wrap; gap: 8px; }

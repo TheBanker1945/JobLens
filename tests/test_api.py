@@ -150,6 +150,19 @@ def test_preferences_are_checked_before_they_are_kept(database, lisa, tmp_path):
         assert http.get("/api/preferences").json()["home"] == "Leiden"
 
 
+def test_work_status_and_goals_are_saved_like_any_answer(database, lisa, tmp_path):
+    with app_for(database, tmp_path, lambda s: FakeClient()) as http:
+        saved = http.put(
+            "/api/preferences",
+            json={"work_status": "employed", "goals": ["step_up", "balance"]},
+        )
+        kept = http.get("/api/preferences").json()
+
+    assert saved.is_success
+    assert kept["work_status"] == "employed"
+    assert kept["goals"] == ["step_up", "balance"]
+
+
 def test_there_is_nothing_to_match_without_a_cv(database, lisa, tmp_path):
     with app_for(database, tmp_path, lambda s: FakeClient()) as http:
         assert http.post("/api/matches").status_code == 409

@@ -194,6 +194,16 @@ of its own. A new link replaces one not yet used (`Database.invite`, also what
 when its replacement is made. A page can only make testers; an owner is still
 made with `db.py set-role`, and an invite asking for a role is refused.
 
+**7.9.2, built.** Two answers join the preferences: `work_status` (employed,
+unemployed, self-employed, student) and `goals` (AIApply's seven). They are
+**saved only**, as decided: no rule reads them, the judge's prompt is
+unchanged with or without them, and they are left out of `is_empty` and
+`stamp`, so answers given before keep their digest (a test pins one computed
+with the old code). The one-page form asks them last, under a note that they do
+not move matches yet; there the goals question reads "Why are you looking?",
+because the page itself is titled "What are you looking for?". A later
+measurement decides whether they may act, as for any rule.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now
