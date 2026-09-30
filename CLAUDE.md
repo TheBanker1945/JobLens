@@ -134,9 +134,14 @@ conceptually, not just have working code.
   browser's languages, then its country, then English). tests/test_ui.py holds
   all of this. Pages and every /api/ answer are `Cache-Control: no-store`
   (they carry CV text). A new account is sent to /guide until it finishes or
-  skips it (users.onboarded_at) or has a CV. The preferences form checks what
+  skips it (users.onboarded_at) or has a CV. The guide (7.9.3) asks the CV
+  and then one question at a time from ui/assets/questions.js, each with a
+  "What this changes" line that must stay true to the rule it describes, and
+  saves each answer on Continue; skipping never erases an answer, and
+  /guide?open asks only the open ones (the dashboard links there). Every
+  preference field must be a question there (a test holds it). The preferences form checks what
   it can in the page, in the person's language, but the server's schema
-  decides; keep the form's limits equal to preferences/schema.py.
+  decides; keep the form's and questions.js's limits equal to preferences/schema.py.
 - Bring your own AI (7.6): a person may store one key for the `cv` role only
   (embeddings stay the operator's: one vector space). Providers come from the
   fixed list in src/joblens/llm/presets.py -- never a user-typed base URL
