@@ -344,7 +344,12 @@ conceptually, not just have working code.
   bucket: at the end of every run nightly.py stores `sources/overview.py`'s
   counts with the run in `nightly_runs` (0008, no user_id, kept 90 days).
   Neon cuts a connection idle for minutes (7 min measured 2026-09-30), so the
-  nightly lock's connection is kept busy by a thread.
+  nightly lock's connection is kept busy by a thread. The page starts the job
+  (7.10.2, cloud/jobs.py, JOBLENS_NIGHTLY_JOB; the app's account holds
+  roles/run.jobsExecutorWithOverrides on that one job only) with --force
+  --by page [--no-fetch | --source X], one run at a time, and Stop cancels the
+  execution the job named itself (CLOUD_RUN_EXECUTION). The web app never
+  fetches itself: scraping stays in the job.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source
   looks broken, throttled, refused, or suspiciously empty.
 

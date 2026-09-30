@@ -42,6 +42,7 @@ from joblens.sources.store import VacancyStore
 # so it is one row.
 PER_BOARD = {**BOARD_KEYS, "careersite": "site"}
 SEARCH_SOURCES = ("overheid", "jobdataapi", "eures", "indeed", "linkedin")
+SOURCES = (*PER_BOARD, *SEARCH_SOURCES)  # fetch_vacancies.py --source takes these
 LABEL = 30  # fetch_vacancies.py cuts a search's name to this in its report
 
 

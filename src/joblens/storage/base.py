@@ -247,3 +247,5 @@ class NightlyRun(BaseModel):
     new_vacancies: int | None  # stored for the first time; None: it fetched nothing
     problems: list[str]  # what its fetch report says needs a look
     in_joblens: int | None  # what a match ranks once it was done
+    source: str | None = None  # it fetched only this source (7.10.2)
+    execution: str | None = None  # Cloud Run's name for it: what Stop cancels

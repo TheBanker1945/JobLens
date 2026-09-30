@@ -51,6 +51,15 @@
 <div class="admin-grid">
 <section class="card" aria-labelledby="runs-title">
 <h2 id="runs-title" data-i18n="admin.runs">Nightly runs</h2>
+<div id="run-controls" class="stack" hidden>
+<p class="muted" data-i18n="admin.runHint">Fetch now asks every source, even while the nightly switch is off.</p>
+<div class="run-buttons">
+<button type="button" id="run-now" class="button button-primary" data-i18n="admin.runNow">Fetch now</button>
+<button type="button" id="run-index" class="button button-outline" data-i18n="admin.runIndex">Only index and publish</button>
+<button type="button" id="run-stop" class="button button-danger" data-i18n="admin.runStop" hidden>Stop this run</button>
+</div>
+</div>
+<p id="run-local" class="card-note" data-i18n="admin.runLocal" hidden>Runs are started from the hosted JobLens.</p>
 <p id="runs-state" class="muted" role="status" aria-live="polite"></p>
 <ul id="runs" class="plain-list"></ul>
 </section>

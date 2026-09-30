@@ -3,6 +3,8 @@
     python scripts/nightly.py           # Cloud Scheduler, every night at 03:00
     python scripts/nightly.py --force   # a run by hand, even while switched off
     python scripts/nightly.py --force --no-fetch   # finish a night: index, publish
+    python scripts/nightly.py --force --source indeed   # fetch one source only
+    python scripts/nightly.py --force --by page   # started from the admin page
 
 daily_update.sh on a laptop, moved to where it runs every night whether a
 laptop is on or not (Mahdi, 2026-09-29: "everything should be cloud based",
@@ -29,6 +31,7 @@ Settings: JOBLENS_STATE_BUCKET, DATABASE_URL, GEMINI_API_KEY and EMBED_* (as
 for the app); the job's own service account reads the bucket.
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -55,17 +58,37 @@ STEPS = (
 )
 
 
+def options(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--force", action="store_true", help="run even while the switch is off"
+    )
+    parser.add_argument(
+        "--no-fetch", dest="fetch", action="store_false", help="only index, publish"
+    )
+    parser.add_argument("--source", help="fetch only this source (fetch_vacancies.py)")
+    parser.add_argument(
+        "--by", choices=("page",), help="who started it, when not Cloud Scheduler"
+    )
+    args = parser.parse_args(argv)
+    # What the admin page lists (nightly_runs.trigger): the page, a person with
+    # gcloud (--force), or Cloud Scheduler.
+    args.trigger = args.by or ("hand" if args.force else "schedule")
+    return args
+
+
 def main() -> int:
     sys.stdout.reconfigure(line_buffering=True)
+    args = options(sys.argv[1:])
     bucket = os.environ.get("JOBLENS_STATE_BUCKET")
     if not bucket:
         print("JOBLENS_STATE_BUCKET is not set: the bucket holding the vacancy state.")
         return 1
     database = Database.from_env()
-    # The owner's switch in settings (7.8.5), off by default: Cloud Scheduler
-    # starts this every night, and it asks no site at all while the switch is
-    # off. --force runs it anyway, for a run started by hand.
-    if "--force" not in sys.argv and not database.nightly_enabled():
+    # The owner's switch (7.8.5), off by default: Cloud Scheduler starts this
+    # every night, and it asks no site at all while the switch is off. --force
+    # runs it anyway, for a run started by hand or from the admin page.
+    if not args.force and not database.nightly_enabled():
         print("The nightly update is switched off (the admin page): nothing fetched.")
         database.close()
         return 0
@@ -77,14 +100,24 @@ def main() -> int:
             print("Another nightly run is going: not starting a second one.")
             database.close()
             return 0
-        fetch = "--no-fetch" not in sys.argv
         run_id = database.start_nightly(
-            "hand" if "--force" in sys.argv else "schedule", fetch=fetch
+            args.trigger,
+            fetch=args.fetch,
+            source=args.source if args.fetch else None,
+            # Cloud Run names every execution; the admin page's Stop needs it.
+            execution=os.environ.get("CLOUD_RUN_EXECUTION"),
         )
-        return run(database, bucket, run_id, fetch=fetch)
+        return run(database, bucket, run_id, fetch=args.fetch, source=args.source)
 
 
-def run(database: Database, bucket: str, run_id: int, *, fetch: bool = True) -> int:
+def run(
+    database: Database,
+    bucket: str,
+    run_id: int,
+    *,
+    fetch: bool = True,
+    source: str | None = None,
+) -> int:
     raw = ROOT / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
@@ -105,6 +138,11 @@ def run(database: Database, bucket: str, run_id: int, *, fetch: bool = True) -> 
         # --no-fetch: only index and publish, to finish a night whose fetch
         # went fine without asking every site a second time the same day.
         steps = [step for step in STEPS if step[0] != "fetch" or fetch]
+        if source:  # the fetch asks one source; index and publish do all, as always
+            steps = [
+                (name, [*command, "--source", source] if name == "fetch" else command)
+                for name, command in steps
+            ]
         try:
             for name, command in steps:
                 print(f"=== {name} ===")
