@@ -27,6 +27,7 @@ from joblens.embeddings.store import CachedEmbedder, cache_path
 from joblens.extraction.store import DetailsStore
 from joblens.sources.base import Vacancy
 from joblens.sources.boards import load_config
+from joblens.sources.overview import enabled_sources
 from joblens.sources.polite import FetchState
 from joblens.sources.report import RunReport
 from joblens.sources.sightings import Sightings
@@ -137,28 +138,6 @@ def main() -> int:
     for problem in problems:
         print(f"  - {problem}")
     return 1
-
-
-def enabled_sources(config: dict) -> set[str]:
-    """The sources a scheduled fetch asks, read the way fetch_vacancies.py reads
-    them: a company board when it lists a company, the rest when enabled."""
-    boards = {
-        name
-        for name in (
-            "recruitee",
-            "greenhouse",
-            "smartrecruiters",
-            "workday",
-            "careersite",
-        )
-        if config.get(name)
-    }
-    switched = {
-        name
-        for name in ("overheid", "jobdataapi", "eures", "indeed", "linkedin")
-        if config.get(name, {}).get("enabled")
-    }
-    return boards | switched
 
 
 def ago(delta: timedelta) -> str:

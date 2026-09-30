@@ -1,4 +1,4 @@
-"""Inviting people from the settings page (7.9.1): only the owner can, the link
+"""Inviting people from the admin page (7.9.1): only the owner can, the link
 signs the new person in once, a new link replaces an unused one, and the list
 says who is in and whose link is still waiting."""
 

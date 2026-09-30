@@ -3959,3 +3959,77 @@ exactly what was picked: hours 32-40, hybrid (changed from the summary), Leiden,
 A test now holds the table and the schema together: every preference field is
 a question, and every question is a real field. Adding a preference without a
 question fails it. 970 tests. No new dependency.
+
+## 7.10.1 — The owner's admin page: where the vacancies come from
+
+Mahdi asked for a page, in the site's own style, that shows the scraper
+sources, how many vacancies each fetched, and "for joblens a subset of
+sources and numbers per subset" -- which he confirmed means both: per source
+the funnel from fetched to what JobLens ranks, and each source opened into its
+boards or searches. This first step is the page and what it reads; Run now,
+the schedule and testers' spend follow as their own steps.
+
+**What the owner sees.** "Admin" in the menu (only for the owner). Four tiles:
+in JobLens, open, stored, new in the last fetch. A table of sources, each row
+with when it was last fetched, what that fetch listed and stored new, and
+stored, open and in JobLens; a button opens a source into its boards
+(Recruitee's 31, each with every number) or its searches (Indeed's 22, each
+with its last run only). A source whose fetch broke says "2 failed", and
+opened it lists what broke. Beside it the nightly runs -- scheduled or by
+hand, each step with a tick or a cross, how long, how many new -- and the
+sites refusing JobLens and until when. Below, the nightly switch and invites,
+moved from Settings.
+
+**How the numbers get to the page.** The web app reads only Postgres; the
+vacancy state lives in the nightly job's bucket, which the app's service
+account may not read. So the job itself, at the end of every run, reads its
+files once (`sources/overview.py`) and writes the result with the run into a
+new table, `nightly_runs`. The page shows the newest one and says when it was
+made. Nothing about a person is in it, so it has no user_id; runs older than
+90 days are deleted when a new one starts.
+
+**Choices worth knowing.**
+- *Three numbers, each a part of the one before.* Stored (everything ever
+  kept), open (still advertised, a real job), in JobLens (open, extracted, not
+  a copy from another source). "In JobLens" is counted by the very
+  `load_corpus` call publishing uses, so it cannot drift from what a match
+  ranks.
+- *A board has every number; a search only its last run.* Sightings remember
+  which board last listed each vacancy, so a board's stock can be counted. A
+  vacancy found by two Indeed searches belongs to neither, so the page says so
+  instead of inventing a split.
+- *Each source's last fetch, not the last fetch.* A run of Indeed alone must
+  not make Greenhouse look unasked. Each source shows the newest report that
+  asked it -- which matters once "fetch only this source" exists (7.10.2).
+- *"Running" is read from the lock, not from the row.* A run that is cut off
+  (a timeout, a crash) never finishes its row. Its lock goes with its process,
+  so the page asks Postgres whether the lock is held (`pg_locks`), never by
+  trying to take it -- a try that won would hold it for a moment, and a real
+  run starting then would think another was going.
+
+**A bug found on the way.** That lock (7.8.5) lives on a connection that is
+silent while the fetch runs. A test against Neon -- connect, wait, ask -- got
+"terminating connection due to administrator command" after 7 idle minutes:
+the lock would vanish a few minutes into every real run, and the unlock at the
+end would fail on the dead connection. The lock's connection now asks
+`SELECT 1` every minute from a small thread (a psycopg connection may be
+shared between threads), and an unlock on a lost connection is let go. Two
+tests hold it: the connection is never quiet for long, and a connection that
+is cut ends the run without an error. It had not bitten yet only because the
+switch is off and the runs by hand were started before the lock existed.
+
+**The walk.** Headless Chrome on a throwaway database with the real local
+vacancy data: an owner sees 9 sources, 1,166 in JobLens, a running run,
+a cut-off one and one that needs a look, and a refusal; the sources open and
+close; Settings no longer has the owner's card; a tester has no Admin in the
+menu and is sent away from /admin. The walk also caught a bug: with its lock
+held in the walk's database, the test database looked busy too -- `pg_locks`
+lists every database on the server, and an advisory lock belongs to one. The
+check now counts only its own database (on Neon there is one, but a laptop's
+Docker holds several). The phone view showed the table running off
+the screen twice -- "werkenbijdeoverheid.nl" and the badge "robots.txt says
+no" are single long words, and a table column is never narrower than its
+longest word -- so on a phone the table keeps New, Stored and In JobLens, and
+those words may break.
+
+986 tests. No new dependency.

@@ -111,8 +111,8 @@ conceptually, not just have working code.
   It refuses a foreign Host, and every non-GET without `X-JobLens: 1` (the CSRF
   guard, with SameSite=Lax cookies). Signing in (7.5) is invite-only: owner and
   tester roles, one-time login links (7 days) made by `scripts/db.py invite`
-  or the owner's Settings page (7.9.1; a page makes testers only, and a new
-  link replaces one not yet used), 30-day sessions in an HttpOnly cookie, and
+  or the owner's Admin page (7.9.1, moved there in 7.10.1; a page makes testers
+  only, and a new link replaces one not yet used), 30-day sessions in an HttpOnly cookie, and
   only SHA-256 hashes of links and
   sessions in the database. The token sits after `#` in a link so it never
   reaches a server log, and opening a link shows a button rather than signing
@@ -329,7 +329,7 @@ conceptually, not just have working code.
   (europe-west4, versioned 30 days): vacancy state only, by the allow-list in
   src/joblens/cloud/state.py -- a CV, label or run never goes there. The job
   is never retried automatically (a retry would ask every site again). It
-  fetches only while the owner's switch is on (settings page, app_settings
+  fetches only while the owner's switch is on (Admin page, app_settings
   'nightly_fetch', default OFF, Mahdi 2026-09-29); --force overrides it for a
   run by hand, --no-fetch only indexes and publishes. The embedding client
   waits out a 429 (a minute, up to five times): per-minute quotas count every
@@ -337,6 +337,14 @@ conceptually, not just have working code.
   live app takes up a new publish within 15 minutes, without a restart.
   daily_update.sh stays for a run by hand on a laptop; the bucket, not
   data/raw/, is now the vacancies' source of truth.
+- The owner's Admin page (7.10, /admin, docs/web-app-phase-7.md): sources and
+  their boards or searches (listed, new, stored, open, in JobLens), the
+  nightly runs, the sites refusing us (shown only: no button clears a
+  refusal), the nightly switch and invites. The web app never reads the
+  bucket: at the end of every run nightly.py stores `sources/overview.py`'s
+  counts with the run in `nightly_runs` (0008, no user_id, kept 90 days).
+  Neon cuts a connection idle for minutes (7 min measured 2026-09-30), so the
+  nightly lock's connection is kept busy by a thread.
 - Every fetch writes a report to data/raw/runs/ and exits non-zero when a source
   looks broken, throttled, refused, or suspiciously empty.
 
