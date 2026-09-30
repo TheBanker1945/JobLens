@@ -320,6 +320,19 @@ gcloud scheduler jobs update http joblens-nightly --location europe-west4 \
   --schedule "0 * * * *"
 ```
 
+**7.10.4, built.** "What it cost this month": the total on JobLens's key
+against the cap for all testers (JOBLENS_OPERATOR_MONTHLY_USD), and every
+account with what it spent on JobLens's key against a tester's allowance
+(JOBLENS_TESTER_MONTHLY_USD), on its own key, and how many paid calls --
+from the `usage` table, the same month `spent_this_month` counts. Nothing new
+is decided here; the page shows the numbers the checks already use.
+
+**For Mahdi (found while building 7.10.4, not changed):** the cap for "all
+testers together" (`budget.check`) counts everything on JobLens's key this
+month, the owner's own use included. So the owner's matches use up the
+testers' $10. The page shows the owner's part separately. Should the cap
+count testers only? A one-line change in `check` and `spending` if so.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

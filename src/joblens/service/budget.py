@@ -34,7 +34,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 
 from joblens.service.errors import ServiceError
-from joblens.storage import Database, User
+from joblens.storage import Database, Spend, User
 
 # What a step is estimated to cost before it runs, from measurements
 # (CLAUDE.md: a judged vacancy is 0.36 cent; reading a CV about half a cent).
@@ -95,6 +95,42 @@ def check(
             "JobLens's free allowance for all testers is used up this month. Add "
             "your own API key in settings to keep going."
         )
+
+
+class PersonSpend(Spend):
+    allowance_usd: float | None  # a tester's on JobLens's key; None: no limit
+
+
+class Spending(BaseModel):
+    """What the owner's admin page shows about money (7.10.4)."""
+
+    month: str  # "2026-09"
+    # Everything on JobLens's key this month: the number the cap for all
+    # testers is checked against (`check`) -- the owner's own use included.
+    operator_usd: float
+    owner_usd: float  # the owner's part of it
+    operator_cap_usd: float  # JOBLENS_OPERATOR_MONTHLY_USD
+    tester_allowance_usd: float  # JOBLENS_TESTER_MONTHLY_USD
+    people: list[PersonSpend]
+
+
+def spending(database: Database, budgets: Budgets) -> Spending:
+    allowance = budgets.tester_monthly_usd
+    people = [
+        PersonSpend(
+            **person.model_dump(),
+            allowance_usd=None if person.role == "owner" else allowance,
+        )
+        for person in database.spend_by_person()
+    ]
+    return Spending(
+        month=f"{datetime.now(UTC):%Y-%m}",
+        operator_usd=round(database.spent_this_month()["operator"], 4),
+        owner_usd=round(sum(p.operator_usd for p in people if p.role == "owner"), 4),
+        operator_cap_usd=budgets.operator_monthly_usd,
+        tester_allowance_usd=budgets.tester_monthly_usd,
+        people=people,
+    )
 
 
 def usage(database: Database, user: User, paid_by: str, budgets: Budgets) -> Usage:

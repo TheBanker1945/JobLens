@@ -524,5 +524,16 @@
   "admin.scheduleSave": "Plan speichern",
   "admin.scheduleSaved": "Gespeichert.",
   "admin.scheduleNoDay": "Wähle mindestens einen Tag.",
-  "admin.scheduleGap": "Zwei Läufe am Tag müssen mindestens 6 Stunden auseinanderliegen."
+  "admin.scheduleGap": "Zwei Läufe am Tag müssen mindestens 6 Stunden auseinanderliegen.",
+  "admin.spend": "Was es diesen Monat gekostet hat",
+  "admin.spendHint": "Jeder bezahlte Modellaufruf, nach dem Schlüssel, der bezahlt hat. Ein Tester darf {allowance} im Monat auf dem Schlüssel von JobLens ausgeben, alles darauf zusammen {cap}; ein eigener Schlüssel hat kein Limit.",
+  "admin.spendAll": "Schlüssel von JobLens, alle: {spent} von {cap}. Am Limit werden Tester ohne eigenen Schlüssel bis zum nächsten Monat gestoppt.",
+  "admin.spendYours": "Davon deine eigene Nutzung: {spent}. Sie zählt auch zum Limit.",
+  "admin.spendTester": "Schlüssel von JobLens: {spent} von {allowance}",
+  "admin.spendOwner": "Schlüssel von JobLens: {spent}, kein Limit für dich",
+  "admin.spendOwn": "eigener Schlüssel: {spent}",
+  "admin.spendCalls.zero": "keine bezahlten Aufrufe",
+  "admin.spendCalls.one": "1 bezahlter Aufruf",
+  "admin.spendCalls.other": "{n} bezahlte Aufrufe",
+  "admin.ownKey": "eigener Schlüssel"
 }

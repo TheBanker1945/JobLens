@@ -866,6 +866,13 @@ def create_app(config: AppConfig) -> FastAPI:
             )
         return config.nightly_job
 
+    @app.get("/api/admin/spend")
+    def spend(user: Me) -> budget.Spending:
+        """What every account's paid model calls cost this month, by whose key
+        paid, against the testers' allowance and the cap for all of them."""
+        owner_only(user)
+        return budget.spending(config.database, config.budgets)
+
     @app.get("/api/admin/runs")
     def nightly_runs(user: Me) -> NightlyRuns:
         """The last 20 nightly runs, whether one is going now, and whether one

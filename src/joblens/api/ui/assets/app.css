@@ -503,6 +503,14 @@ pre.sent {
 .refusal { display: flex; flex-direction: column; gap: 2px; }
 .run-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 .fetch-one { height: 36px; padding: 0 14px; font-size: 14px; }
+/* what it cost (7.10.4): the total's bar full width, a person's beside them */
+.spend-total { gap: 6px; }
+.spend-total p { margin: 0; }
+.spend-end { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.spend-end .bar { width: 180px; }
+@media (max-width: 720px) {
+  .spend-end { align-items: flex-start; text-align: left; }
+}
 .board-status { margin-top: 4px; font-weight: 500; color: var(--muted); }
 .board-status .badge { white-space: normal; }
 .phone-only { display: none; }

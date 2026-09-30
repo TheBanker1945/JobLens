@@ -50,6 +50,7 @@ from joblens.storage.base import (
     Person,
     ProviderKey,
     RunSummary,
+    Spend,
     User,
 )
 from joblens.storage.migrate import Migration, migrate
@@ -623,6 +624,25 @@ class Database:
         spent = {"operator": 0.0, "own": 0.0}
         spent.update({row["paid_by"]: float(row["usd"]) for row in rows})
         return spent
+
+    def spend_by_person(self) -> list[Spend]:
+        """Every account and what its paid calls cost since the first of this
+        month (UTC) -- the month spent_this_month counts -- most spent on
+        JobLens's key first. The owner's admin page (7.10.4)."""
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT u.id, u.email, u.display_name, u.role, "
+                "EXISTS (SELECT 1 FROM provider_keys k WHERE k.user_id = u.id) "
+                "AS own_key, "
+                "coalesce(sum(g.cost_usd) FILTER (WHERE g.paid_by = 'operator'), 0) "
+                "AS operator_usd, "
+                "coalesce(sum(g.cost_usd) FILTER (WHERE g.paid_by = 'own'), 0) "
+                "AS own_usd, count(g.id) AS calls "
+                "FROM users u LEFT JOIN usage g ON g.user_id = u.id "
+                "AND g.at >= date_trunc('month', now() AT TIME ZONE 'UTC') "
+                "GROUP BY u.id ORDER BY operator_usd DESC, own_usd DESC, u.created_at"
+            ).fetchall()
+        return [Spend.model_validate(row | {"id": str(row["id"])}) for row in rows]
 
     def purge_expired_files(self, now: datetime | None = None) -> int:
         """Delete uploaded files past their expiry. Returns how many went.

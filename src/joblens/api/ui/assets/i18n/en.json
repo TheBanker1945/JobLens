@@ -524,5 +524,16 @@
   "admin.scheduleSave": "Save the schedule",
   "admin.scheduleSaved": "Saved.",
   "admin.scheduleNoDay": "Pick at least one day.",
-  "admin.scheduleGap": "Two runs a day must be at least 6 hours apart."
+  "admin.scheduleGap": "Two runs a day must be at least 6 hours apart.",
+  "admin.spend": "What it cost this month",
+  "admin.spendHint": "Every paid model call, by whose key paid. A tester may spend {allowance} a month on JobLens's key, and everything on it together {cap}; an own key has no limit.",
+  "admin.spendAll": "JobLens's key, everyone: {spent} of {cap}. At the cap, testers without their own key are stopped until next month.",
+  "admin.spendYours": "Of which your own use: {spent}. It counts towards the cap too.",
+  "admin.spendTester": "JobLens's key: {spent} of {allowance}",
+  "admin.spendOwner": "JobLens's key: {spent}, no limit for you",
+  "admin.spendOwn": "own key: {spent}",
+  "admin.spendCalls.zero": "no paid calls",
+  "admin.spendCalls.one": "1 paid call",
+  "admin.spendCalls.other": "{n} paid calls",
+  "admin.ownKey": "own key"
 }
