@@ -18,13 +18,16 @@ const PAGES = [
   { href: "/cv", key: "nav.cv", icon: FILE_ICON },
   { href: "/preferences", key: "nav.preferences", icon: "M4 6h16 M4 12h10 M4 18h6" },
 ];
+// The owner's page (7.10.1): the server sends anyone else back to the dashboard.
+const ADMIN = { href: "/admin", key: "nav.admin", icon: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" };
 
 export function setUpFrame(current, user, { onError } = {}) {
+  const pages = user.role === "owner" ? [...PAGES, ADMIN] : PAGES;
   const top = byId("topbar");
   fill(top,
     h("a", { class: "brand", href: "/" }, logo(), "JobLens"),
     h("nav", { class: "mainnav", "aria-label": t("nav.label") },
-      ...PAGES.map((one) => h("a", {
+      ...pages.map((one) => h("a", {
         href: one.href, "aria-current": one.href === current ? "page" : null,
       }, t(one.key))),
     ),
@@ -38,7 +41,7 @@ export function setUpFrame(current, user, { onError } = {}) {
   if (bottom) {
     bottom.setAttribute("aria-label", t("nav.label"));
     fill(bottom,
-      ...PAGES.map((one) => h("a", {
+      ...pages.map((one) => h("a", {
         href: one.href, "aria-current": one.href === current ? "page" : null,
       }, icon(one.icon), t(one.key))),
     );

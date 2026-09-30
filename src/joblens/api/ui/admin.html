@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="%LANG%">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="joblens-languages" content="%LANGUAGES%">
+<title>JobLens</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/admin.js"></script>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="page">
+<div class="page-head">
+<h1 data-i18n="admin.title">Admin</h1>
+<p data-i18n="admin.intro">For you, the owner: where the vacancies come from, what each nightly update did, and who has an account.</p>
+</div>
+<div id="notice" class="notice" role="alert" hidden></div>
+
+<div id="totals" class="stats" hidden>
+<div class="stat stat-strong"><div class="stat-label" data-i18n="admin.col.joblens">In JobLens</div><div class="stat-value" id="total-joblens"></div></div>
+<div class="stat"><div class="stat-label" data-i18n="admin.col.open">Open</div><div class="stat-value" id="total-open"></div></div>
+<div class="stat stat-weak"><div class="stat-label" data-i18n="admin.col.stored">Stored</div><div class="stat-value" id="total-stored"></div></div>
+<div class="stat"><div class="stat-label" data-i18n="admin.newLast">New in the last fetch</div><div class="stat-value" id="total-new"></div></div>
+</div>
+
+<section class="card" aria-labelledby="sources-title">
+<div class="card-head">
+<h2 id="sources-title" data-i18n="admin.sources">Vacancy sources</h2>
+<span id="sources-as-of" class="muted"></span>
+</div>
+<p class="muted" data-i18n="admin.sourcesHint">Stored is everything a source ever gave JobLens, open what is still advertised, and in JobLens what a match ranks.</p>
+<p id="sources-none" class="card-note" data-i18n="admin.sourcesNone" hidden>No nightly run has reported on the sources yet.</p>
+<div class="table-scroll" id="sources-wrap" hidden>
+<table class="sources" id="sources">
+<thead>
+<tr>
+<th scope="col" data-i18n="admin.col.source">Source</th>
+<th scope="col" class="c-wide" data-i18n="admin.col.fetched">Last fetch</th>
+<th scope="col" class="num c-wide" data-i18n="admin.col.listed">Listed</th>
+<th scope="col" class="num" data-i18n="admin.col.new">New</th>
+<th scope="col" class="num" data-i18n="admin.col.stored">Stored</th>
+<th scope="col" class="num c-wide" data-i18n="admin.col.open">Open</th>
+<th scope="col" class="num" data-i18n="admin.col.joblens">In JobLens</th>
+</tr>
+</thead>
+</table>
+</div>
+</section>
+
+<div class="admin-grid">
+<section class="card" aria-labelledby="runs-title">
+<h2 id="runs-title" data-i18n="admin.runs">Nightly runs</h2>
+<p id="runs-state" class="muted" role="status" aria-live="polite"></p>
+<ul id="runs" class="plain-list"></ul>
+</section>
+
+<section class="card" aria-labelledby="refusing-title">
+<h2 id="refusing-title" data-i18n="admin.refusing">Sites refusing JobLens</h2>
+<p class="muted" data-i18n="admin.refusingHint">A site that refused a request is left alone until the time shown.</p>
+<ul id="refusing" class="plain-list"></ul>
+</section>
+</div>
+
+<section class="card" aria-labelledby="nightly-title">
+<h2 id="nightly-title" data-i18n="admin.nightly">Nightly vacancy update</h2>
+<p class="muted" data-i18n="admin.nightlyHint">Every night at 03:00, new vacancies from every source.</p>
+<label class="check"><input type="checkbox" id="nightly"> <span data-i18n="admin.nightlyOn">Fetch new vacancies every night</span></label>
+<p id="nightly-state" class="muted" role="status" aria-live="polite"></p>
+</section>
+
+<section class="card" aria-labelledby="invite-title">
+<form id="invite" class="stack" novalidate>
+<h2 id="invite-title" data-i18n="admin.invite">Invite someone</h2>
+<p class="muted" data-i18n="admin.inviteHint">They get an account as a tester, and you get a login link to send them yourself.</p>
+<div class="settings-grid">
+<div class="field field-wide">
+<label for="invite-email" data-i18n="admin.inviteEmail">E-mail</label>
+<input id="invite-email" class="input" type="email" maxlength="254" autocomplete="off" spellcheck="false" aria-describedby="invite-error">
+</div>
+<div class="field">
+<label for="invite-name" data-i18n="admin.inviteName">Name (optional)</label>
+<input id="invite-name" class="input" maxlength="80" autocomplete="off">
+</div>
+<div class="field">
+<label for="invite-language" data-i18n="admin.inviteLanguage">Language</label>
+<select id="invite-language" class="input"></select>
+</div>
+</div>
+<span id="invite-error" class="field-error" role="alert" hidden></span>
+<div class="form-foot">
+<button type="submit" id="invite-make" class="button button-primary" data-i18n="admin.inviteMake">Make an invite link</button>
+</div>
+</form>
+<div id="invite-link" class="success invite-link" role="status" aria-live="polite" hidden>
+<p id="invite-said"></p>
+<input id="invite-url" class="input" readonly spellcheck="false" data-i18n-attr="aria-label:admin.inviteUrl">
+<div><button type="button" id="invite-copy" class="button button-outline" data-i18n="admin.copy">Copy link</button></div>
+</div>
+<div class="stack bring">
+<h3 class="subhead" data-i18n="admin.people">People with an account</h3>
+<ul id="people" class="plain-list"></ul>
+</div>
+</section>
+</main>
+<nav class="bottomnav" id="bottomnav"></nav>
+</body>
+</html>

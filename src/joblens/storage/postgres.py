@@ -22,8 +22,10 @@ server in 7.4 replaces `connect` with a pool and nothing else changes.
 """
 
 import hashlib
+import logging
 import os
 import secrets
+import threading
 import uuid
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -43,12 +45,15 @@ from joblens.storage.base import (
     KEEP_ORIGINAL,
     CVRecord,
     Job,
+    NightlyRun,
     Person,
     ProviderKey,
     RunSummary,
     User,
 )
 from joblens.storage.migrate import Migration, migrate
+
+logger = logging.getLogger(__name__)
 
 # A login link is sent by hand to an invited tester: a week to open it. A
 # session lasts a month, then the person asks for a new link.
@@ -58,6 +63,8 @@ SESSION_VALID = timedelta(days=30)
 # and was seen delivering one start twice, 30 seconds apart. Beside
 # migrate.LOCK (70_200_001) and the tests' (70_200_002).
 NIGHTLY_LOCK = 70_200_003
+# What the admin page lists of past runs (7.10.1): older ones are deleted.
+NIGHTLY_KEPT = timedelta(days=90)
 
 
 class Database:
@@ -328,20 +335,38 @@ class Database:
         return row["updated_at"]
 
     @contextmanager
-    def nightly_lock(self) -> Iterator[bool]:
+    def nightly_lock(self, keepalive: float = 60) -> Iterator[bool]:
         """Hold the one-run-at-a-time lock while the block runs. Yields False,
         without waiting, when another run holds it. On a connection of its
         own, so it lasts the whole run -- and goes when the process does, so
-        a run that crashed blocks nobody."""
+        a run that crashed blocks nobody.
+
+        That connection says nothing while the fetch runs, and Neon cuts a
+        connection that is quiet for a few minutes (measured 2026-09-30: cut
+        after 7 idle minutes, "terminating connection due to administrator
+        command"); the lock would go with it, halfway through the run. So
+        while it is held, a thread asks it something every `keepalive`
+        seconds."""
         with psycopg.connect(self.url, autocommit=True) as conn:
             got = conn.execute(
                 "SELECT pg_try_advisory_lock(%s)", (NIGHTLY_LOCK,)
             ).fetchone()[0]
+            stop = threading.Event()
+            beat = threading.Thread(
+                target=_keep_alive, args=(conn, stop, keepalive), daemon=True
+            )
+            if got:
+                beat.start()
             try:
                 yield got
             finally:
                 if got:
-                    conn.execute("SELECT pg_advisory_unlock(%s)", (NIGHTLY_LOCK,))
+                    stop.set()
+                    beat.join()
+                    try:
+                        conn.execute("SELECT pg_advisory_unlock(%s)", (NIGHTLY_LOCK,))
+                    except psycopg.Error:
+                        pass  # the connection is gone, and the lock with it
 
     def nightly_switched_at(self) -> datetime | None:
         with self.connect() as conn:
@@ -349,6 +374,93 @@ class Database:
                 "SELECT updated_at FROM app_settings WHERE key = 'nightly_fetch'"
             ).fetchone()
         return row["updated_at"] if row else None
+
+    # -- what each nightly run did (7.10.1) ------------------------------------
+
+    def start_nightly(self, trigger: str, *, fetch: bool) -> int:
+        """A row for a run that is starting; returns its id. Runs older than
+        NIGHTLY_KEPT are deleted at the same time."""
+        with self.connect() as conn:
+            conn.execute(
+                "DELETE FROM nightly_runs WHERE started_at < now() - %s",
+                (NIGHTLY_KEPT,),
+            )
+            row = conn.execute(
+                "INSERT INTO nightly_runs (trigger, fetched) VALUES (%s, %s) "
+                "RETURNING id",
+                (trigger, fetch),
+            ).fetchone()
+        return row["id"]
+
+    def finish_nightly(
+        self,
+        run_id: int,
+        *,
+        steps: dict[str, bool],
+        new_vacancies: int | None,
+        problems: list[str],
+        overview: dict | None,
+    ) -> None:
+        """What a run did, once it is done. `overview` is sources/overview.py's
+        Overview as JSON, or None when it could not be read."""
+        in_joblens = (
+            sum(source["in_joblens"] for source in overview["sources"])
+            if overview
+            else None
+        )
+        with self.connect() as conn:
+            conn.execute(
+                "UPDATE nightly_runs SET finished_at = now(), steps = %s, "
+                "new_vacancies = %s, problems = %s, in_joblens = %s, overview = %s "
+                "WHERE id = %s",
+                (
+                    Jsonb(steps),
+                    new_vacancies,
+                    Jsonb(problems),
+                    in_joblens,
+                    Jsonb(overview) if overview is not None else None,
+                    run_id,
+                ),
+            )
+
+    def nightly_runs(self, limit: int = 20) -> list[NightlyRun]:
+        """The newest runs first, without their overview."""
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT id, started_at, finished_at, trigger, fetched, steps, "
+                "new_vacancies, problems, in_joblens FROM nightly_runs "
+                "ORDER BY started_at DESC, id DESC LIMIT %s",
+                (limit,),
+            ).fetchall()
+        return [NightlyRun.model_validate(row) for row in rows]
+
+    def nightly_overview(self) -> tuple[datetime, dict] | None:
+        """The sources as the newest run that could read them left them: when
+        it finished, and sources/overview.py's Overview as JSON."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT finished_at, overview FROM nightly_runs "
+                "WHERE overview IS NOT NULL ORDER BY started_at DESC, id DESC LIMIT 1"
+            ).fetchone()
+        return (row["finished_at"], row["overview"]) if row else None
+
+    def nightly_running(self) -> bool:
+        """Whether a run holds the lock right now. Read from pg_locks, never by
+        trying the lock: a try that got it would hold it for a moment, and a
+        run starting in that moment would think another was going. A bigint
+        advisory key shows as classid (high half), objid (low half) and
+        objsubid 1. pg_locks lists every database on the server, and an
+        advisory lock belongs to one, so only this database's count."""
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' "
+                "AND database = (SELECT oid FROM pg_database "
+                "WHERE datname = current_database()) "
+                "AND classid::bigint = %s AND objid::bigint = %s AND objsubid = 1 "
+                "AND granted) AS held",
+                (NIGHTLY_LOCK >> 32, NIGHTLY_LOCK & 0xFFFFFFFF),
+            ).fetchone()
+        return row["held"]
 
     def purge_expired_logins(self) -> int:
         """Sessions and links past their date; `db.py purge-files` runs it."""
@@ -751,6 +863,17 @@ class PostgresStore:
                 (self.user_id, limit),
             ).fetchall()
         return [_job(row) for row in rows]
+
+
+def _keep_alive(conn: psycopg.Connection, stop: threading.Event, every: float) -> None:
+    """Keep a connection from going quiet until `stop` (Database.nightly_lock).
+    A psycopg connection may be shared between threads: it serialises them."""
+    while not stop.wait(every):
+        try:
+            conn.execute("SELECT 1")
+        except psycopg.Error:
+            logger.warning("the nightly lock's connection was lost; so was the lock")
+            return
 
 
 def _id(value: str, what: str) -> uuid.UUID:

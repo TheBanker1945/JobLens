@@ -1,11 +1,21 @@
 """The owner's switch for the nightly update (7.8.5): off by default, only the
-owner can see or flip it, and the settings card shows the last update."""
+owner can see or flip it, and the admin page shows the last update."""
+
+import time
 
 import pytest
 from test_api import app_for
 from test_published import MODEL, corpus_and_vectors
 
+from joblens.storage.postgres import NIGHTLY_LOCK
 from joblens.storage.published import publish
+
+# The backend that holds the nightly lock, in this database: pg_locks lists
+# every database on the server, and other checkouts may hold theirs.
+HOLDER = (
+    "SELECT pid FROM pg_locks WHERE locktype = 'advisory' AND objid::bigint = %s "
+    "AND database = (SELECT oid FROM pg_database WHERE datname = current_database())"
+)
 
 OWNER, TESTER = "owner@example.test", "tester@example.test"
 
@@ -29,6 +39,35 @@ def test_a_second_nightly_run_finds_the_lock_taken(database):
             assert (first, second) == (True, False)
     with database.nightly_lock() as next_night:
         assert next_night is True
+
+
+def test_the_lock_keeps_its_connection_from_going_quiet(database):
+    """Neon cut a connection that sat idle for 7 minutes (2026-09-30), and a
+    lock goes with its connection: the fetch would lose it halfway. While it
+    is held, its connection is asked something every `keepalive` seconds."""
+    with database.nightly_lock(keepalive=0.05) as mine:
+        time.sleep(0.4)
+        with database.connect() as conn:
+            quiet = conn.execute(
+                "SELECT extract(epoch FROM clock_timestamp() - state_change) AS s "
+                f"FROM pg_stat_activity WHERE pid = ({HOLDER})",
+                (NIGHTLY_LOCK,),
+            ).fetchone()["s"]
+
+    assert mine is True
+    assert quiet < 0.3  # busy a moment ago, not idle since the lock was taken
+
+
+def test_a_lock_whose_connection_was_cut_ends_without_an_error(database):
+    with database.nightly_lock(keepalive=0.05) as mine:
+        with database.connect() as conn:
+            conn.execute(f"SELECT pg_terminate_backend(({HOLDER}))", (NIGHTLY_LOCK,))
+        time.sleep(0.2)
+        held = database.nightly_running()
+
+    assert mine is True and held is False  # the lock went with its connection
+    with database.nightly_lock() as next_run:
+        assert next_run is True
 
 
 @pytest.fixture

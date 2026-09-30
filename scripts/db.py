@@ -23,7 +23,7 @@ unless --owner) and prints a login link; send it to them however you like. The
 link works once, within 7 days, and gives a 30-day session; `login-link` makes a
 new one, and a new link replaces one that was not used yet. The links point at
 JOBLENS_BASE_URL (default http://127.0.0.1:8001). The owner can do the same
-from the settings page (7.9.1), which also shows who has signed in.
+from the admin page (7.9.1), which also shows who has signed in.
 
 `import` copies this laptop's runs (data/raw/cv-runs/) and a real CV's labels
 (data/raw/cv-labels/) into one account, and can be run again: what is already
@@ -129,7 +129,7 @@ def create_user(database: Database, args) -> int:
 
 def invite(database: Database, args) -> int:
     """An account if there is none, and a login link either way: what the
-    owner's settings page does too (7.9.1)."""
+    owner's admin page does too (7.9.1)."""
     user, token, created = database.invite(
         args.email, display_name=args.name, locale=args.locale
     )

@@ -17,7 +17,7 @@ blocking clients, and FastAPI runs a plain function in a thread for exactly
 that.
 
 **Signing in (7.5).** Invite-only: the owner makes an account and a one-time
-login link (scripts/db.py invite, or the settings page since 7.9.1), the link
+login link (scripts/db.py invite, or the admin page since 7.9.1), the link
 opens a page whose button starts a session, and the session is an HttpOnly
 cookie that lasts 30 days. The database keeps a hash of each link and session,
 never the token. Every route but /api/health and the login itself answers 401
@@ -87,9 +87,11 @@ from joblens.service.ai import OwnKeysOff, check_provider
 from joblens.service.budget import Budgets, BudgetSpent
 from joblens.service.marks import MarkRefused, NotInRun, mark
 from joblens.service.matching import ChatFactory, EmbedFactory, VectorsFactory
+from joblens.sources.overview import Overview
 from joblens.storage import (
     Database,
     Job,
+    NightlyRun,
     Person,
     PostgresStore,
     RunSummary,
@@ -185,7 +187,7 @@ class NightlySwitch(BaseModel):
 
 
 class Nightly(BaseModel):
-    """The nightly update as the owner's settings card shows it (7.8.5)."""
+    """The nightly update as the owner's admin page shows it (7.8.5)."""
 
     enabled: bool
     switched_at: datetime | None  # when the switch was last flipped
@@ -193,8 +195,20 @@ class Nightly(BaseModel):
     vacancies: int | None  # how many it held
 
 
+class Sources(BaseModel):
+    """Every vacancy source as the newest nightly run left it (7.10.1)."""
+
+    as_of: datetime  # when that run finished
+    overview: Overview
+
+
+class NightlyRuns(BaseModel):
+    running: bool  # a run holds the one-run-at-a-time lock right now
+    runs: list[NightlyRun]  # newest first; an unfinished one not running was cut off
+
+
 class Invite(BaseModel):
-    """Who the owner invites from the settings page (7.9.1). Anything else
+    """Who the owner invites from the admin page (7.9.1). Anything else
     is refused, a role above all: an owner is made with db.py, not a page."""
 
     model_config = ConfigDict(extra="forbid")
@@ -428,6 +442,20 @@ def create_app(config: AppConfig) -> FastAPI:
         app.add_api_route(
             path, signed_in_page(name), methods=["GET"], include_in_schema=False
         )
+
+    @app.get("/admin", include_in_schema=False)
+    def admin(
+        request: Request,
+        session: Annotated[str | None, Depends(SESSION_COOKIE)],
+    ) -> Response:
+        """The owner's page (7.10.1); anyone else is sent to the dashboard."""
+        user = config.database.session_user(session) if session else None
+        if user is None:
+            return RedirectResponse("/login", status_code=303)
+        if not user.is_owner:
+            return RedirectResponse("/", status_code=303)
+        chosen = language.pick(request.headers.get("accept-language"), user.locale)
+        return page("admin.html", chosen)
 
     @app.get("/login", include_in_schema=False)
     def login(request: Request) -> HTMLResponse:
@@ -757,6 +785,28 @@ def create_app(config: AppConfig) -> FastAPI:
         owner_only(user)
         config.database.set_nightly(given.enabled)
         return nightly_state()
+
+    # -- the admin page (7.10.1) ------------------------------------------------
+
+    @app.get("/api/admin/sources")
+    def sources(user: Me) -> Sources | None:
+        """Per source, and per board or search in it: stored, open, in JobLens,
+        and what its last fetch found. As the newest nightly run left them;
+        null before the first."""
+        owner_only(user)
+        seen = config.database.nightly_overview()
+        if seen is None:
+            return None
+        return Sources(as_of=seen[0], overview=Overview.model_validate(seen[1]))
+
+    @app.get("/api/admin/runs")
+    def nightly_runs(user: Me) -> NightlyRuns:
+        """The last 20 nightly runs, and whether one is going now."""
+        owner_only(user)
+        return NightlyRuns(
+            running=config.database.nightly_running(),
+            runs=config.database.nightly_runs(),
+        )
 
     # -- inviting people (7.9.1) -------------------------------------------------
 

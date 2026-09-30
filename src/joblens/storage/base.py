@@ -233,3 +233,17 @@ class ProviderKey(BaseModel):
     key_secret: bytes
     key_hint: str  # the last four characters, to say which key without showing it
     verified_at: datetime
+
+
+class NightlyRun(BaseModel):
+    """One run of the nightly job, as the owner's admin page lists it (7.10.1)."""
+
+    id: int
+    started_at: datetime
+    finished_at: datetime | None  # None: still going, or cut off (see `running`)
+    trigger: str  # "schedule", or "hand": started with --force
+    fetched: bool  # False: --no-fetch, only index and publish
+    steps: dict[str, bool]  # each step that ran, in order, and whether it went well
+    new_vacancies: int | None  # stored for the first time; None: it fetched nothing
+    problems: list[str]  # what its fetch report says needs a look
+    in_joblens: int | None  # what a match ranks once it was done

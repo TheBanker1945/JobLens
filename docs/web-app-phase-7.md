@@ -100,6 +100,7 @@ for it.
 | 7 | the user-facing UI: style questions, 2-3 mockups, Mahdi picks, then build; five languages | `feat/7.7-ui` |
 | 8 | hosting: container, hosted database and storage, secrets, scheduled fetching, privacy notice, delete-my-data, cost caps | `feat/7.8-hosting` |
 | 9 | onboarding and invites: invite from the site, one question at a time | `feat/7.9.1-invites`, `feat/7.9.2-questions`, `feat/7.9.3-flow` |
+| 10 | the owner's admin page: sources and their numbers, runs, run now, a schedule, testers' spend | `feat/7.10.1-admin-sources` and three after it |
 
 From 7.2 on everything is designed as if there is no persistent disk, which
 keeps every host open.
@@ -219,6 +220,56 @@ flow with only the open ones. "Type of work" is the contract and the hours
 questions; the hours choices (full-time 36-40, four days 32-35, part-time up to
 28) become one range. Sectors to skip are kept in the words chosen, in the
 person's language, because the judge reads them as written.
+
+## The owner's admin page (7.10)
+
+Mahdi's brief (2026-09-30): "an interface within the website and with the
+same design style on which i can see the scraper sources, the amount of
+vacancies fetched per source and for joblens a subset of sources and numbers
+per subset", a button to scrape by hand, and a way to set when it fetches by
+itself. His answers to the questions that followed:
+
+| question | answer |
+|---|---|
+| "a subset of sources and numbers per subset" | **both**: per source the funnel (listed last fetch, new, stored, open, in JobLens), and each source opens into its boards or searches with the same numbers |
+| where the schedule lives | **in JobLens** (app_settings); Cloud Scheduler becomes an hourly wake-up and the job leaves at once unless it is due |
+| the schedule form | **weekdays and up to two hours a day**; no cron text |
+| extras | all four: run history and the sites refusing us (shown only), Stop and "fetch only this source", testers' spend, and the owner's things moved from Settings to the new page |
+
+Rejected for the schedule: the page editing Cloud Scheduler itself. Cloud
+Scheduler has no per-job permissions, so the app's service account -- which
+reads three secrets and nothing else -- would need the right to edit every
+scheduler job in the project and to act as `joblens-scheduler`. The price of
+the choice made: about 23 starts a day that find nothing due and stop within
+seconds, each waking Neon briefly. Not offered on purpose: a button that clears
+a site's refusal (CLAUDE.md: nothing goes around a refusal), editing the scope's
+word lists from the page (a change there needs a measurement), and more than
+two fetches a day (each asks every site again).
+
+Four steps, each its own PR: 7.10.1 the page, sources, runs and refusals;
+7.10.2 Run now, Stop and one source (the app starts the Cloud Run job, with
+`roles/run.jobsExecutorWithOverrides` on that one job only: run, run with
+arguments, cancel); 7.10.3 the schedule; 7.10.4 testers' spend.
+
+**7.10.1, built.** `/admin`, for the owner only (anyone else is sent to the
+dashboard, and the menu shows it to the owner alone). The numbers come from
+the nightly job, not from the web app: the app cannot read the job's bucket,
+so at the end of every run the job counts the sources from its files
+(`sources/overview.py`) and stores that with the run in `nightly_runs`
+(migration 0008), which also holds when it ran, who started it, each step's
+outcome, its new vacancies and the problems its fetch report named. A board's
+vacancies are counted by the board that last listed them (sightings); a
+search has only its last run, because a vacancy two searches found belongs to
+neither. "In JobLens" is counted by the same `load_corpus` call that
+publishing uses, so it is what a match ranks. The nightly switch and invites
+moved here from Settings, unchanged.
+
+Found on the way: the one-run-at-a-time lock (7.8.5) sat on a connection that
+says nothing while the fetch runs, and Neon cut a connection idle for 7
+minutes (measured 2026-09-30, "terminating connection due to administrator
+command") -- taking the lock with it, and making the unlock at the end fail.
+The lock's connection now asks `SELECT 1` every minute from a thread, and an
+unlock on a lost connection is let go.
 
 ## Open questions from 7.3 (for Mahdi)
 
