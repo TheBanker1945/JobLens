@@ -9,7 +9,7 @@ from conftest import details
 
 from joblens.extraction.store import DetailsStore, ExtractedVacancy
 from joblens.sources.base import Vacancy
-from joblens.sources.overview import Row, overview
+from joblens.sources.overview import SOURCES, Row, overview
 from joblens.sources.polite import FetchState, SiteState
 from joblens.sources.report import RunReport, SearchRun
 from joblens.sources.sightings import Sighting, Sightings
@@ -147,13 +147,24 @@ def test_each_source_counts_stored_open_and_what_joblens_ranks(seen):
     assert (greenhouse.stored, greenhouse.open, greenhouse.in_joblens) == (4, 2, 1)
     # an open application is no job; a copy of a Greenhouse job is ranked once
     assert (indeed.stored, indeed.open, indeed.in_joblens) == (3, 2, 1)
-    assert [one.source for one in seen.sources] == [
+    assert [one.source for one in seen.sources][:3] == [
         "greenhouse",
         "indeed",
         "jobdataapi",
-    ]  # switched off last, its vacancies still counted
+    ]  # switched off after, its vacancies still counted
     assert sources["jobdataapi"].enabled is False
     assert sources["jobdataapi"].in_joblens == 1
+
+
+def test_a_source_switched_off_and_never_asked_still_has_a_row(seen):
+    """7.10.5: LinkedIn, off and never fetched, was missing from the page."""
+    linkedin = by_source(seen)["linkedin"]
+
+    assert set(by_source(seen)) == set(SOURCES)
+    assert linkedin.enabled is False
+    assert (linkedin.stored, linkedin.open, linkedin.in_joblens) == (0, 0, 0)
+    assert linkedin.run is None and linkedin.rows == []
+    assert seen.sources[-1].in_joblens == 0  # last: off, and nothing in it
 
 
 def test_a_board_has_every_number_and_the_boards_toml_order(seen):
@@ -202,7 +213,17 @@ def test_only_sites_still_refusing_us_are_listed(seen):
     assert seen.refusing[0].until == NOW + timedelta(hours=20)
 
 
-def test_an_empty_raw_folder_is_an_empty_overview(tmp_path):
+def test_an_empty_raw_folder_still_names_every_source(tmp_path):
     empty = overview(tmp_path, {}, now=NOW)
 
-    assert empty.sources == [] and empty.refusing == []
+    assert sorted(one.source for one in empty.sources) == sorted(SOURCES)
+    assert all(not one.enabled and one.stored == 0 for one in empty.sources)
+    assert empty.refusing == []
+
+
+def test_the_page_offers_exactly_what_a_fetch_takes():
+    """`SOURCES` is the page's "What to fetch" list and the API's check; a run
+    with a name fetch_vacancies.py does not take would fail in the job."""
+    from fetch_vacancies import SOURCES as FETCHABLE  # scripts/, via conftest.py
+
+    assert sorted(SOURCES) == sorted(FETCHABLE)

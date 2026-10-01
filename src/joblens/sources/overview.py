@@ -117,7 +117,9 @@ def overview(root: Path, config: dict, now: datetime | None = None) -> Overview:
     }
 
     sources = []
-    for source in set(store.sources()) | enabled | set(last):
+    # Every source JobLens has, so one switched off and never asked still has
+    # a row that says so (7.10.5: LinkedIn was missing from the page).
+    for source in set(SOURCES) | set(store.sources()) | enabled | set(last):
         vacancies = store.load(source)
         is_open = {
             v.key for v in vacancies if is_vacancy(v) and sightings.is_open(v, now)

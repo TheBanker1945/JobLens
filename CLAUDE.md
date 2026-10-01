@@ -250,14 +250,20 @@ conceptually, not just have working code.
   the script never adds a board on its own. Recruitee also runs under employers'
   own domains ("slug" with a dot is a host). SmartRecruiters costs one request
   per vacancy text, so it applies the scope to its listing before asking.
-- Indeed and LinkedIn are scraped through JobSpy, an optional dependency:
+- Indeed is scraped through JobSpy, an optional dependency:
   `uv sync --group scrape`. Pinned to a git commit on purpose — its last release
   requires numpy 1.26, and resolving it from PyPI silently installs a 2024
   version.
-- JobSpy is used for listings only. LinkedIn descriptions are fetched by us,
-  paced, because its own description loop has no delay and swallows errors.
-  LinkedIn stays off (Mahdi, 2026-09-22): its robots.txt disallows /jobs-guest/
-  for every crawler, Googlebot included.
+- LinkedIn is read by our own code, search and descriptions
+  (src/joblens/sources/scraped.py, 7.10.5), through the gate with our
+  User-Agent: JobSpy's LinkedIn search retried a 429 and wore a browser's
+  User-Agent. On, nightly included (Mahdi, 2026-10-01, reversing "stays off"
+  of 2026-09-22) although its robots.txt disallows /jobs-guest/ for every
+  crawler and its terms forbid scraping: a deliberate exception, so its
+  requests are not marked CRAWL. Everything else holds: a card outside the
+  scope or already stored costs no request, max_descriptions_per_run is per
+  run, a 429/403 is remembered, and a search answered with another error stops
+  LinkedIn for that run (not remembered: 999 is not a seen marker yet).
 - Every request passes one gate, src/joblens/sources/polite.py, as an httpx
   transport under the client: paced per *site* (all *.recruitee.com boards are
   one site), capped per run, and a refusal (429, 403, a challenge page, a

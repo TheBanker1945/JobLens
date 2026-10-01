@@ -516,14 +516,22 @@ def test_linkedin_throttling_is_remembered_for_the_next_run(tmp_path):
     """Descriptions that stop arriving are LinkedIn saying no without a 429."""
     path = tmp_path / "fetch-state.json"
     gate, _ = make_gate(FetchState.load(path))
-    rows = [{**ROW, "id": f"li-{n}", "site": "linkedin"} for n in range(6)]
-    empty_page = lambda request: html(200, "<html><body>log in</body></html>")  # noqa: E731
+    cards = "".join(
+        f'<div data-entity-urn="urn:li:jobPosting:{n}">'
+        f'<h3 class="base-search-card__title">Data Engineer</h3></div>'
+        for n in range(1, 7)
+    )
+
+    def linkedin(request: httpx.Request) -> httpx.Response:
+        if "seeMoreJobPostings" in request.url.path:
+            return html(200, cards)
+        return html(200, "<html><body>log in</body></html>")
+
     source = LinkedInSource(
         "data engineer",
         "Amsterdam, Netherlands",
-        polite_client(gate, empty_page),
+        polite_client(gate, linkedin),
         delay_seconds=0,
-        scrape=lambda **options: rows,
     )
     run = SearchRun("linkedin", "data engineer in Amsterdam")
 
@@ -532,6 +540,9 @@ def test_linkedin_throttling_is_remembered_for_the_next_run(tmp_path):
     assert run.status == "throttled"
     remembered = FetchState.load(path).sites["linkedin.com"]
     assert remembered.reason == "descriptions stopped arriving"
+    # Its requests go through the gate's own client: counted once each, so
+    # fetch_into did not ask the gate for the search on top of them.
+    assert gate.requests["linkedin.com"] == 1 + 5  # the search, five descriptions
 
 
 def test_a_bug_in_one_adapter_fails_its_search_and_nothing_else(tmp_path, capsys):

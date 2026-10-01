@@ -215,6 +215,7 @@ class NightlyRuns(BaseModel):
     runs: list[NightlyRun]  # newest first; an unfinished one not running was cut off
     can_start: bool  # this server can start and stop the job (7.10.2)
     starting: datetime | None  # asked for then, and not yet begun
+    sources: list[str]  # what one run may fetch alone (7.10.5): --source takes these
 
 
 class RunAsk(BaseModel):
@@ -857,6 +858,7 @@ def create_app(config: AppConfig) -> FastAPI:
             runs=config.database.nightly_runs(),
             can_start=config.nightly_job is not None,
             starting=config.database.nightly_requested(),
+            sources=list(SOURCES),
         )
 
     def the_job() -> NightlyJob:

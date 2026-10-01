@@ -54,7 +54,9 @@ from joblens.sources.scope import Scope
 from joblens.sources.scraped import (
     IndeedSource,
     LikelyThrottled,
+    LinkedInRun,
     LinkedInSource,
+    ScrapeError,
     ScrapeTimeout,
 )
 from joblens.sources.sightings import BOARD_SOURCES, Sightings
@@ -206,14 +208,14 @@ def fetch_into(
     on its own says nothing: it is the normal answer for a quiet week and the
     only answer a broken source gives.
 
-    The API sources are gated inside the client. The scraped ones are gated
+    The API sources and LinkedIn are gated inside the client. Indeed is gated
     here, once per search: JobSpy sends its own requests, and the search is the
     only part of that traffic we can see.
     """
     limit = source_limit(config, run.source, args.limit)
     site = getattr(source, "site", None)  # set on the scraped sources only
     try:
-        if site:
+        if site and not getattr(source, "gate_sees_requests", False):
             gate.ask(site)
         # Scraped sources and the aggregator make fewer requests for a lower
         # limit, so they get it here. A board does not, so it gets it below.
@@ -234,6 +236,9 @@ def fetch_into(
         if site:
             gate.failed(site)
         run.status, run.detail = "timeout", str(err)
+        return False
+    except ScrapeError as err:  # a scraped site answered in a way we do not read
+        run.status, run.detail = "failed", str(err)
         return False
     except httpx.HTTPError as err:
         run.status, run.detail = "failed", type(err).__name__
@@ -400,7 +405,10 @@ def build_sources(
         settings = config.get("linkedin", {})
         if not settings.get("enabled"):
             return
-        known = store.existing_keys("linkedin")  # these cost no request at all
+        known_jobs = known("linkedin")  # these cost no request at all
+        # One for all searches: the description cap is per run, and a search
+        # LinkedIn answered with an error stops the ones after it.
+        run = LinkedInRun(settings.get("max_descriptions_per_run", 40))
         for search in settings.get("searches", []):
             yield (
                 f"{search['term']} in {search['city']}",
@@ -410,8 +418,9 @@ def build_sources(
                     client,
                     distance_km=settings.get("distance_km", 25),
                     hours_old=settings.get("hours_old", 72),
-                    known_keys=known,
-                    max_descriptions=settings.get("max_descriptions_per_run", 40),
+                    scope=scope,
+                    known_keys=known_jobs,
+                    run=run,
                     delay_seconds=settings.get("delay_seconds", 2.5),
                 ),
             )
