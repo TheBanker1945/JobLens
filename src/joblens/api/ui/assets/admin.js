@@ -1,7 +1,8 @@
 // The owner's admin page (7.10.1): every vacancy source and what it holds,
 // what each nightly run did, the sites that are refusing JobLens, the nightly
 // switch (7.8.5) and invites (7.9.1), both moved here from settings. And
-// (7.10.2) starting a run now, one source only, or stopping the one going.
+// (7.10.2) starting a run now, one source only, or stopping the one going;
+// which source is picked above the buttons (7.10.5).
 //
 // The numbers come from the nightly job itself: at the end of every run it
 // counts the sources from its files and stores that with the run
@@ -23,6 +24,9 @@ const NAMES = {
   linkedin: "LinkedIn",
 };
 const WORDS = { careersite: "admin.careersites", overheid: "admin.overheid" };
+// Read through JobSpy, the scraping library (sources/scraped.py); LinkedIn is
+// read by JobLens's own code since 7.10.5.
+const VIA_JOBSPY = new Set(["indeed"]);
 // Up here, not beside the code that uses them: the page runs from the top as
 // soon as it loads, and a constant further down does not exist yet by then.
 const DAY = { day: "numeric", month: "short" };
@@ -40,8 +44,8 @@ const DUTCH = "Europe/Amsterdam"; // the schedule's hours are Dutch time
 
 let me = null;
 let wasRunning = false;
-let canStart = false; // this server can start and stop the job (7.10.2)
 let busy = false; // a run is going or starting: one at a time
+let pickable = []; // every source one run may fetch alone (7.10.5)
 let polling = null;
 let shownGoing = null; // the run on screen as going
 let stopping = null; // the execution Stop was pressed for
@@ -53,11 +57,9 @@ try {
   me = await api("/api/me");
   if (me.role !== "owner") window.location.replace("/");
   setUpFrame("/admin", me, { onError: (e) => say(errorText(e)) });
-  byId("run-now").addEventListener("click", () => startRun({}));
+  byId("run-now").addEventListener("click", () => startRun(chosenSource()));
   byId("run-index").addEventListener("click", () => startRun({ fetch: false }));
   byId("run-stop").addEventListener("click", stopRun);
-  // The runs first: whether a source gets its "Fetch only" button depends on
-  // whether this server can start the job at all.
   await showRuns();
   await Promise.all([showSources(), showNightly(), showSpend(), showInvites()]);
 } catch (error) {
@@ -70,6 +72,7 @@ async function showSources() {
   const seen = await api("/api/admin/sources");
   show(byId("sources-none"), !seen);
   show(byId("sources-wrap"), Boolean(seen));
+  fillSourceChoice(seen ? seen.overview.sources : []);
   if (!seen) return;
   const { sources, refusing } = seen.overview;
   byId("sources-as-of").textContent = t("admin.asOf", { date: formatDate(seen.as_of, WHEN) });
@@ -111,6 +114,7 @@ function sourceGroup(one) {
     h("span", { class: "muted" }, one.per_board
       ? plural("admin.boards", one.rows.filter((row) => row.name !== null).length)
       : plural("admin.searches", one.rows.length),
+    VIA_JOBSPY.has(one.source) && ` · ${t("admin.viaJobspy")}`,
     h("span", { class: "phone-only" }, ` · ${fetched}`)),
     badges(one),
   ));
@@ -144,13 +148,6 @@ function badges(one) {
 
 function detailRows(one) {
   const rows = [];
-  if (canStart && one.enabled) {
-    const button = h("button", { type: "button", class: "button button-outline fetch-one" },
-      t("admin.runOne", { source: nameOf(one.source) }));
-    button.disabled = busy;
-    button.addEventListener("click", () => startRun({ source: one.source }));
-    rows.push(h("tr", { class: "board-note" }, h("td", { colspan: 7 }, button)));
-  }
   if (one.problems.length) {
     rows.push(h("tr", { class: "board-note" },
       h("td", { colspan: 7 }, h("ul", { class: "problems" },
@@ -207,8 +204,8 @@ async function showRuns() {
   await drawRuns(await api("/api/admin/runs"));
 }
 
-async function drawRuns({ running, runs, can_start: able, starting }) {
-  canStart = able;
+async function drawRuns({ running, runs, can_start: able, starting, sources }) {
+  pickable = sources;
   busy = running || Boolean(starting);
   const fetched = runs.find((run) => run.new_vacancies !== null);
   byId("total-new").textContent = fetched ? formatNumber(fetched.new_vacancies) : "–";
@@ -229,7 +226,7 @@ async function drawRuns({ running, runs, can_start: able, starting }) {
   show(byId("run-local"), !able);
   byId("run-now").disabled = busy;
   byId("run-index").disabled = busy;
-  for (const button of document.querySelectorAll(".fetch-one")) button.disabled = busy;
+  byId("run-source").disabled = busy;
   const stop = byId("run-stop");
   show(stop, Boolean(going?.execution) && able && !ending);
   stop.disabled = false;
@@ -245,14 +242,37 @@ async function drawRuns({ running, runs, can_start: able, starting }) {
   }
 }
 
+// What "Fetch now" asks (7.10.5): every source, or the one picked. Every
+// source the job takes is offered (the server's list), in the table's order. One
+// the last run counted as switched off -- in the job's own sources.toml -- is
+// shown but cannot be picked: it would fetch nothing. A source the last run did
+// not count yet (switched on since) can be.
+function fillSourceChoice(counted) {
+  const select = byId("run-source");
+  const chosen = select.value;
+  const off = new Set(counted.filter((one) => !one.enabled).map((one) => one.source));
+  const names = [...new Set([...counted.map((one) => one.source), ...pickable])]
+    .filter((name) => pickable.includes(name));
+  fill(select,
+    h("option", { value: "" }, t("admin.allSources")),
+    ...names.map((name) => h("option", { value: name, disabled: off.has(name) },
+      off.has(name) ? `${nameOf(name)} (${t("admin.off")})` : nameOf(name))));
+  if (names.includes(chosen) && !off.has(chosen)) select.value = chosen;
+}
+
+function chosenSource() {
+  const source = byId("run-source").value;
+  return source ? { source } : {};
+}
+
 // Start the job now (7.10.2): everything, only index and publish, or one
 // source. Cloud Run takes about a minute to begin; until the run writes its
 // own row, the page says it is starting.
 async function startRun(body) {
   say(null);
   busy = true;
-  for (const button of document.querySelectorAll("#run-now, #run-index, .fetch-one")) {
-    button.disabled = true;
+  for (const control of document.querySelectorAll("#run-now, #run-index, #run-source")) {
+    control.disabled = true;
   }
   try {
     await drawRuns(await api("/api/admin/runs", { method: "POST", json: body }));

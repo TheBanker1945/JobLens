@@ -4163,3 +4163,78 @@ separately, and docs/web-app-phase-7.md asks whether the cap should count
 testers only.
 
 1022 tests. No new dependency.
+
+## 7.10.5 — LinkedIn on, and picking what one run fetches
+
+Mahdi, looking at the live admin page: "I can't see JobSpy nor LinkedIn,
+but I do see Indeed." And: LinkedIn must be scraped and shown, and a run
+started from the page should fetch one chosen source.
+
+**Why they were missing.** JobSpy is not a source: it is the library the
+Indeed adapter reads Indeed's app API with, so the Indeed row *is* JobSpy at
+work (the row now says "via JobSpy"). LinkedIn was switched off in
+`sources.toml` since 2026-09-22, and the overview the nightly job stores
+lists a source only when it has vacancies, is switched on, or was asked by a
+fetch. LinkedIn was none of the three, so it had no row -- not even one saying
+"switched off". Now every source has a row.
+
+**The decision, and what it reverses.** LinkedIn's robots.txt says
+`Disallow: /` to every crawler it has not approved, and `/jobs-guest/` even
+to Googlebot (re-read 2026-10-01); its terms forbid scraping. That is why 2.4
+built it and 5.1 left it off. Asked with that on the table, Mahdi chose: on,
+the nightly run included. One fact made fair: `apis.indeed.com`, the API
+JobSpy reads Indeed through, also says `Disallow: /`, and JobLens has read
+it since 2.4 as "an API, not a crawl". LinkedIn differs in degree -- HTML
+pages, an explicit ban, a company that enforces it -- not in kind.
+
+**The bigger change: LinkedIn without JobSpy.** Reading JobSpy's LinkedIn
+code before switching it on: its search session retries a 429 three times
+(urllib3 `Retry`, 5 s backoff), sends a Chrome User-Agent, clears its cookies
+before every request, and answers a refusal with an empty list. Each of those
+is a rule of 5.1 broken ("no retries, no disguise"), and the last one means
+the gate never hears of the refusal, so every night would ask again. So the
+search is ours now, like the descriptions already were:
+
+| | JobSpy's search | Ours |
+|---|---|---|
+| User-Agent | Chrome 120 | `JobLens/0.1 (learning project; ...)` |
+| a 429 | retried 3 times | remembered by the gate, 12 h and up |
+| a 403 | an empty list | remembered by the gate |
+| anything else (999?) | an empty list | LinkedIn not asked again this run |
+| pacing | 3-7 s between pages | the gate's pause + 2.5 s |
+| counted by the gate | once per search, as a guess | every request |
+
+LinkedIn answered our honest User-Agent with HTTP 200 and ten cards a page
+(probed once, 2026-10-01). A card carries the job's id (`data-entity-urn`),
+title, company, place and date, read with the standard library's HTMLParser
+like the descriptions -- no new dependency, and one real card is kept as a
+test fixture so a change in LinkedIn's markup shows up as a failing test.
+
+**Cheaper on the way.** The card's title and place go through the scope
+*before* a description is asked for, as SmartRecruiters does (5.2): an
+"Account Manager" or a job in Eindhoven costs no request now. A description
+read and left out is remembered under the scope's fingerprint, so it is not
+read again tomorrow. And `max_descriptions_per_run` was, despite its name,
+per search: two searches could ask 80. It is per run now, shared by the 13
+searches (three broad terms in the four Randstad hubs, one around
+Middelburg), 60 a night, with a hard ceiling of 120 LinkedIn requests per
+run in the gate.
+
+**A first real run, small.** One search ("software engineer", Utrecht), three
+descriptions, through the gate from the laptop: 4 requests, 10 listed, 3 kept
+(Sopra Steria in Nieuwegein, two recruiter posts in Utrecht), none refused.
+Cloud Run is a datacenter address, which LinkedIn is known to treat worse; the
+first nightly run will say, on the admin page.
+
+**Picking the source.** Since 7.10.2 the page could fetch one source, but the
+button sat inside each source's opened rows, where nobody found it. Now a
+"What to fetch" choice sits above "Fetch now": all sources, or one. The list
+comes from the server (every name `fetch_vacancies.py --source` takes, a test
+keeps the two equal), so LinkedIn is there before any run has counted it; a
+source the last run found switched off is shown but cannot be picked. The
+scheduled runs did not change: they ask every source that is switched on.
+
+**Rejected:** ticking several sources for one run. `--source` takes one
+name, and "all, or one" is what was asked for.
+
+1032 tests. No new dependency.

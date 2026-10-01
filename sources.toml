@@ -24,6 +24,11 @@ max_cooldown_days = 7
 [politeness.sites."jobdataapi.com"]
 max_requests = 8
 
+# LinkedIn (on since 2026-10-01): 13 searches of up to three pages, and at most
+# 60 descriptions a run ([linkedin] below). This is the ceiling on all of it.
+[politeness.sites."linkedin.com"]
+max_requests = 120
+
 # europa.eu's robots.txt asks every crawler for Crawl-delay: 10. EURES is not a
 # crawl, but it is not a documented API either (sources/eures.py): its pace.
 [politeness.sites."europa.eu"]
@@ -220,24 +225,68 @@ city = "Middelburg"
 term = "software engineer"
 city = "Middelburg"
 
-# Off by default, on purpose, and staying off (decided 2026-09-22). LinkedIn's
-# guest endpoints are the throttle-prone half of scraping, its terms do not
-# invite it, and its robots.txt disallows /jobs-guest/ for every crawler,
-# Googlebot included. Switching this on is a deliberate choice about your own
-# IP. What it costs is capped: jobs already in data/raw/ are never requested
-# again, a run fetches at most max_descriptions_per_run descriptions, and
-# delay_seconds sits between them.
+# On since 2026-10-01, Mahdi's decision, reversing "staying off" of 2026-09-22.
+# Know what it is: LinkedIn's robots.txt disallows /jobs-guest/ for every
+# crawler (Googlebot included, and "/" for any crawler it did not approve), and
+# its terms forbid scraping. JobLens reads it anyway, as a guest, and keeps
+# every other rule: our own User-Agent, every request through the gate (paced,
+# capped below, a 429 or 403 remembered for 12 h and up), no retries, no
+# proxies, no disguise. Since 7.10.5 that is our own code, not JobSpy's, whose
+# LinkedIn search retried a 429 and wore a browser's User-Agent
+# (src/joblens/sources/scraped.py). Turn it off here; the vacancies it brought
+# stay stored.
+#
+# The cost is capped: a card outside [scope] or already stored costs no
+# request, the run asks at most max_descriptions_per_run descriptions (for all
+# searches together), and delay_seconds sits between requests on top of the
+# gate's own pause. A search is three pages of ten.
 [linkedin]
-enabled = false
+enabled = true
 distance_km = 25
 hours_old = 72
 results_per_search = 25
-max_descriptions_per_run = 40
+max_descriptions_per_run = 60
 delay_seconds = 2.5
 
+# The scope's work, around the same hubs as Indeed. LinkedIn matches the words
+# loosely, so three broad terms; "machine learning" for the AI jobs a
+# "developer" title does not name. LinkedIn writes Den Haag as "The Hague".
 [[linkedin.searches]]
-term = "data engineer"
+term = "software engineer"
+city = "Amsterdam"
+[[linkedin.searches]]
+term = "developer"
+city = "Amsterdam"
+[[linkedin.searches]]
+term = "machine learning"
 city = "Amsterdam"
 [[linkedin.searches]]
 term = "software engineer"
 city = "Rotterdam"
+[[linkedin.searches]]
+term = "developer"
+city = "Rotterdam"
+[[linkedin.searches]]
+term = "machine learning"
+city = "Rotterdam"
+[[linkedin.searches]]
+term = "software engineer"
+city = "The Hague"
+[[linkedin.searches]]
+term = "developer"
+city = "The Hague"
+[[linkedin.searches]]
+term = "machine learning"
+city = "The Hague"
+[[linkedin.searches]]
+term = "software engineer"
+city = "Utrecht"
+[[linkedin.searches]]
+term = "developer"
+city = "Utrecht"
+[[linkedin.searches]]
+term = "machine learning"
+city = "Utrecht"
+[[linkedin.searches]]
+term = "developer"
+city = "Middelburg"

@@ -10,6 +10,7 @@ import pytest
 from test_api import app_for
 
 from joblens.cloud.jobs import NightlyJob
+from joblens.sources.overview import SOURCES
 
 OWNER, TESTER = "owner@example.test", "tester@example.test"
 JOB = "projects/p-1/locations/europe-west4/jobs/joblens-nightly"
@@ -46,6 +47,7 @@ def people(database):
         ({}, ["--force", "--by", "page"]),
         ({"fetch": False}, ["--force", "--by", "page", "--no-fetch"]),
         ({"source": "indeed"}, ["--force", "--by", "page", "--source", "indeed"]),
+        ({"source": "linkedin"}, ["--force", "--by", "page", "--source", "linkedin"]),
     ],
 )
 def test_the_owner_starts_a_run_with_the_right_arguments(
@@ -60,6 +62,16 @@ def test_the_owner_starts_a_run_with_the_right_arguments(
     assert started.status_code == 202
     assert job.started == [args]  # --force: the switch is for Cloud Scheduler
     assert started.json()["starting"] is not None
+
+
+def test_the_page_is_told_every_source_one_run_may_fetch(database, people, tmp_path):
+    """7.10.5: the page's "What to fetch" offers these, LinkedIn included, even
+    before a run has counted it."""
+    with app_for(database, tmp_path, as_=OWNER, nightly_job=FakeJob()) as http:
+        state = http.get("/api/admin/runs").json()
+
+    assert state["sources"] == list(SOURCES)
+    assert "linkedin" in state["sources"]
 
 
 def test_a_tester_can_neither_start_nor_stop(database, people, tmp_path):

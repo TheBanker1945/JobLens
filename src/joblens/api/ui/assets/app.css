@@ -502,7 +502,7 @@ pre.sent {
 .run details summary { font-size: 13px; font-weight: 600; color: var(--danger); cursor: pointer; }
 .refusal { display: flex; flex-direction: column; gap: 2px; }
 .run-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
-.fetch-one { height: 36px; padding: 0 14px; font-size: 14px; }
+.run-source { max-width: 320px; }
 /* what it cost (7.10.4): the total's bar full width, a person's beside them */
 .spend-total { gap: 6px; }
 .spend-total p { margin: 0; }

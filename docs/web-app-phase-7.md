@@ -333,6 +333,16 @@ month, the owner's own use included. So the owner's matches use up the
 testers' $10. The page shows the owner's part separately. Should the cap
 count testers only? A one-line change in `check` and `spending` if so.
 
+**7.10.5, built.** Every source has a row on the page, switched off or not,
+and the Indeed row says "via JobSpy". "What to fetch" above "Fetch now":
+all sources or one, from the server's list (`SOURCES`), so a run can fetch
+LinkedIn alone; the per-row "Fetch only" buttons are gone. LinkedIn is on,
+nightly included (Mahdi, 2026-10-01; robots.txt disallows it, see
+CLAUDE.md), and is read by JobLens's own code through the gate rather than
+JobSpy. Live after both images are rebuilt and deployed (the app for the
+page, the job for LinkedIn and the new overview), in either order: the old
+page ignores the new list, and the old job leaves LinkedIn off.
+
 ## Open questions from 7.3 (for Mahdi)
 
 - **Hard lines or margins?** A vacancy 46 km away against a 40 km preference now

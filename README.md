@@ -124,7 +124,7 @@ in `sources.toml`; nothing downstream knows the difference.
 | Recruitee, Greenhouse | public JSON from a company's own board | nothing |
 | jobdataapi | aggregator, anonymous tier (~10 requests/hour per IP) | nothing |
 | Indeed | its mobile app API, through [JobSpy](https://github.com/speedyapply/JobSpy) | `uv sync --group scrape` |
-| LinkedIn | its logged-out guest endpoints, off by default | `uv sync --group scrape` |
+| LinkedIn | its logged-out guest pages, read by our own code; on, although its robots.txt disallows it (`[linkedin]` in `sources.toml` turns it off) | nothing |
 
 Scraping never happens while someone is using JobLens: a scheduled run puts
 vacancies in `data/raw/`, and search only ever reads what is already there.

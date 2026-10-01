@@ -52,7 +52,13 @@
 <section class="card" aria-labelledby="runs-title">
 <h2 id="runs-title" data-i18n="admin.runs">Nightly runs</h2>
 <div id="run-controls" class="stack" hidden>
-<p class="muted" data-i18n="admin.runHint">Fetch now asks every source, even while the nightly switch is off.</p>
+<p class="muted" data-i18n="admin.runHint">Fetch now asks the sources picked here right away, even while the nightly switch is off, then reads and publishes what is new. The scheduled runs always ask every source. It takes a while; this page follows it.</p>
+<div class="field run-source">
+<label for="run-source" data-i18n="admin.runSource">What to fetch</label>
+<select id="run-source" class="input">
+<option value="" data-i18n="admin.allSources">All sources</option>
+</select>
+</div>
 <div class="run-buttons">
 <button type="button" id="run-now" class="button button-primary" data-i18n="admin.runNow">Fetch now</button>
 <button type="button" id="run-index" class="button button-outline" data-i18n="admin.runIndex">Only index and publish</button>
